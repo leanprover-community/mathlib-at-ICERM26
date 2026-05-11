@@ -9,7 +9,7 @@ public import Mathlib.Analysis.BoxIntegral.Basic
 
 namespace Stieltjes
 
-open BoxIntegral
+open BoxIntegral LinearMap
 
 /-- If  `g : ℝ → M` is a map, `dg : BoxAdditiveMap Unit M ⊤` is the box additive map that sends a box `J` to `g(J.upper()) - g(J.lower())`. -/
 def deriv {M : Type*} [AddCommGroup M] (g : ℝ → M) :
@@ -25,32 +25,28 @@ def deriv {M : Type*} [AddCommGroup M] (g : ℝ → M) :
 /-- The interval [a,b).  -/
 def interval (a b : ℝ) : Box Unit := sorry
 
-def symm {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E]
-[NormedAddCommGroup F] [NormedAddCommGroup G]
-  (B : E →ₗ[ℝ] F →ₗ[ℝ] G) : F →ₗ[ℝ] E →ₗ[ℝ] G := by sorry
-
 /- Task 2: Define a Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear map `B : E → F → G` and an interval `I` to give an output in `G`. -/
 
 def HasIntegral {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedAddCommGroup F] [NormedAddCommGroup G]
   (B : E →ₗ[ℝ] F →ₗ[ℝ] G) (f : ℝ → E) (g : ℝ → F) (a b : ℝ) (L : G) : Prop :=
-  BoxIntegral.HasIntegral (interval a b) IntegrationParams.Riemann f
-  (deriv (fun x ↦ (symm B) (g x))) L
+  BoxIntegral.HasIntegral (interval a b) IntegrationParams.Riemann (fun x ↦ f (x ()))
+  (deriv (fun x ↦ (flip B) (g (x ())))) L
 
 /- Task 3: Theorem A.1 of Montgomery Vaughan: if `f` is continuous and `g` is bounded variation
 then the Stieltjes integral exists. -/
 
 theorem exists_of_continuous_of_bounded_variation {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedAddCommGroup F] [NormedAddCommGroup G]
-  (B : E →ₗ[ℝ] F →ₗ[ℝ] G) (f : ℝ → E) (g : ℝ → F) (I : Interval ℝ)
-  (hf : ContinuousOn f I) (hg : BoundedVariationOn g I) :
-  ∃ L, hasIntegral B f g I L := by sorry
+  (B : E →ₗ[ℝ] F →ₗ[ℝ] G) (f : ℝ → E) (g : ℝ → F) (a b : ℝ)
+  (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
+  ∃ L, HasIntegral B f g a b L := by sorry
 
 /- Task 4: Theorem A.2 of Montgomery Vaughan: if ∫_a^b f d g exists, then ∫_a^b g d f exists and
 ∫_a^b g d f = g(b) * f(b) - g(a) * f(a) - ∫_a^b f d g. -/
 
 theorem integration_by_parts {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedAddCommGroup F] [NormedAddCommGroup G]
-  (B : E →ₗ[ℝ] F →ₗ[ℝ] G) (f : ℝ → E) (g : ℝ → F) (I : Interval ℝ) {L : G}
-  (hL : hasIntegral B f g I L) :
-  hasIntegral (symm B) g f I (B (g I.2) (f I.2) - B (g I.1) (f I.1) - L) := by sorry
+  (B : E →ₗ[ℝ] F →ₗ[ℝ] G) (f : ℝ → E) (g : ℝ → F) (a b : ℝ) {L : G}
+  (hL : HasIntegral B f g a b L) :
+  HasIntegral (flip B) g f a b (B (g b) (f b) - B (g a) (f a) - L) := by sorry
 
 /- Task 5: Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Var[a,b]g = ∫_a^b |g'(x)|\ dx
