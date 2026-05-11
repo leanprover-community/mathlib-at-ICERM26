@@ -32,6 +32,12 @@ Var[a,b]g = ∫_a^b |g'(x)|\ dx
 ∫_a^b f (x) dg(x) = ∫_a^b f (x)g′(x) dx. -/
 
 
+/-- Task 7: Theorem A.4 Suppose that g has bounded variation, and put g^∗(x) = Var[a,x]g. Then
+
+∫_a^b f(x) dg(x) ≤ ∫_a^b | f (x)| dg∗(x).
+provided that both integrals exist.
+-/
+
 
 
 end StieltjesIntegral
