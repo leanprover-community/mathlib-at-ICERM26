@@ -7,3 +7,10 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Basic
 
+namespace StieltjesIntegral
+
+/-- Turn a map `g : ℝ → M` to a BoxAdditiveMap `dg : BoxAdditiveMap Unit M I` -/
+def StieltjesDerivative {M : Type*} [AddCommMonoid M] (I: WithTop (Box Unit)) (g : ℝ → M): BoxAdditiveMap Unit M I := by sorry
+
+
+end StieltjesIntegral
