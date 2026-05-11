@@ -37,13 +37,18 @@ variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 
+/-- A version of `LinearMap.flip` for continuous linear maps. -/
+def flip (B : E →L[ℝ] F →L[ℝ] G) : F →L[ℝ] E →L[ℝ] G := sorry
+
 /-- The scalar multiplication on the reals as a bilinear map. -/
 def smul_right : E →L[ℝ] ℝ →L[ℝ] E := sorry
 
-noncomputable def mul : ℝ →L[ℝ] ℝ →L[ℝ] ℝ := smul_right
+noncomputable def smul_left : ℝ →L[ℝ] F →L[ℝ] F := flip smul_right
 
-/-- A version of `LinearMap.flip` for continuous linear maps. -/
-def flip (B : E →L[ℝ] F →L[ℝ] G) : F →L[ℝ] E →L[ℝ] G := sorry
+/-- normed algebra multiplication (e.g., on ℝ or ℂ) as a bilinear map. -/
+noncomputable def mul {E : Type*} [NormedRing E]
+[NormedAlgebra ℝ E] : E →L[ℝ] E →L[ℝ] E := sorry
+
 
 /-- The Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear
  map `B : E → F → G` and an interval `I` takes values in `G`. -/
