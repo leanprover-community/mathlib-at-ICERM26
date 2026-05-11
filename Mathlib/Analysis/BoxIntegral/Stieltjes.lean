@@ -32,6 +32,8 @@ def deriv {M : Type*} [AddCommGroup M] (g : ℝ → M) :
 -/
 def interval (a b : ℝ) : Box Unit := sorry
 
+/- Our notion of Stieltjes transformation requires a choice of continuous bilinear mapping from the
+ranges of `f`, `g` to the desired output range. Below we set out some standard choices. -/
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
@@ -40,18 +42,24 @@ variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 /-- A version of `LinearMap.flip` for continuous linear maps. -/
 def flip (B : E →L[ℝ] F →L[ℝ] G) : F →L[ℝ] E →L[ℝ] G := sorry
 
-/-- The scalar multiplication on the reals as a bilinear map. -/
+/-- Right scalar multiplication on the reals as a bilinear map.
+A suitable choice for Stieltjes integrals when `g` is real.
+-/
 def smul_right : E →L[ℝ] ℝ →L[ℝ] E := sorry
 
+/-- Left scalar multiplication on the reals as a bilinear map.
+A suitable choice for Stieltjes integrals when `f` is real.
+-/
 noncomputable def smul_left : ℝ →L[ℝ] F →L[ℝ] F := flip smul_right
 
-/-- normed algebra multiplication (e.g., on ℝ or ℂ) as a bilinear map. -/
+/-- Normed algebra multiplication (e.g., on ℝ or ℂ) as a bilinear map.
+A suitable choice for Stieltjes integrals when `f`, `g` are both real or both complex. -/
 noncomputable def mul {E : Type*} [NormedRing E]
 [NormedAlgebra ℝ E] : E →L[ℝ] E →L[ℝ] E := sorry
 
 
 /-- The Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear
- map `B : E → F → G` and an interval `I` takes values in `G`. -/
+ map `B : E → F → G` and endpoints `a`, `b` takes values in `G`. -/
 def HasIntegral (f : ℝ → E) (g : ℝ → F) (L : G) : Prop :=
   BoxIntegral.HasIntegral (interval a b) IntegrationParams.Riemann (fun x ↦ f (x ()))
   (deriv (fun x ↦ (flip B) (g x))) L
