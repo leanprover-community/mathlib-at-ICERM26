@@ -92,6 +92,37 @@ Stieltjes integral, Riemann–Stieltjes, bounded variation
 
 @[expose] public section
 
+/-! ## Intervals -/
+
+namespace Stieltjes
+
+open BoxIntegral
+
+/-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(0, 1]` if `a ≥ b`. -/
+noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
+  if h : a < b then
+    { lower := fun _ ↦ a
+      upper := fun _ ↦ b
+      lower_lt_upper := fun _ ↦ h }
+  else
+    { lower := fun _ ↦ 0
+      upper := fun _ ↦ 1
+      lower_lt_upper := fun _ ↦ zero_lt_one }
+
+@[simp]
+lemma Ioc.upper {a b : ℝ} (h : a < b) (i : Fin 1) : (Ioc a b).upper i = b := by
+  simp [Ioc, h]
+
+@[simp]
+lemma Ioc.lower {a b : ℝ} (h : a < b) (i : Fin 1) : (Ioc a b).lower i = a := by
+  simp [Ioc, h]
+
+lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
+  ext
+  simp [Ioc, Box.mem_def]
+
+end Stieltjes
+
 namespace BoxIntegral.BoxAdditiveMap
 
 /-! ## `BoxIntegral.BoxAdditiveMap` extensions (to upstream)
@@ -151,6 +182,8 @@ lemma sub_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f g : ι →ᵇᵃ[I₀]
 
 /-! ## The differential `ofDiff` of a function on `ℝ` -/
 
+open Stieltjes
+
 /-- The box-additive "differential" sending a function `g : ℝ → M` to the box-additive map on
 `Box (Fin 1)` defined by `J ↦ g (J.upper 0) - g (J.lower 0)`, bundled as an
 `AddMonoidHom`. -/
@@ -189,12 +222,17 @@ lemma ofDiff_const (c : M) : ofDiff (fun _ : ℝ ↦ c) = 0 := by
   ext J
   simp
 
+@[simp]
+lemma ofDiff_Ioc (g : ℝ → M) {a b : ℝ} (h : a < b) :
+    ofDiff g (Ioc a b) = g b - g a := by
+  simp [h]
+
 /-- `ofDiff g` vanishes iff `g` is constant. -/
 lemma ofDiff_eq_zero_iff {g : ℝ → M} : ofDiff g = 0 ↔ ∀ x y, g x = g y := by
   refine ⟨fun h x y ↦ ?_, fun h ↦ ?_⟩
-  · have key {u v : ℝ} (huv : u < v) : g u = g v := by
-      replace h := DFunLike.congr_fun h ⟨fun _ ↦ u, fun _ ↦ v, fun _ ↦ huv⟩
-      simp only [ofDiff_apply, zero_apply, Pi.zero_apply] at h
+  · have key {a b : ℝ} (hab : a < b) : g a = g b := by
+      replace h := DFunLike.congr_fun h (Ioc a b)
+      simp [hab] at h
       grind
     rcases lt_trichotomy x y with hlt | rfl | hgt
     · exact key hlt
@@ -307,17 +345,6 @@ open BoxIntegral ContinuousLinearMap
 namespace Stieltjes
 
 /-! ## Definition of the Riemann–Stieltjes integral -/
-
-/-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(0, 1]` if `a ≥ b`. -/
-noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
-  if h : a < b then
-    { lower := fun _ ↦ a
-      upper := fun _ ↦ b
-      lower_lt_upper := fun _ ↦ h }
-  else
-    { lower := fun _ ↦ 0
-      upper := fun _ ↦ 1
-      lower_lt_upper := fun _ ↦ zero_lt_one }
 
 /- Our notion of Stieltjes transformation requires a choice of continuous bilinear mapping from the
 ranges of `f`, `g` to the desired output range.
