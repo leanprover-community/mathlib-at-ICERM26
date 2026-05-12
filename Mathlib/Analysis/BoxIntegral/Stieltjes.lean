@@ -191,6 +191,15 @@ lemma map_ofDiff {N : Type*} [AddCommGroup N] (g : ℝ → M) (φ : M →+ N) :
   ext J
   simp [map_sub]
 
+/-- The Riemann–Stieltjes differential of `ContinuousLinearMap.lsmul ℝ ℝ : ℝ → (E →L[ℝ] E)`
+equals the Lebesgue volume box-additive map on `Box (Fin 1)`. Mathematically, this says that
+the Stieltjes integral against the identity integrator (paired with scalar multiplication)
+agrees with the ordinary Riemann integral on the real line. -/
+lemma ofDiff_lsmul_eq_volume {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] :
+    ofDiff (fun x : ℝ ↦ (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E) x) =
+      (BoxAdditiveMap.volume : (Fin 1) →ᵇᵃ E →L[ℝ] E) := by
+  sorry
+
 end BoxIntegral.BoxAdditiveMap
 
 namespace BoxIntegral
@@ -614,6 +623,26 @@ theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G
     (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (fun x ↦ ‖f x‖)
       (fun x ↦ (eVariationOn g (Set.Icc a x)).toReal) L') :
     ‖L‖ ≤ ‖B‖ * L' := by sorry
+
+/-! ### Connection to standard integrals -/
+
+/-- When the integrator is the identity, the Stieltjes integral with the scalar-multiplication
+pairing `(lsmul ℝ ℝ).flip` reduces to the ordinary `BoxIntegral.HasIntegral` against the
+Lebesgue volume on `(a, b]`. -/
+theorem hasStieltjesIntegral_id_iff_hasIntegral_volume (f : ℝ → E) (L : E) :
+    HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f id L ↔
+      HasIntegral (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0))
+        BoxAdditiveMap.volume L := by sorry
+
+/-- Function-level form of Theorem A.3(b) (`integral_of_derivative`): when `g` is `C¹` on
+`[a, b]` and `f` is Riemann integrable, the Stieltjes integral of `f` against `g` equals the
+Riemann integral of `B (f x) (g' x)`. -/
+theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g : ℝ → F}
+    (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hf : RiemannIntegrable a b f) :
+    stieltjesIntegral a b B f g = ∫ x in a..b, B (f x) (deriv g x) :=
+  (integral_of_derivative a b B hg hf).stieltjesIntegral_eq
+
+/-! ### Sums as Stieltjes integrals -/
 
 /-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f d ⌊x⌋ -/
 theorem sum_eq_integral_nat_floor (f : ℝ → E) :
