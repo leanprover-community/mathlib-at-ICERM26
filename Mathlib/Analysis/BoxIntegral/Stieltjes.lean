@@ -48,23 +48,23 @@ variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 
 /-- A version of `LinearMap.flip` for continuous linear maps. -/
-def flip (B : E →L[ℝ] F →L[ℝ] G) : F →L[ℝ] E →L[ℝ] G := sorry
+noncomputable def flip (B : E →L[ℝ] F →L[ℝ] G) : F →L[ℝ] E →L[ℝ] G :=
+  B.flip
 
 /-- Right scalar multiplication on the reals as a bilinear map.
-A suitable choice for Stieltjes integrals when `g` is real.
--/
-def smul_right : E →L[ℝ] ℝ →L[ℝ] E := sorry
+A suitable choice for Stieltjes integrals when `g` is real. -/
+noncomputable def smul_right : E →L[ℝ] ℝ →L[ℝ] E :=
+  ContinuousLinearMap.smulRightL ℝ ℝ E (ContinuousLinearMap.id ℝ ℝ)
 
 /-- Left scalar multiplication on the reals as a bilinear map.
-A suitable choice for Stieltjes integrals when `f` is real.
--/
+A suitable choice for Stieltjes integrals when `f` is real. -/
 noncomputable def smul_left : ℝ →L[ℝ] F →L[ℝ] F := flip smul_right
 
 /-- Normed algebra multiplication (e.g., on ℝ or ℂ) as a bilinear map.
 A suitable choice for Stieltjes integrals when `f`, `g` are both real or both complex. -/
-noncomputable def mul {E : Type*} [NormedRing E]
-[NormedAlgebra ℝ E] : E →L[ℝ] E →L[ℝ] E := sorry
-
+noncomputable def mul {A : Type*} [NormedRing A] [NormedAlgebra ℝ A] :
+  A →L[ℝ] A →L[ℝ] A :=
+  ContinuousLinearMap.mul ℝ A
 
 /-- The Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear
  map `B : E → F → G` and endpoints `a`, `b` takes values in `G`. -/
