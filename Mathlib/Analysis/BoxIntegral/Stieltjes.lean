@@ -63,6 +63,16 @@ variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 
+/- Endpoint convention. The underlying box `interval a b` is the half-open interval `(a, b]`,
+but most hypotheses and outputs below use `Set.Icc a b` rather than `Set.Ioc a b`. This is the
+conservative choice and is needed in several places:
+* `ContinuousOn` / `ContDiffOn` hypotheses rely on compactness of the domain (e.g. for uniform
+  continuity), which fails on `Ioc`.
+* For a prepartition of `(a, b]` the leftmost sub-box has lower endpoint `a`, so `g a` appears
+  in `BoxAdditiveMap.ofDiff g`. Bounded-variation hypotheses on `g` must therefore include `a`.
+Some occurrences below may admit a half-open weakening; for now we keep `Set.Icc` everywhere
+and flag this as a possible future refinement. -/
+
 /-- The Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear
 map `B : E → F → G` and endpoints `a`, `b` takes values in `G`. -/
 def HasStieltjesIntegral (f : ℝ → E) (g : ℝ → F) (L : G) : Prop :=
@@ -97,14 +107,14 @@ theorem exists_of_continuousOn_of_boundedVariationOn
   have hint := integrable_of_continuousOn_of_boundedVariationOn a b B f g hf hg
   exact ⟨_, BoxIntegral.Integrable.hasIntegral hint⟩
 
-/-- Theorem A.2 of Montgomery Vaughan: if ∫_a^b f d g exists, then ∫_a^b g d f exists and
-∫_a^b g d f = g(b) * f(b) - g(a) * f(a) - ∫_a^b f d g. -/
+/-- Theorem A.2 of Montgomery Vaughan: if ∫ₐᵇ f dg exists, then ∫ₐᵇ g df exists and
+∫ₐᵇ g df = g(b) * f(b) - g(a) * f(a) - ∫ₐᵇ f dg. -/
 theorem integration_by_parts {f : ℝ → E} {g : ℝ → F} {L : G}
     (hL : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b B.flip g f (B (f b) (g b) - B (f a) (g a) - L) := by sorry
 
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
-Var[a,b]g = ∫_a^b |g'(x)|\ dx
+Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
 theorem variation_of_derivative {g : ℝ → F} (hgdiff : ContDiffOn ℝ 1 g (Set.Icc a b)) :
     (eVariationOn g (Set.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
@@ -115,14 +125,14 @@ abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
     (fun x ↦ f (x ())) BoxAdditiveMap.volume
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
-Riemann integrable, then ∫_a^b f (x) dg(x) = ∫_a^b f (x)g′(x) dx. -/
+Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
 theorem integral_of_derivative {f : ℝ → E} {g : ℝ → F}
     (hgdiff : ContDiffOn ℝ 1 g (Set.Icc a b))
     (hfint : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
 
-/-- Theorem A.4. Suppose that g has bounded variation, and put g^∗(x) = Var[a,x]g. Then
-∫_a^b f(x) dg(x) ≤ ∫_a^b | f (x)| dg∗(x).
+/-- Theorem A.4. Suppose that g has bounded variation, and put g∗(x) = Varₐˣ g. Then
+‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dg∗(x),
 provided that both integrals exist. -/
 theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G} {L' : ℝ}
     (hgvar : BoundedVariationOn g (Set.Icc a b))
