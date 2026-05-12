@@ -102,7 +102,8 @@ theorem IsOpen.isSmoothlySimplyConnected {s : Set ℂ} (hs : IsOpen s) (hs' : Is
             source' := hh0
             target' := hh1 }
         refine ⟨γ, Set.range_subset_iff.mpr hh_range, ?_⟩
-        sorry
+        exact (hh_smooth.of_le (by norm_cast)).contDiffOn.congr
+          (fun t ht ↦ Path.extend_extends' γ ⟨t, ht⟩)
       exists_smooth_homotopy x hx y hy := by
 
         sorry
