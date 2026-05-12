@@ -134,10 +134,10 @@ namespace BoxIntegral.BoundaryPoints
 
 open BoxIntegral Stieltjes
 
-
-noncomputable def toPartition {N : ℕ}
-    (x : Fin (N + 1) → ℝ)
-    (hx : StrictMono x) : Prepartition (Ioc (x 0) (x (Fin.last N))) where
+noncomputable def toPartition {N : ℕ} {a b : ℝ}
+    (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+    (ha : (x 0) = a) (hb : x (Fin.last N) = b) :
+    Prepartition (Ioc a b) where
   boxes := by
     classical
     exact (Finset.univ : Finset (Fin N)).image fun i ↦ Ioc (x i.castSucc) (x i.succ)
@@ -145,32 +145,19 @@ noncomputable def toPartition {N : ℕ}
   pairwiseDisjoint := by sorry
 
 theorem toPartition.IsPartition {N : ℕ} {a b : ℝ} (hab : a < b)
-    (x : Fin (N + 1) → ℝ) (hx : StrictMono x) :
-    (toPartition x hx).IsPartition := by
+    (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+    (ha : (x 0) = a) (hb : x (Fin.last N) = b):
+    (toPartition x hx ha hb).IsPartition := by
   sorry
 
-noncomputable def exist_boundary_points
+theorem fromPartition
     {a b : ℝ} (hab : a < b)
     (π : Prepartition (Ioc a b))
     (hπ : π.IsPartition):
-    ∃ (N : ℕ) (x : Fin (N + 1) → ℝ) (hx : StrictMono x),
-      x 0 = a ∧ x (Fin.last N) = b := by
+    letI N := Finset.card π.boxes
+    ∃ (x : Fin (N + 1) → ℝ) (hx : StrictMono x) (ha : (x 0) = a) (hb : x (Fin.last N) = b),
+     π = toPartition x hx ha hb := by
   sorry
-
-noncomputable def ofPartition
-    {a b : ℝ} (hab : a<b)
-    (π : Prepartition (Ioc a b))
-    (hπ : π.IsPartition) :
-    (Fin (Finset.card π.boxes + 1) → ℝ) := by
-  sorry
-
-noncomputable def ofPartition_strictMono
-    {a b : ℝ} (hab : a < b)
-    (π : Prepartition (Ioc a b))
-    (hπ : π.IsPartition) :
-    StrictMono (BoundaryPoints.ofPartition hab π hπ) := by
-  sorry
-
 
 end BoxIntegral.BoundaryPoints
 
