@@ -1,6 +1,7 @@
 import Mathlib.Analysis.Calculus.ContDiff.Defs
 import Mathlib.Analysis.Complex.Basic
 import Mathlib.Topology.Homotopy.Basic
+import Mathlib.AlgebraicTopology.FundamentalGroupoid.SimplyConnected
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E]
 
@@ -29,3 +30,7 @@ structure IsSmoothlySimplyConnected (s : Set E) : Prop where
   exists_smooth_homotopy : ∀ x ∈ s, ∀ y ∈ connectedComponentIn s x, ∀ᶠ z in 𝓝[s] y,
     ∀ γ₁ : Path x y, IsC2PathIn γ₁ s → ∀ γ₂ : Path x z, IsC2PathIn γ₂ s →
     ∃ φ : ContinuousMap.Homotopy γ₁ γ₂, IsC2AffineHomotopyIn φ s
+
+theorem IsOpen.isSmoothlySimplyConnected {s : Set ℂ} (hs : IsOpen s) (hs' : IsSimplyConnected s) :
+    IsSmoothlySimplyConnected s := by
+  sorry
