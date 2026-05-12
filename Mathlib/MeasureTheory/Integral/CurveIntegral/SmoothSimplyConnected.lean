@@ -1,8 +1,12 @@
-import Mathlib.Analysis.Calculus.ContDiff.Defs
-import Mathlib.Analysis.Complex.Basic
-import Mathlib.Topology.Homotopy.Basic
+module
 
-variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E]
+public import Mathlib.Analysis.Calculus.ContDiff.Defs
+public import Mathlib.Analysis.Complex.Basic
+public import Mathlib.Topology.Homotopy.Basic
+
+@[expose] public section
+
+variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
 open scoped unitInterval Topology
 
