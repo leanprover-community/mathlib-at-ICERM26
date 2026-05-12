@@ -338,6 +338,58 @@ theorem HasIntegral.smul_vol {vol : ι →ᵇᵃ E →L[ℝ] F} {y : F}
   rw [funext (integralSum_smul_vol c f vol)]
   exact (tendsto_const_nhds : Filter.Tendsto _ _ (nhds c)).smul h
 
+/-! ### Intertwining `HasIntegral` by continuous linear maps -/
+
+/-- If `φ : E →L[ℝ] E'` acts on integrands and `ψ : F →L[ℝ] F'` acts on integrated values, and
+`(vol, vol')` are intertwined in the sense that the diagram
+```
+        vol J
+   E ─────────→ F
+   │            │
+   φ            ψ
+   ↓            ↓
+   E' ────────→ F'
+        vol' J
+```
+commutes for every box `J` — i.e. `ψ (vol J e) = vol' J (φ e)` for all `J, e` — then `HasIntegral`
+transports along `(φ, ψ)`: if `f` has integral `y` under `vol`, then `φ ∘ f` has integral `ψ y`
+under `vol'`. -/
+theorem HasIntegral.map {E' F' : Type*}
+    [NormedAddCommGroup E'] [NormedSpace ℝ E'] [NormedAddCommGroup F'] [NormedSpace ℝ F']
+    {vol : ι →ᵇᵃ E →L[ℝ] F} {vol' : ι →ᵇᵃ E' →L[ℝ] F'} {y : F}
+    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F')
+    (hvol : ∀ (J : Box ι) (e : E), ψ (vol J e) = vol' J (φ e))
+    (h : HasIntegral I l f vol y) :
+    HasIntegral I l (fun x ↦ φ (f x)) vol' (ψ y) := by
+  have hSum : ∀ π : TaggedPrepartition I,
+      integralSum (fun x ↦ φ (f x)) vol' π = ψ (integralSum f vol π) := fun π ↦ by
+    simp only [integralSum, map_sum]
+    exact Finset.sum_congr rfl fun J _ ↦ (hvol J (f (π.tag J))).symm
+  unfold HasIntegral at h ⊢
+  exact ((ψ.continuous.tendsto y).comp h).congr fun π ↦ (hSum π).symm
+
+/-- Existence version of `HasIntegral.map`: integrability is preserved when transporting
+along an intertwined pair of continuous linear maps. -/
+theorem Integrable.map {E' F' : Type*}
+    [NormedAddCommGroup E'] [NormedSpace ℝ E'] [NormedAddCommGroup F'] [NormedSpace ℝ F']
+    {vol : ι →ᵇᵃ E →L[ℝ] F} {vol' : ι →ᵇᵃ E' →L[ℝ] F'}
+    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F')
+    (hvol : ∀ (J : Box ι) (e : E), ψ (vol J e) = vol' J (φ e))
+    (h : Integrable I l f vol) : Integrable I l (fun x ↦ φ (f x)) vol' :=
+  (h.hasIntegral.map φ ψ hvol).integrable
+
+/-- Function-level version of `HasIntegral.map`: applying `ψ` to the integral of `f` against
+`vol` equals the integral of `φ ∘ f` against `vol'`, when `f` is integrable and the volumes
+are intertwined. -/
+theorem integral_map {E' F' : Type*}
+    [NormedAddCommGroup E'] [NormedSpace ℝ E'] [NormedAddCommGroup F'] [NormedSpace ℝ F']
+    {vol : ι →ᵇᵃ E →L[ℝ] F} {vol' : ι →ᵇᵃ E' →L[ℝ] F'}
+    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F')
+    (hvol : ∀ (J : Box ι) (e : E), ψ (vol J e) = vol' J (φ e))
+    (h : Integrable I l f vol) :
+    integral I l (fun x ↦ φ (f x)) vol' = ψ (integral I l f vol) := by
+  rw [(h.hasIntegral.map φ ψ hvol).integral_eq, h.hasIntegral.integral_eq]
+
 end BoxIntegral
 
 open BoxIntegral ContinuousLinearMap
@@ -613,6 +665,58 @@ theorem stieltjesIntegral_smul_right {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
     ∫⟨B⟩ x in a..b, f x d (c • g) = c • ∫⟨B⟩ x in a..b, f x d g := by
   rw [(h.hasStieltjesIntegral.smul_right a b B c).stieltjesIntegral_eq,
+    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+/-! ### Naturality: transporting along continuous linear maps -/
+
+/-- If a bilinear pairing `B : E →L[ℝ] F →L[ℝ] G` and CLMs `φ : E →L[ℝ] E'`, `ψ : F →L[ℝ] F'`,
+`Ψ : G →L[ℝ] G'` satisfy the compatibility `Ψ (B e y) = B' (φ e) (ψ y)` for all `e, y`, then
+`HasStieltjesIntegral` transports along `(φ, ψ, Ψ)`: applying `φ` to the integrand, `ψ` to the
+integrator and `Ψ` to the integral preserves the Stieltjes-integral relation. -/
+theorem HasStieltjesIntegral.map {E' F' G' : Type*}
+    [NormedAddCommGroup E'] [NormedSpace ℝ E']
+    [NormedAddCommGroup F'] [NormedSpace ℝ F']
+    [NormedAddCommGroup G'] [NormedSpace ℝ G']
+    {f : ℝ → E} {g : ℝ → F} {L : G}
+    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F') (Ψ : G →L[ℝ] G')
+    (B' : E' →L[ℝ] F' →L[ℝ] G')
+    (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
+    (h : HasStieltjesIntegral a b B f g L) :
+    HasStieltjesIntegral a b B' (fun x ↦ φ (f x)) (fun x ↦ ψ (g x)) (Ψ L) := by
+  unfold HasStieltjesIntegral at h ⊢
+  refine HasIntegral.map φ Ψ ?_ h
+  intro J e
+  simp only [BoxIntegral.BoxAdditiveMap.ofDiff_apply, ContinuousLinearMap.sub_apply,
+    ContinuousLinearMap.flip_apply, map_sub, hB]
+
+/-- Existence-level naturality: if `(B, B', φ, ψ, Ψ)` are compatible in the sense of
+`HasStieltjesIntegral.map`, then `StieltjesIntegrable` is preserved when transporting
+the integrand along `φ` and the integrator along `ψ`. -/
+theorem StieltjesIntegrable.map {E' F' G' : Type*}
+    [NormedAddCommGroup E'] [NormedSpace ℝ E']
+    [NormedAddCommGroup F'] [NormedSpace ℝ F']
+    [NormedAddCommGroup G'] [NormedSpace ℝ G']
+    {f : ℝ → E} {g : ℝ → F}
+    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F') (Ψ : G →L[ℝ] G')
+    (B' : E' →L[ℝ] F' →L[ℝ] G')
+    (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
+    (h : StieltjesIntegrable a b B f g) :
+    StieltjesIntegrable a b B' (fun x ↦ φ (f x)) (fun x ↦ ψ (g x)) :=
+  (h.hasStieltjesIntegral.map a b B φ ψ Ψ B' hB).stieltjesIntegrable
+
+/-- Function-level naturality of `stieltjesIntegral` under continuous linear maps. -/
+theorem stieltjesIntegral_map {E' F' G' : Type*}
+    [NormedAddCommGroup E'] [NormedSpace ℝ E']
+    [NormedAddCommGroup F'] [NormedSpace ℝ F']
+    [NormedAddCommGroup G'] [NormedSpace ℝ G']
+    {f : ℝ → E} {g : ℝ → F}
+    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F') (Ψ : G →L[ℝ] G')
+    (B' : E' →L[ℝ] F' →L[ℝ] G')
+    (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
+    (h : StieltjesIntegrable a b B f g) :
+    ∫⟨B'⟩ x in a..b, φ (f x) d (fun x ↦ ψ (g x)) =
+      Ψ (∫⟨B⟩ x in a..b, f x d g) := by
+  rw [(h.hasStieltjesIntegral.map a b B φ ψ Ψ B' hB).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 /-! ## Auxiliary lemmas -/
