@@ -845,13 +845,9 @@ theorem HasStieltjesIntegral.smul_right {f : ℝ → E} {g : ℝ → F} {L : G}
 
 /-! ### Splitting over adjacent intervals -/
 
-/-- If `f` is Stieltjes-integrable over `(a, c]`, has Stieltjes integral `L` over `(a, b]`
-and `L'` over `(b, c]`, with `a < b < c`, then `f` has Stieltjes integral `L + L'` over `(a, c]`.
-The general (signed) case extending to arbitrary real endpoints `a, b, c` will follow as
-`HasStieltjesIntegral.add_adjacent` once the prime version is in hand.
-
-The integrability assumption on `(a, c]` is the price we pay for not gluing per-box gauges in
-`HasIntegral.sum_of_isPartition`; see the docstring there. -/
+/-- If `f` is Stieltjes-integrable from `a` to `c`, has Stieltjes integral `L` from `a` to `b`
+and `L'` from `b` to `c` then `f` has Stieltjes integral `L + L'` from `a` to `c`.  No ordering
+is assumed in `a`, `b`, `c` in the final statement of the theorem. -/
 private theorem HasStieltjesIntegral'.add_adjacent [CompleteSpace G]
     {f : ℝ → E} {g : ℝ → F} {L L' : G} {c : ℝ}
     (hab : a < b) (hbc : b < c)
