@@ -7,6 +7,7 @@ Authors: Jaume de Dios, Bogdan Georgiev, Harald Helfgott, Terence Tao
 module
 
 public import Mathlib.Analysis.BoxIntegral.Basic
+public import Mathlib.Analysis.BoxIntegral.Partition.Basic
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.Analysis.Calculus.ContDiff.Defs
@@ -124,7 +125,54 @@ lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
   ext
   simp [Ioc, Box.mem_def]
 
+
 end Stieltjes
+
+
+
+namespace BoxIntegral.BoundaryPoints
+
+open BoxIntegral Stieltjes
+
+
+noncomputable def toPartition {N : ℕ}
+    (x : Fin (N + 1) → ℝ)
+    (hx : StrictMono x) : Prepartition (Ioc (x 0) (x (Fin.last N))) where
+  boxes := by
+    classical
+    exact (Finset.univ : Finset (Fin N)).image fun i ↦ Ioc (x i.castSucc) (x i.succ)
+  le_of_mem' := by sorry
+  pairwiseDisjoint := by sorry
+
+theorem toPartition.IsPartition {N : ℕ} {a b : ℝ} (hab : a < b)
+    (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+    (toPartition x hx).IsPartition := by
+  sorry
+
+noncomputable def exist_boundary_points
+    {a b : ℝ} (hab : a < b)
+    (π : Prepartition (Ioc a b))
+    (hπ : π.IsPartition):
+    ∃ (N : ℕ) (x : Fin (N + 1) → ℝ) (hx : StrictMono x),
+      x 0 = a ∧ x (Fin.last N) = b := by
+  sorry
+
+noncomputable def ofPartition
+    {a b : ℝ} (hab : a<b)
+    (π : Prepartition (Ioc a b))
+    (hπ : π.IsPartition) :
+    (Fin (Finset.card π.boxes + 1) → ℝ) := by
+  sorry
+
+noncomputable def ofPartition_strictMono
+    {a b : ℝ} (hab : a < b)
+    (π : Prepartition (Ioc a b))
+    (hπ : π.IsPartition) :
+    StrictMono (BoundaryPoints.ofPartition hab π hπ) := by
+  sorry
+
+
+end BoxIntegral.BoundaryPoints
 
 namespace BoxIntegral.BoxAdditiveMap
 
