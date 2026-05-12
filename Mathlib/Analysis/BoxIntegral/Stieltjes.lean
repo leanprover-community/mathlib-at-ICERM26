@@ -78,12 +78,59 @@ See the comment near `HasStieltjesIntegral` for details.
 Stieltjes integral, Riemann–Stieltjes, bounded variation
 -/
 
+@[expose] public section
 
 namespace BoxIntegral.BoxAdditiveMap
 
+/- TODO (upstream): the declarations below up to `ofDiff` are *not* Stieltjes-specific. They
+fill in gaps in the `BoxAdditiveMap` API in
+`Mathlib.Analysis.BoxIntegral.Partition.Additive`:
+* the `@[ext]` lemma `ext_funLike`;
+* the `_apply` simp lemmas `add_apply`, `smul_apply` (companions to the existing
+  `@[simps -fullyApplied]` `Zero` instance);
+* the `Neg` and `Sub` instances when `M : AddCommGroup` (and the matching `neg_apply` /
+  `sub_apply` simp lemmas), alongside the existing `Zero` / `Add` / `SMul` / `AddCommMonoid`
+  instances. A full `AddCommGroup (ι →ᵇᵃ[I₀] M)` instance (e.g. via
+  `Function.Injective.addCommGroup` on `DFunLike.coe`) would also be natural.
+Once these land upstream the local declarations here should be removed. -/
+
+@[ext]
+theorem ext_funLike {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
+    {f g : ι →ᵇᵃ[I₀] M} (h : ∀ J, f J = g J) : f = g :=
+  DFunLike.ext _ _ h
+
+@[simp]
+lemma add_apply {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
+    (f g : ι →ᵇᵃ[I₀] M) (J : Box ι) : (f + g) J = f J + g J := rfl
+
+@[simp]
+lemma smul_apply {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
+    {R : Type*} [Monoid R] [DistribMulAction R M]
+    (c : R) (f : ι →ᵇᵃ[I₀] M) (J : Box ι) : (c • f) J = c • (f J) := rfl
+
+variable {M : Type*} [AddCommGroup M]
+
+instance {ι : Type*} {I₀ : WithTop (Box ι)} : Neg (ι →ᵇᵃ[I₀] M) :=
+  ⟨fun f =>
+    ⟨-(f : Box ι → M), fun I hI π hπ => by
+      simp only [Pi.neg_apply, Finset.sum_neg_distrib, sum_partition_boxes _ hI hπ]⟩⟩
+
+instance {ι : Type*} {I₀ : WithTop (Box ι)} : Sub (ι →ᵇᵃ[I₀] M) :=
+  ⟨fun f g =>
+    ⟨(f : Box ι → M) - g, fun I hI π hπ => by
+      simp only [Pi.sub_apply, Finset.sum_sub_distrib, sum_partition_boxes _ hI hπ]⟩⟩
+
+@[simp]
+lemma neg_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f : ι →ᵇᵃ[I₀] M) (J : Box ι) :
+    (-f) J = -(f J) := rfl
+
+@[simp]
+lemma sub_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f g : ι →ᵇᵃ[I₀] M) (J : Box ι) :
+    (f - g) J = f J - g J := rfl
+
 /-- If `g : ℝ → M` is a map, `ofDiff g : BoxAdditiveMap (Fin 1) M ⊤` is the box additive map that
 sends a box `J` to `g (J.upper 0) - g (J.lower 0)`. -/
-def ofDiff {M : Type*} [AddCommGroup M] (g : ℝ → M) : (Fin 1) →ᵇᵃ M :=
+def ofDiff (g : ℝ → M) : (Fin 1) →ᵇᵃ M :=
   ofMapSplitAdd
     (fun J : Box (Fin 1) => g (J.upper 0) - g (J.lower 0)) ⊤
     (by
@@ -91,6 +138,47 @@ def ofDiff {M : Type*} [AddCommGroup M] (g : ℝ → M) : (Fin 1) →ᵇᵃ M :=
       fin_cases i
       rw [Box.splitLower_def hx, Box.splitUpper_def hx]
       simp [Option.elim'])
+
+@[simp]
+lemma ofDiff_apply (g : ℝ → M) (J : Box (Fin 1)) :
+    ofDiff g J = g (J.upper 0) - g (J.lower 0) := rfl
+
+@[simp]
+lemma ofDiff_zero : ofDiff (0 : ℝ → M) = 0 := by
+  ext J
+  simp
+
+@[simp]
+lemma ofDiff_add (g h : ℝ → M) : ofDiff (g + h) = ofDiff g + ofDiff h := by
+  ext J
+  simp
+  abel
+
+@[simp]
+lemma ofDiff_smul {R : Type*} [Monoid R] [DistribMulAction R M]
+    (c : R) (g : ℝ → M) : ofDiff (c • g) = c • ofDiff g := by
+  ext J
+  simp [smul_sub]
+
+@[simp]
+lemma ofDiff_neg (g : ℝ → M) : ofDiff (-g) = -ofDiff g := by
+  ext J
+  simp
+  abel
+
+@[simp]
+lemma ofDiff_sub (g h : ℝ → M) : ofDiff (g - h) = ofDiff g - ofDiff h := by
+  ext J
+  simp
+  abel
+
+/-- `ofDiff` commutes with `BoxAdditiveMap.map` along an `AddMonoidHom`: postcomposing the
+differential `ofDiff g` by `φ : M →+ N` is the same as taking the differential of `φ ∘ g`. -/
+@[simp]
+lemma map_ofDiff {N : Type*} [AddCommGroup N] (g : ℝ → M) (φ : M →+ N) :
+    (ofDiff g).map φ = ofDiff (φ ∘ g) := by
+  ext J
+  simp [map_sub]
 
 end BoxIntegral.BoxAdditiveMap
 
