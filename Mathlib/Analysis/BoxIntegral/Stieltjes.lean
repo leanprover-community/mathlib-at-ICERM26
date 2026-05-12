@@ -19,15 +19,15 @@ public import Mathlib.Analysis.Calculus.ContDiff.Defs
 
 namespace BoxIntegral.BoxAdditiveMap
 
-/-- If `g : ℝ → M` is a map, `ofDiff g : BoxAdditiveMap Unit M ⊤` is the box additive map that
-sends a box `J` to `g (J.upper ()) - g (J.lower ())`. -/
+/-- If `g : ℝ → M` is a map, `ofDiff g : BoxAdditiveMap (Fin 1) M ⊤` is the box additive map that
+sends a box `J` to `g (J.upper 0) - g (J.lower 0)`. -/
 def ofDiff {M : Type*} [AddCommGroup M] (g : ℝ → M) :
-    BoxAdditiveMap Unit M ⊤ :=
+    BoxAdditiveMap (Fin 1) M ⊤ :=
   ofMapSplitAdd
-    (fun J : Box Unit => g (J.upper ()) - g (J.lower ())) ⊤
+    (fun J : Box (Fin 1) => g (J.upper 0) - g (J.lower 0)) ⊤
     (by
       intro I _ i x hx
-      cases i
+      fin_cases i
       rw [Box.splitLower_def hx, Box.splitUpper_def hx]
       simp [Option.elim'])
 
@@ -38,7 +38,7 @@ open BoxIntegral
 namespace Stieltjes
 
 /-- The interval (a, b]. Returns the dummy interval (0, 1] if a ≥ b. -/
-noncomputable def interval (a b : ℝ) : Box Unit :=
+noncomputable def interval (a b : ℝ) : Box (Fin 1) :=
   if h : a < b then
     { lower := fun _ ↦ a
       upper := fun _ ↦ b
@@ -77,11 +77,12 @@ and flag this as a possible future refinement. -/
 map `B : E → F → G` and endpoints `a`, `b` takes values in `G`. -/
 def HasStieltjesIntegral (f : ℝ → E) (g : ℝ → F) (L : G) : Prop :=
   BoxIntegral.HasIntegral (Stieltjes.interval a b) IntegrationParams.Riemann
-    (fun x ↦ f (x ())) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) L
+    (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) L
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
-lemma variation_deriv_le_variation (g : ℝ → F) (hg : BoundedVariationOn g (Set.Icc a b))
+lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
+    (hg : BoundedVariationOn g (Set.Icc a b))
     (π : BoxIntegral.Prepartition (interval a b)) :
     ∑ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
       ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
@@ -94,7 +95,7 @@ lemma integrable_of_continuousOn_of_boundedVariationOn
     (f : ℝ → E) (g : ℝ → F)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
     BoxIntegral.Integrable (interval a b) IntegrationParams.Riemann
-      (fun x ↦ f (x ())) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by sorry
+      (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by sorry
 
 /-! ## Main theorems -/
 
@@ -122,7 +123,7 @@ theorem variation_of_derivative {g : ℝ → F} (hgdiff : ContDiffOn ℝ 1 g (Se
 /-- Placeholder abbreviation; there may be a better spelling for this. -/
 abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
   BoxIntegral.Integrable (interval a b) IntegrationParams.Riemann
-    (fun x ↦ f (x ())) BoxAdditiveMap.volume
+    (fun x ↦ f (x 0)) BoxAdditiveMap.volume
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
