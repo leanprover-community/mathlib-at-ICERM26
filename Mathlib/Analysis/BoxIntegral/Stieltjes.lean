@@ -72,6 +72,9 @@ See the comment near `HasStieltjesIntegral` for details.
 
 * Develop a higher-dimensional Stieltjes integral
 * Develop a Stieltjes integral based around `Ico` intervals rather than `Ioc` intervals
+* Change of variables formula wrt monotone substitutions
+* Interpretation of `ofDiff` as a measure (assuming monotonicity)
+* Interpretation of `ofDiff` as a signed measure (assuming bounded variation)
 
 ## Tags
 
@@ -334,6 +337,12 @@ theorem HasStieltjesIntegral.stieltjesIntegrable {f : ℝ → E} {g : ℝ → F}
     (h : HasStieltjesIntegral a b B f g L) : StieltjesIntegrable a b B f g :=
   ⟨L, h⟩
 
+/-- A chosen witness extracted from `StieltjesIntegrable`. -/
+protected theorem StieltjesIntegrable.hasStieltjesIntegral {f : ℝ → E} {g : ℝ → F}
+    (h : StieltjesIntegrable a b B f g) :
+    HasStieltjesIntegral a b B f g h.choose :=
+  h.choose_spec
+
 /-- If `HasStieltjesIntegral a b B f g L`, then `stieltjesIntegral a b B f g = L`. -/
 theorem HasStieltjesIntegral.stieltjesIntegral_eq {f : ℝ → E} {g : ℝ → F} {L : G}
     (h : HasStieltjesIntegral a b B f g L) : stieltjesIntegral a b B f g = L := by
@@ -410,6 +419,52 @@ theorem HasStieltjesIntegral.smul_right {f : ℝ → E} {g : ℝ → F} {L : G}
   have heq : (fun x : ℝ ↦ B.flip ((c • g) x)) = c • (fun x ↦ B.flip (g x)) := by ext; simp
   rw [heq, BoxIntegral.BoxAdditiveMap.ofDiff_smul]
   exact h.smul_vol c
+
+/-! ### Integrability in the integrand -/
+
+theorem StieltjesIntegrable.zero_left {g : ℝ → F} : StieltjesIntegrable a b B 0 g :=
+  (HasStieltjesIntegral.zero_left a b B).stieltjesIntegrable
+
+theorem StieltjesIntegrable.add_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
+    (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
+    StieltjesIntegrable a b B (f₁ + f₂) g :=
+  (h₁.hasStieltjesIntegral.add_left a b B h₂.hasStieltjesIntegral).stieltjesIntegrable
+
+theorem StieltjesIntegrable.neg_left {f : ℝ → E} {g : ℝ → F}
+    (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable a b B (-f) g :=
+  (h.hasStieltjesIntegral.neg_left a b B).stieltjesIntegrable
+
+theorem StieltjesIntegrable.sub_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
+    (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
+    StieltjesIntegrable a b B (f₁ - f₂) g :=
+  (h₁.hasStieltjesIntegral.sub_left a b B h₂.hasStieltjesIntegral).stieltjesIntegrable
+
+theorem StieltjesIntegrable.smul_left {f : ℝ → E} {g : ℝ → F}
+    (h : StieltjesIntegrable a b B f g) (c : ℝ) : StieltjesIntegrable a b B (c • f) g :=
+  (h.hasStieltjesIntegral.smul_left a b B c).stieltjesIntegrable
+
+/-! ### Integrability in the integrator -/
+
+theorem StieltjesIntegrable.zero_right {f : ℝ → E} : StieltjesIntegrable a b B f 0 :=
+  (HasStieltjesIntegral.zero_right a b B).stieltjesIntegrable
+
+theorem StieltjesIntegrable.add_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
+    (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
+    StieltjesIntegrable a b B f (g₁ + g₂) :=
+  (h₁.hasStieltjesIntegral.add_right a b B h₂.hasStieltjesIntegral).stieltjesIntegrable
+
+theorem StieltjesIntegrable.neg_right {f : ℝ → E} {g : ℝ → F}
+    (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable a b B f (-g) :=
+  (h.hasStieltjesIntegral.neg_right a b B).stieltjesIntegrable
+
+theorem StieltjesIntegrable.sub_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
+    (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
+    StieltjesIntegrable a b B f (g₁ - g₂) :=
+  (h₁.hasStieltjesIntegral.sub_right a b B h₂.hasStieltjesIntegral).stieltjesIntegrable
+
+theorem StieltjesIntegrable.smul_right {f : ℝ → E} {g : ℝ → F}
+    (h : StieltjesIntegrable a b B f g) (c : ℝ) : StieltjesIntegrable a b B f (c • g) :=
+  (h.hasStieltjesIntegral.smul_right a b B c).stieltjesIntegrable
 
 /-! ## Auxiliary lemmas -/
 
