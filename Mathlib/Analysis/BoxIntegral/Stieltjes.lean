@@ -10,6 +10,7 @@ was conducted.
 module
 
 public import Mathlib.Analysis.BoxIntegral.Basic
+public import Mathlib.Analysis.BoxIntegral.Partition.Basic
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.Analysis.Calculus.ContDiff.Defs
@@ -132,6 +133,39 @@ lemma mem_Ioc {a b : ℝ} (hab : a < b) (x : Fin 1 → ℝ) : x ∈ Ioc a b ↔ 
   simp [Box.mem_def, Ioc.upper hab, Ioc.lower hab]
 
 end Stieltjes
+
+
+
+namespace BoxIntegral.BoundaryPoints
+
+open BoxIntegral Stieltjes
+
+noncomputable def toPartition {N : ℕ} {a b : ℝ}
+    (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+    (ha : (x 0) = a) (hb : x (Fin.last N) = b) :
+    Prepartition (Ioc a b) where
+  boxes := by
+    classical
+    exact (Finset.univ : Finset (Fin N)).image fun i ↦ Ioc (x i.castSucc) (x i.succ)
+  le_of_mem' := by sorry
+  pairwiseDisjoint := by sorry
+
+theorem toPartition.IsPartition {N : ℕ} {a b : ℝ} (hab : a < b)
+    (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+    (ha : (x 0) = a) (hb : x (Fin.last N) = b):
+    (toPartition x hx ha hb).IsPartition := by
+  sorry
+
+theorem fromPartition
+    {a b : ℝ} (hab : a < b)
+    (π : Prepartition (Ioc a b))
+    (hπ : π.IsPartition):
+    letI N := Finset.card π.boxes
+    ∃ (x : Fin (N + 1) → ℝ) (hx : StrictMono x) (ha : (x 0) = a) (hb : x (Fin.last N) = b),
+     π = toPartition x hx ha hb := by
+  sorry
+
+end BoxIntegral.BoundaryPoints
 
 namespace BoxIntegral.BoxAdditiveMap
 
