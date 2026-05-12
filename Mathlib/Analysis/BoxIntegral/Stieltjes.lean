@@ -169,7 +169,7 @@ theorem HasStieltjesIntegral.stieltjesIntegral_eq {f : ℝ → E} {g : ℝ → F
   classical
   have hI : StieltjesIntegrable a b B f g := h.stieltjesIntegrable
   simp only [stieltjesIntegral, dif_pos hI]
-  exact hI.choose_spec.unique _ h
+  exact hI.choose_spec.unique B L h
 
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
