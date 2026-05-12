@@ -30,11 +30,17 @@ Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Append
   dummy box when `a ≥ b`).
 * `HasStieltjesIntegral a b B f g L`: the predicate asserting that `L : G` is the
   Riemann–Stieltjes integral of `f` against `g`, paired by the bilinear map `B`, over `(a, b]`.
+* `StieltjesIntegrable a b B f g`: existence of the integral, i.e. some `L` with
+  `HasStieltjesIntegral a b B f g L`.
+* `stieltjesIntegral a b B f g`: the integral as a function, returning `0` on non-integrable
+  inputs (analogous to `BoxIntegral.integral`, `MeasureTheory.integral`, etc.).
 * `Stieltjes.RiemannIntegrable a b f`: a placeholder predicate for Riemann integrability of
   `f` on `(a, b]`.
 
 ## Main theorems
 
+* `HasStieltjesIntegral.unique`: the value `L` of the Riemann–Stieltjes integral, when it
+  exists, is unique.
 * `Stieltjes.exists_of_continuousOn_of_boundedVariationOn` (Theorem A.1): if `f` is continuous
   and `g` has bounded variation on `[a, b]`, then the Riemann–Stieltjes integral exists.
 * `Stieltjes.integration_by_parts` (Theorem A.2): integration by parts.
@@ -62,6 +68,11 @@ See the comment near `HasStieltjesIntegral` for details.
 * H. L. Montgomery and R. C. Vaughan, *Multiplicative Number Theory I: Classical Theory*,
   Cambridge Studies in Advanced Mathematics 97, Cambridge University Press, 2007 (Appendix A).
 
+## TODO
+
+* Develop a higher-dimensional Stieltjes integral
+* Develop a Stieltjes integral based around `Ico` intervals rather than `Ioc` intervals
+
 ## Tags
 
 Stieltjes integral, Riemann–Stieltjes, bounded variation
@@ -87,7 +98,7 @@ open BoxIntegral ContinuousLinearMap
 
 namespace Stieltjes
 
-/-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the dummy interval `(0, 1]` if `a ≥ b`. -/
+/-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(0, 1]` if `a ≥ b`. -/
 noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
   if h : a < b then
     { lower := fun _ ↦ a
@@ -129,6 +140,38 @@ def HasStieltjesIntegral (f : ℝ → E) (g : ℝ → F) (L : G) : Prop :=
   HasIntegral (Ioc a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) L
 
+/-- `StieltjesIntegrable a b B f g` asserts that the Riemann–Stieltjes integral of `f` against
+`g` paired by `B` over `(a, b]` exists, i.e. some `L` satisfies `HasStieltjesIntegral a b B f g L`.
+-/
+def StieltjesIntegrable (f : ℝ → E) (g : ℝ → F) : Prop :=
+  ∃ L, HasStieltjesIntegral a b B f g L
+
+open Classical in
+/-- The Riemann–Stieltjes integral of `f` against `g` paired by `B` over `(a, b]`. Returns the
+junk value `0` if no such integral exists. -/
+noncomputable def stieltjesIntegral (f : ℝ → E) (g : ℝ → F) : G :=
+  if h : StieltjesIntegrable a b B f g then h.choose else 0
+
+/-- Uniqueness: the Riemann–Stieltjes integral, when it exists, is unique. -/
+theorem HasStieltjesIntegral.unique {f : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
+    (h₁ : HasStieltjesIntegral a b B f g L₁) (h₂ : HasStieltjesIntegral a b B f g L₂) :
+    L₁ = L₂ :=
+  HasIntegral.unique h₁ h₂
+
+/-- The existence of a Riemann–Stieltjes integral implies `StieltjesIntegrable`. -/
+theorem HasStieltjesIntegral.stieltjesIntegrable {f : ℝ → E} {g : ℝ → F} {L : G}
+    (h : HasStieltjesIntegral a b B f g L) : StieltjesIntegrable a b B f g :=
+  ⟨L, h⟩
+
+/-- If `HasStieltjesIntegral a b B f g L`, then `stieltjesIntegral a b B f g = L`. -/
+theorem HasStieltjesIntegral.stieltjesIntegral_eq {f : ℝ → E} {g : ℝ → F} {L : G}
+    (h : HasStieltjesIntegral a b B f g L) : stieltjesIntegral a b B f g = L := by
+  classical
+  have hI : StieltjesIntegrable a b B f g := h.stieltjesIntegrable
+  simp only [stieltjesIntegral, dif_pos hI]
+  exact hI.choose_spec.unique _ h
+
+
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
@@ -167,7 +210,7 @@ theorem integration_by_parts {f : ℝ → E} {g : ℝ → F} {L : G}
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
-theorem variation_of_derivative {g : ℝ → F} (hgdiff : ContDiffOn ℝ 1 g (Set.Icc a b)) :
+theorem variation_of_derivative {g : ℝ → F} (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) :
     (eVariationOn g (Set.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
 
 /-- Placeholder abbreviation; there may be a better spelling for this. -/
@@ -178,16 +221,16 @@ abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
 theorem integral_of_derivative {f : ℝ → E} {g : ℝ → F}
-    (hgdiff : ContDiffOn ℝ 1 g (Set.Icc a b))
-    (hfint : RiemannIntegrable a b f) :
+    (hg : ContDiffOn ℝ 1 g (Set.Icc a b))
+    (hf : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
 
 /-- Theorem A.4. Suppose that g has bounded variation, and put g∗(x) = Varₐˣ g. Then
 ‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dg∗(x),
 provided that both integrals exist. -/
 theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G} {L' : ℝ}
-    (hgvar : BoundedVariationOn g (Set.Icc a b))
-    (hfgint : HasStieltjesIntegral a b B f g L)
+    (hg : BoundedVariationOn g (Set.Icc a b))
+    (hfg : HasStieltjesIntegral a b B f g L)
     (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (fun x ↦ ‖f x‖)
       (fun x ↦ (eVariationOn g (Set.Icc a x)).toReal) L') :
     ‖L‖ ≤ ‖B‖ * L' := by sorry
