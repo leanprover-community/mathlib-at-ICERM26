@@ -32,5 +32,10 @@ structure IsSmoothlySimplyConnected (s : Set E) : Prop where
     ∃ φ : ContinuousMap.Homotopy γ₁ γ₂, IsC2AffineHomotopyIn φ s
 
 theorem IsOpen.isSmoothlySimplyConnected {s : Set ℂ} (hs : IsOpen s) (hs' : IsSimplyConnected s) :
-    IsSmoothlySimplyConnected s := by
-  sorry
+    IsSmoothlySimplyConnected s where
+      exists_smooth_path x hx y hy := by
+
+        sorry
+      exists_smooth_homotopy x hx y hy := by
+
+        sorry
