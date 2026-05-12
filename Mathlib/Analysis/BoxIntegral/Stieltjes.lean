@@ -29,7 +29,7 @@ def deriv {M : Type*} [AddCommGroup M] (g : ℝ → M) :
       simp [Option.elim'])
 
 
-/-- The interval (a,b]. Returns the dummy interval (0, 1] if a ≥ b. -/
+/-- The interval [a,b). Returns the dummy interval [0, 1) if a ≥ b. -/
 noncomputable def interval (a b : ℝ) : Box Unit :=
   if h : a < b then
     { lower := fun _ ↦ a
@@ -41,37 +41,71 @@ noncomputable def interval (a b : ℝ) : Box Unit :=
       lower_lt_upper := fun _ ↦ zero_lt_one }
 
 /- Our notion of Stieltjes transformation requires a choice of continuous bilinear mapping from the
-ranges of `f`, `g` to the desired output range. Standard choices already available in Mathlib
-include:
-* `ContinuousLinearMap.mul ℝ A : A →L[ℝ] A →L[ℝ] A` for `A` a normed `ℝ`-algebra
-  (e.g. when `f`, `g` are both real- or both complex-valued).
-* `ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E` for scalar multiplication when `f` is real,
-  and `(ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip : E →L[ℝ] ℝ →L[ℝ] E` when `g`
-  is real.
-Use `ContinuousLinearMap.flip` to swap the argument order of any of these. -/
+ranges of `f`, `g` to the desired output range. Below we set out some standard choices. -/
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 
+/-- A version of `LinearMap.flip` for continuous linear maps. -/
+noncomputable def flip (B : E →L[ℝ] F →L[ℝ] G) : F →L[ℝ] E →L[ℝ] G :=
+  B.flip
+
+/-- Right scalar multiplication on the reals as a bilinear map.
+A suitable choice for Stieltjes integrals when `g` is real. -/
+noncomputable def smul_right : E →L[ℝ] ℝ →L[ℝ] E :=
+  ContinuousLinearMap.smulRightL ℝ ℝ E (ContinuousLinearMap.id ℝ ℝ)
+
+/-- Left scalar multiplication on the reals as a bilinear map.
+A suitable choice for Stieltjes integrals when `f` is real. -/
+noncomputable def smul_left : ℝ →L[ℝ] F →L[ℝ] F := flip smul_right
+
+/-- Normed algebra multiplication (e.g., on ℝ or ℂ) as a bilinear map.
+A suitable choice for Stieltjes integrals when `f`, `g` are both real or both complex. -/
+noncomputable def mul {A : Type*} [NormedRing A] [NormedAlgebra ℝ A] :
+  A →L[ℝ] A →L[ℝ] A :=
+  ContinuousLinearMap.mul ℝ A
+
 /-- The Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear
  map `B : E → F → G` and endpoints `a`, `b` takes values in `G`. -/
 def HasIntegral (f : ℝ → E) (g : ℝ → F) (L : G) : Prop :=
   BoxIntegral.HasIntegral (interval a b) IntegrationParams.Riemann (fun x ↦ f (x ()))
-  (deriv (fun x ↦ B.flip (g x))) L
+  (deriv (fun x ↦ (flip B) (g x))) L
+
+/-- For any valid box partition of [a, b], the sum of the norm of the
+differential `deriv g` is bounded by the total variation of g on the interval. -/
+lemma variation_deriv_le_variation (g : ℝ → F) (hg : BoundedVariationOn g (Set.Icc a b))
+  (π : BoxIntegral.Prepartition (interval a b)) :
+  ∑ J ∈ π.boxes, ‖(deriv (fun x ↦ B.flip (g x))) J‖ ≤
+    ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
+  sorry
+
+/-- Prove that the Riemann-Stieltjes integrand is Box-Integrable.
+Use the Cauchy criterion and the uniform continuity of f on [a, b].
+We separate integrability for more modular API. -/
+lemma integrable_of_continuous_of_bounded_variation
+  (f : ℝ → E) (g : ℝ → F)
+  (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
+  BoxIntegral.Integrable (interval a b) IntegrationParams.Riemann
+    (fun x ↦ f (x ())) (deriv (fun x ↦ (flip B) (g x))) := by sorry
+
+/- --- MAIN THEOREMS --- -/
 
 /-- Theorem A.1 of Montgomery Vaughan: if `f` is continuous and `g` is bounded variation
 then the Stieltjes integral exists. -/
 theorem exists_of_continuous_of_bounded_variation
   (f : ℝ → E) (g : ℝ → F)
   (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
-  ∃ L, Stieltjes.HasIntegral a b B f g L := by sorry
+  ∃ L, Stieltjes.HasIntegral a b B f g L := by
+  -- Use our helper to prove it is integrable
+  have hint := integrable_of_continuous_of_bounded_variation a b B f g hf hg
+  exact ⟨_, BoxIntegral.Integrable.hasIntegral hint⟩
 
 /-- Theorem A.2 of Montgomery Vaughan: if ∫_a^b f d g exists, then ∫_a^b g d f exists and
 ∫_a^b g d f = g(b) * f(b) - g(a) * f(a) - ∫_a^b f d g. -/
 theorem integration_by_parts {f : ℝ → E} {g : ℝ → F} {L : G}
   (hL : Stieltjes.HasIntegral a b B f g L) :
-  Stieltjes.HasIntegral a b B.flip g f (B (f b) (g b) - B (f a) (g a) - L) := by sorry
+  Stieltjes.HasIntegral a b (flip B) g f (B (f b) (g b) - B (f a) (g a) - L) := by sorry
 
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Var[a,b]g = ∫_a^b |g'(x)|\ dx
@@ -98,20 +132,18 @@ theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F}
   (hgvar : BoundedVariationOn g (Set.Icc a b)) (L : G) (L' M : ℝ)
   (hfgint : HasIntegral a b B f g L)
   (hbound : ∀ e f, ‖B e f‖ ≤ M * ‖e‖ * ‖f‖)
-  (hfabs_gstar : HasIntegral a b (ContinuousLinearMap.mul ℝ ℝ) (fun x ↦ ‖f x‖)
+  (hfabs_gstar : HasIntegral a b mul (fun x ↦ ‖f x‖)
     (fun x ↦ (eVariationOn g (Set.Icc a x)).toReal) L') :
   ‖L‖ ≤ M * L' := by sorry
 
 /-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f d ⌊x⌋ -/
 theorem sum_le_integral_nat_floor (f : ℝ → E) :
-  HasIntegral a b (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
-    (fun x ↦ Nat.floor x)
-    (∑ n ∈ Finset.Ico (Nat.ceil a) (Nat.ceil b), f n) := by sorry
+  HasIntegral a b smul_right f (fun x ↦ Nat.floor x)
+  (∑ n ∈ Finset.Ico (Nat.ceil a) (Nat.ceil b), f n) := by sorry
 
 theorem sum_le_integral_floor (f : ℝ → E) :
-  HasIntegral a b (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
-    (fun x ↦ Int.floor x)
-    (∑ n ∈ Finset.Ico (Int.ceil a) (Int.ceil b), f n) := by sorry
+  HasIntegral a b smul_right f (fun x ↦ Int.floor x)
+  (∑ n ∈ Finset.Ico (Int.ceil a) (Int.ceil b), f n) := by sorry
 
 
 end Stieltjes
