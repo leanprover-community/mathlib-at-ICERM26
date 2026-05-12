@@ -879,7 +879,7 @@ private theorem HasStieltjesIntegral.add_adjacent_prelim [CompleteSpace G]
   simp only [hab, of_lt, hbc, hab.trans hbc] at h₁ h₂ h₃ ⊢
   exact HasStieltjesIntegral'.add_adjacent _ _ _ hab hbc ⟨L'', h₃⟩ h₁ h₂
 
-
+/-- Note: the proof here has an excessive amount of case splitting. -/
 theorem HasStieltjesIntegral.add_adjacent [CompleteSpace G]
     {f : ℝ → E} {g : ℝ → F} {L L' : G} {c : ℝ}
     (h : StieltjesIntegrable a c B f g)
@@ -898,24 +898,33 @@ theorem HasStieltjesIntegral.add_adjacent [CompleteSpace G]
   have h₁' := h₁.symm
   have h₂' := h₂.symm
   have h₃' := h₃.symm
-  rcases (show a < b ∨ b < a by order) with hab | hab <;>
-  rcases (show b < c ∨ c < b by order) with hbc | hbc <;>
-  rcases (show a < c ∨ c < a by order) with hac | hac <;>
+  convert h₃
+  rcases lt_or_gt_of_ne hab with hab | hba <;>
+  rcases lt_or_gt_of_ne hbc with hbc | hcb <;>
+  rcases lt_or_gt_of_ne hac with hac | hca <;>
   try order
   · simp_all [add_adjacent_prelim _ _ _ hab hbc h₁ h₂ h₃]
-  · convert h₃
-    have := add_adjacent_prelim _ _ _ hac hbc h₃ h₂' h₁
+  · have := add_adjacent_prelim _ _ _ hac hcb h₃ h₂' h₁
     grind
-  · convert h₃
-    have := add_adjacent_prelim _ _ _ hac hab h₃' h₁ h₂'
+  · have := add_adjacent_prelim _ _ _ hca hab h₃' h₁ h₂'
     grind
-  · convert h₃
-    have := add_adjacent_prelim _ _ _ hab hac h₁' h₃ h₂
+  · have := add_adjacent_prelim _ _ _ hba hac h₁' h₃ h₂
     grind
-  · simp_all [add_adjacent_prelim _ _ _ hbc hac h₂ h₃' h₁']
-  · convert h₃
-    have := add_adjacent_prelim _ _ _ hbc hab h₂' h₁' h₃'
+  · have := add_adjacent_prelim _ _ _ hbc hca h₂ h₃' h₁'
     grind
+  · have := add_adjacent_prelim _ _ _ hcb hba h₂' h₁' h₃'
+    grind
+
+theorem stieltjesIntegral.add_adjacent [CompleteSpace G]
+    {f : ℝ → E} {g : ℝ → F} {c : ℝ}
+    (h : StieltjesIntegrable a c B f g)
+    (h₁ : StieltjesIntegrable a b B f g)
+    (h₂ : StieltjesIntegrable b c B f g) :
+    ∫⟨B⟩ x in a..c, f x d g = ∫⟨B⟩ x in a..b, f x d g + ∫⟨B⟩ x in b..c, f x d g := by
+  have h₁' := h₁.hasStieltjesIntegral _ _ B
+  have h₂' := h₂.hasStieltjesIntegral _ _ B
+  have := HasStieltjesIntegral.add_adjacent _ _ _ h h₁' h₂'
+  rwa [h.hasStieltjesIntegral_iff] at this
 
 /-! ### Integrability in the integrand -/
 
