@@ -56,8 +56,46 @@ theorem IsOpen.isSmoothlySimplyConnected {s : Set ℂ} (hs : IsOpen s) (hs' : Is
         have hh1 : h 1 = y := by simp [h]
         have hh_smooth : ContDiff ℝ ∞ h := by fun_prop
         have hh_range (t : I) : h t ∈ s := by
-
-          sorry
+          apply hδs
+          rw [Metric.mem_thickening_iff]
+          refine ⟨γ₀ t, Set.mem_range_self t, ?_⟩
+          -- h t - g t = (1-t)•(x - g 0) + t•(y - g 1)
+          have hdist_hg : dist (h ↑t) (g ↑t) =
+              ‖(1 - (t : ℝ)) • (x - g 0) + (t : ℝ) • (y - g 1)‖ := by
+            simp only [h, dist_eq_norm]; congr 1; ring
+          -- g t is within δ/3 of γ₀ t
+          have hgt : dist (g ↑t) (γ₀ t) < δ / 3 := by
+            have := hg_dist (t : ℝ)
+            rwa [Path.extend_extends' γ₀ t] at this
+          -- endpoints: x - g 0 and y - g 1 are each < δ/3 in norm
+          have hx_err : ‖x - g 0‖ < δ / 3 := by
+            have := hg_dist 0; rw [Path.extend_zero, dist_comm] at this
+            rwa [dist_eq_norm] at this
+          have hy_err : ‖y - g 1‖ < δ / 3 := by
+            have := hg_dist 1; rw [Path.extend_one, dist_comm] at this
+            rwa [dist_eq_norm] at this
+          -- correction is a convex combination, so also < δ/3
+          have hcorr : ‖(1 - (t : ℝ)) • (x - g 0) + (t : ℝ) • (y - g 1)‖ < δ / 3 := by
+            have ht0 : 0 ≤ (t : ℝ) := t.2.1
+            have ht1 : (t : ℝ) ≤ 1 := t.2.2
+            have hmax : max ‖x - g 0‖ ‖y - g 1‖ < δ / 3 := max_lt hx_err hy_err
+            calc ‖(1 - (t : ℝ)) • (x - g 0) + (t : ℝ) • (y - g 1)‖
+                ≤ ‖(1 - (t : ℝ)) • (x - g 0)‖ + ‖(t : ℝ) • (y - g 1)‖ := norm_add_le _ _
+              _ = (1 - (t : ℝ)) * ‖x - g 0‖ + (t : ℝ) * ‖y - g 1‖ := by
+                    rw [norm_smul, norm_smul, Real.norm_of_nonneg (by linarith),
+                        Real.norm_of_nonneg ht0]
+              _ ≤ (1 - (t : ℝ)) * max ‖x - g 0‖ ‖y - g 1‖ +
+                    (t : ℝ) * max ‖x - g 0‖ ‖y - g 1‖ := by
+                    gcongr
+                    · exact le_max_left _ _
+                    · exact le_max_right _ _
+              _ = max ‖x - g 0‖ ‖y - g 1‖ := by ring
+              _ < δ / 3 := hmax
+          -- combine
+          calc dist (h ↑t) (γ₀ t)
+              ≤ dist (h ↑t) (g ↑t) + dist (g ↑t) (γ₀ t) := dist_triangle _ _ _
+            _ < δ / 3 + δ / 3 := by rw [hdist_hg]; linarith
+            _ < δ := by linarith
         let γ : Path x y :=
           { toFun := fun t ↦ h t
             continuous_toFun := hh_smooth.continuous.comp continuous_subtype_val
