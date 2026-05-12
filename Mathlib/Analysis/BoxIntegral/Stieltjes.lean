@@ -175,6 +175,83 @@ lemma map_ofDiff {N : Type*} [AddCommGroup N] (g : ℝ → M) (φ : M →+ N) :
 
 end BoxIntegral.BoxAdditiveMap
 
+namespace BoxIntegral
+
+/- TODO (upstream): the lemmas below extend `BoxIntegral.HasIntegral`'s integrand-side linearity
+(`HasIntegral.add`, `.neg`, `.sub`, `.smul`, `hasIntegral_zero` in `BoxIntegral/Basic.lean`) to
+the volume side. They belong upstream next to their integrand-side counterparts. -/
+
+variable {ι : Type*} {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  [NormedAddCommGroup F] [NormedSpace ℝ F]
+variable {I : Box ι} {l : IntegrationParams}
+
+@[simp]
+theorem integralSum_zero_vol (f : (ι → ℝ) → E) (π : TaggedPrepartition I) :
+    integralSum f (0 : ι →ᵇᵃ E →L[ℝ] F) π = 0 := by
+  simp [integralSum]
+
+@[simp]
+theorem integralSum_add_vol (f : (ι → ℝ) → E) (vol₁ vol₂ : ι →ᵇᵃ E →L[ℝ] F)
+    (π : TaggedPrepartition I) :
+    integralSum f (vol₁ + vol₂) π = integralSum f vol₁ π + integralSum f vol₂ π := by
+  simp [integralSum, BoxAdditiveMap.add_apply, ContinuousLinearMap.add_apply,
+    Finset.sum_add_distrib]
+
+@[simp]
+theorem integralSum_neg_vol (f : (ι → ℝ) → E) (vol : ι →ᵇᵃ E →L[ℝ] F)
+    (π : TaggedPrepartition I) :
+    integralSum f (-vol) π = -integralSum f vol π := by
+  simp [integralSum, BoxAdditiveMap.neg_apply, ContinuousLinearMap.neg_apply,
+    Finset.sum_neg_distrib]
+
+@[simp]
+theorem integralSum_sub_vol (f : (ι → ℝ) → E) (vol₁ vol₂ : ι →ᵇᵃ E →L[ℝ] F)
+    (π : TaggedPrepartition I) :
+    integralSum f (vol₁ - vol₂) π = integralSum f vol₁ π - integralSum f vol₂ π := by
+  simp [integralSum, BoxAdditiveMap.sub_apply, ContinuousLinearMap.sub_apply,
+    Finset.sum_sub_distrib]
+
+@[simp]
+theorem integralSum_smul_vol (c : ℝ) (f : (ι → ℝ) → E) (vol : ι →ᵇᵃ E →L[ℝ] F)
+    (π : TaggedPrepartition I) :
+    integralSum f (c • vol) π = c • integralSum f vol π := by
+  simp [integralSum, BoxAdditiveMap.smul_apply, ContinuousLinearMap.smul_apply,
+    Finset.smul_sum]
+
+variable [Fintype ι] {f : (ι → ℝ) → E}
+
+theorem hasIntegral_zero_vol : HasIntegral I l f (0 : ι →ᵇᵃ E →L[ℝ] F) 0 := by
+  unfold HasIntegral
+  rw [funext (integralSum_zero_vol f) (g := (0 : TaggedPrepartition I → F))]
+  exact tendsto_const_nhds
+
+theorem HasIntegral.add_vol {vol₁ vol₂ : ι →ᵇᵃ E →L[ℝ] F} {y₁ y₂ : F}
+    (h₁ : HasIntegral I l f vol₁ y₁) (h₂ : HasIntegral I l f vol₂ y₂) :
+    HasIntegral I l f (vol₁ + vol₂) (y₁ + y₂) := by
+  unfold HasIntegral at h₁ h₂ ⊢
+  rw [funext (integralSum_add_vol f vol₁ vol₂)]
+  exact h₁.add h₂
+
+theorem HasIntegral.neg_vol {vol : ι →ᵇᵃ E →L[ℝ] F} {y : F}
+    (h : HasIntegral I l f vol y) : HasIntegral I l f (-vol) (-y) := by
+  unfold HasIntegral at h ⊢
+  rw [funext (integralSum_neg_vol f vol)]
+  exact h.neg
+
+theorem HasIntegral.sub_vol {vol₁ vol₂ : ι →ᵇᵃ E →L[ℝ] F} {y₁ y₂ : F}
+    (h₁ : HasIntegral I l f vol₁ y₁) (h₂ : HasIntegral I l f vol₂ y₂) :
+    HasIntegral I l f (vol₁ - vol₂) (y₁ - y₂) := by
+  simpa only [sub_eq_add_neg] using h₁.add_vol h₂.neg_vol
+
+theorem HasIntegral.smul_vol {vol : ι →ᵇᵃ E →L[ℝ] F} {y : F}
+    (h : HasIntegral I l f vol y) (c : ℝ) :
+    HasIntegral I l f (c • vol) (c • y) := by
+  unfold HasIntegral at h ⊢
+  rw [funext (integralSum_smul_vol c f vol)]
+  exact (tendsto_const_nhds : Tendsto _ _ (𝓝 c)).smul h
+
+end BoxIntegral
+
 open BoxIntegral ContinuousLinearMap
 
 namespace Stieltjes
@@ -251,6 +328,73 @@ theorem HasStieltjesIntegral.stieltjesIntegral_eq {f : ℝ → E} {g : ℝ → F
   have hI : StieltjesIntegrable a b B f g := h.stieltjesIntegrable
   simp only [stieltjesIntegral, dif_pos hI]
   exact hI.choose_spec.unique a b B h
+
+/-! ### Linearity in the integrand -/
+
+theorem HasStieltjesIntegral.zero_left {g : ℝ → F} : HasStieltjesIntegral a b B 0 g 0 :=
+  hasIntegral_zero
+
+theorem HasStieltjesIntegral.add_left {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
+    (h₁ : HasStieltjesIntegral a b B f₁ g L₁) (h₂ : HasStieltjesIntegral a b B f₂ g L₂) :
+    HasStieltjesIntegral a b B (f₁ + f₂) g (L₁ + L₂) :=
+  HasIntegral.add h₁ h₂
+
+theorem HasStieltjesIntegral.neg_left {f : ℝ → E} {g : ℝ → F} {L : G}
+    (h : HasStieltjesIntegral a b B f g L) :
+    HasStieltjesIntegral a b B (-f) g (-L) :=
+  HasIntegral.neg h
+
+theorem HasStieltjesIntegral.sub_left {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
+    (h₁ : HasStieltjesIntegral a b B f₁ g L₁) (h₂ : HasStieltjesIntegral a b B f₂ g L₂) :
+    HasStieltjesIntegral a b B (f₁ - f₂) g (L₁ - L₂) :=
+  HasIntegral.sub h₁ h₂
+
+theorem HasStieltjesIntegral.smul_left {f : ℝ → E} {g : ℝ → F} {L : G}
+    (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
+    HasStieltjesIntegral a b B (c • f) g (c • L) :=
+  HasIntegral.smul h c
+
+/-! ### Linearity in the integrator -/
+
+theorem HasStieltjesIntegral.zero_right {f : ℝ → E} : HasStieltjesIntegral a b B f 0 0 := by
+  unfold HasStieltjesIntegral
+  have h : (fun x : ℝ ↦ B.flip ((0 : ℝ → F) x)) = 0 := by ext; simp
+  rw [h, map_zero]
+  exact hasIntegral_zero_vol
+
+theorem HasStieltjesIntegral.add_right {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
+    (h₁ : HasStieltjesIntegral a b B f g₁ L₁) (h₂ : HasStieltjesIntegral a b B f g₂ L₂) :
+    HasStieltjesIntegral a b B f (g₁ + g₂) (L₁ + L₂) := by
+  unfold HasStieltjesIntegral at h₁ h₂ ⊢
+  have h : (fun x : ℝ ↦ B.flip ((g₁ + g₂) x)) =
+      (fun x ↦ B.flip (g₁ x)) + (fun x ↦ B.flip (g₂ x)) := by ext; simp
+  rw [h, map_add]
+  exact h₁.add_vol h₂
+
+theorem HasStieltjesIntegral.neg_right {f : ℝ → E} {g : ℝ → F} {L : G}
+    (h : HasStieltjesIntegral a b B f g L) :
+    HasStieltjesIntegral a b B f (-g) (-L) := by
+  unfold HasStieltjesIntegral at h ⊢
+  have heq : (fun x : ℝ ↦ B.flip ((-g) x)) = -(fun x ↦ B.flip (g x)) := by ext; simp
+  rw [heq, map_neg]
+  exact h.neg_vol
+
+theorem HasStieltjesIntegral.sub_right {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
+    (h₁ : HasStieltjesIntegral a b B f g₁ L₁) (h₂ : HasStieltjesIntegral a b B f g₂ L₂) :
+    HasStieltjesIntegral a b B f (g₁ - g₂) (L₁ - L₂) := by
+  unfold HasStieltjesIntegral at h₁ h₂ ⊢
+  have h : (fun x : ℝ ↦ B.flip ((g₁ - g₂) x)) =
+      (fun x ↦ B.flip (g₁ x)) - (fun x ↦ B.flip (g₂ x)) := by ext; simp
+  rw [h, map_sub]
+  exact h₁.sub_vol h₂
+
+theorem HasStieltjesIntegral.smul_right {f : ℝ → E} {g : ℝ → F} {L : G}
+    (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
+    HasStieltjesIntegral a b B f (c • g) (c • L) := by
+  unfold HasStieltjesIntegral at h ⊢
+  have heq : (fun x : ℝ ↦ B.flip ((c • g) x)) = c • (fun x ↦ B.flip (g x)) := by ext; simp
+  rw [heq, BoxIntegral.BoxAdditiveMap.ofDiff_smul]
+  exact h.smul_vol c
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
