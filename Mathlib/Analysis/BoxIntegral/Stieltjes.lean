@@ -37,6 +37,13 @@ Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Append
 * `Stieltjes.RiemannIntegrable a b f`: a placeholder predicate for Riemann integrability of
   `f` on `(a, b]`.
 
+## Notation
+
+`∫⟨B⟩ x in a..b, f x d g` is notation for `stieltjesIntegral a b B (fun x ↦ f x) g`,
+scoped to the `Stieltjes` namespace (`open scoped Stieltjes` to make it available). It
+parallels Mathlib's `∫ x in a..b, f x ∂μ` notation for `intervalIntegral`, with the
+bilinear pairing `B` carried explicitly in angle brackets since it has no canonical default.
+
 ## Main theorems
 
 * `HasStieltjesIntegral.unique`: the value `L` of the Riemann–Stieltjes integral, when it
@@ -75,6 +82,8 @@ See the comment near `HasStieltjesIntegral` for details.
 * Change of variables formula wrt monotone substitutions
 * Interpretation of `ofDiff` as a measure (assuming monotonicity)
 * Interpretation of `ofDiff` as a signed measure (assuming bounded variation)
+* `map` lemmas for `BoxIntegral` and `stieltjesIntegral` applying homomorphisms to the various
+normed vector spaces etc.
 
 ## Tags
 
@@ -323,6 +332,15 @@ open Classical in
 junk value `0` if no such integral exists. -/
 noncomputable def stieltjesIntegral (f : ℝ → E) (g : ℝ → F) : G :=
   if h : StieltjesIntegrable a b B f g then h.choose else 0
+
+/-- Notation for the Riemann–Stieltjes integral. `∫⟨B⟩ x in a..b, f x d g` is
+`stieltjesIntegral a b B (fun x ↦ f x) g`. The bilinear pairing `B` is written explicitly inside
+angle brackets because there is no canonical choice (e.g. `ContinuousLinearMap.mul ℝ ℝ` for
+scalar-valued `f` and `g`, `(ContinuousLinearMap.lsmul ℝ ℝ).flip` when `g` is real-valued, etc.).
+The notation parallels Mathlib's `∫ x in a..b, f x ∂μ` for `intervalIntegral`. -/
+@[inherit_doc stieltjesIntegral]
+scoped notation3 "∫⟨"B"⟩ "(...)" in "a".."b", "r:60:(scoped f => f)" d "g:70 =>
+  stieltjesIntegral a b B r g
 
 /-! ## Basic API -/
 
