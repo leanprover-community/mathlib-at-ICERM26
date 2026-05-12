@@ -72,8 +72,7 @@ namespace BoxIntegral.BoxAdditiveMap
 
 /-- If `g : ℝ → M` is a map, `ofDiff g : BoxAdditiveMap (Fin 1) M ⊤` is the box additive map that
 sends a box `J` to `g (J.upper 0) - g (J.lower 0)`. -/
-def ofDiff {M : Type*} [AddCommGroup M] (g : ℝ → M) :
-    BoxAdditiveMap (Fin 1) M ⊤ :=
+def ofDiff {M : Type*} [AddCommGroup M] (g : ℝ → M) : (Fin 1) →ᵇᵃ M :=
   ofMapSplitAdd
     (fun J : Box (Fin 1) => g (J.upper 0) - g (J.lower 0)) ⊤
     (by
@@ -196,26 +195,26 @@ theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G
 /-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f d ⌊x⌋ -/
 theorem sum_eq_integral_nat_floor (f : ℝ → E) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
-      (fun x ↦ Nat.floor x)
-      (∑ n ∈ Finset.Ico (Nat.ceil a) (Nat.ceil b), f n) := by sorry
+      (fun x ↦ ⌊x⌋₊)
+      (∑ n ∈ Finset.Ico ⌈a⌉₊ ⌈b⌉₊, f n) := by sorry
 
 theorem sum_eq_integral_int_floor (f : ℝ → E) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
-      (fun x ↦ Int.floor x)
-      (∑ n ∈ Finset.Ico (Int.ceil a) (Int.ceil b), f n) := by sorry
+      (fun x ↦ ⌊x⌋)
+      (∑ n ∈ Finset.Ico ⌈a⌉ ⌈b⌉, f n) := by sorry
 
 /-- Sum of pairings `B (f n) (g n)` over natural `n ∈ (⌊a⌋, ⌊b⌋]`, expressed as a Stieltjes
 integral of `f` against the right-continuous summatory `x ↦ ∑ n ≤ x, g n`. -/
 theorem sum_eq_integral_natSummatory_le (f : ℝ → E) (g : ℕ → F) :
     HasStieltjesIntegral a b B f
-      (fun x ↦ ∑ n ∈ Finset.Iic (Nat.floor x), g n)
-      (∑ n ∈ Finset.Ioc (Nat.floor a) (Nat.floor b), B (f n) (g n)) := by sorry
+      (fun x ↦ ∑ n ∈ Finset.Iic ⌊x⌋₊, g n)
+      (∑ n ∈ Finset.Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n)) := by sorry
 
 /-- Sum of pairings `B (f n) (g n)` over natural `n ∈ [⌈a⌉, ⌈b⌉)`, expressed as a Stieltjes
 integral of `f` against the left-continuous summatory `x ↦ ∑ n < x, g n`. -/
 theorem sum_eq_integral_natSummatory_lt (f : ℝ → E) (g : ℕ → F) :
     HasStieltjesIntegral a b B f
-      (fun x ↦ ∑ n ∈ Finset.Iio (Nat.ceil x), g n)
-      (∑ n ∈ Finset.Ico (Nat.ceil a) (Nat.ceil b), B (f n) (g n)) := by sorry
+      (fun x ↦ ∑ n ∈ Finset.Iio ⌈x⌉₊, g n)
+      (∑ n ∈ Finset.Ico ⌈a⌉₊ ⌈b⌉₊, B (f n) (g n)) := by sorry
 
 end Stieltjes
