@@ -26,7 +26,7 @@ Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Append
 
 * `BoxIntegral.BoxAdditiveMap.ofDiff g`: the box-additive map associated to `g : ℝ → M`,
   sending a box `J` to `g (J.upper 0) - g (J.lower 0)`.
-* `Stieltjes.interval a b`: the half-open interval `(a, b]` as a `Box (Fin 1)` (returning a
+* `Stieltjes.Ioc a b`: the half-open interval `(a, b]` as a `Box (Fin 1)` (returning a
   dummy box when `a ≥ b`).
 * `HasStieltjesIntegral a b B f g L`: the predicate asserting that `L : G` is the
   Riemann–Stieltjes integral of `f` against `g`, paired by the bilinear map `B`, over `(a, b]`.
@@ -88,8 +88,8 @@ open BoxIntegral ContinuousLinearMap
 
 namespace Stieltjes
 
-/-- The interval (a, b]. Returns the dummy interval (0, 1] if a ≥ b. -/
-noncomputable def interval (a b : ℝ) : Box (Fin 1) :=
+/-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the dummy interval `(0, 1]` if `a ≥ b`. -/
+noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
   if h : a < b then
     { lower := fun _ ↦ a
       upper := fun _ ↦ b
@@ -114,11 +114,11 @@ variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 
-/- Endpoint convention. The underlying box `interval a b` is the half-open interval `(a, b]`,
+/- Endpoint convention. The underlying box `Ioc a b` is the half-open interval `(a, b]`,
 but most hypotheses and outputs below use `Set.Icc a b` rather than `Set.Ioc a b`. This is the
 conservative choice and is needed in several places:
 * `ContinuousOn` / `ContDiffOn` hypotheses rely on compactness of the domain (e.g. for uniform
-  continuity), which fails on `Ioc`.
+  continuity), which fails on `Set.Ioc`.
 * For a prepartition of `(a, b]` the leftmost sub-box has lower endpoint `a`, so `g a` appears
   in `BoxAdditiveMap.ofDiff g`. Bounded-variation hypotheses on `g` must therefore include `a`.
 Some occurrences below may admit a half-open weakening; for now we keep `Set.Icc` everywhere
@@ -127,14 +127,14 @@ and flag this as a possible future refinement. -/
 /-- The Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear
 map `B : E → F → G` and endpoints `a`, `b` takes values in `G`. -/
 def HasStieltjesIntegral (f : ℝ → E) (g : ℝ → F) (L : G) : Prop :=
-  HasIntegral (Stieltjes.interval a b) IntegrationParams.Riemann
+  HasIntegral (Ioc a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) L
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
     (hg : BoundedVariationOn g (Set.Icc a b))
-    (π : Prepartition (interval a b)) :
+    (π : Prepartition (Ioc a b)) :
     ∑ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
       ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
   sorry
@@ -145,7 +145,7 @@ We separate integrability for more modular API. -/
 lemma integrable_of_continuousOn_of_boundedVariationOn
     (f : ℝ → E) (g : ℝ → F)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
-    Integrable (interval a b) IntegrationParams.Riemann
+    Integrable (Ioc a b) IntegrationParams.Riemann
       (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by sorry
 
 /-! ## Main theorems -/
@@ -173,7 +173,7 @@ theorem variation_of_derivative {g : ℝ → F} (hgdiff : ContDiffOn ℝ 1 g (Se
 
 /-- Placeholder abbreviation; there may be a better spelling for this. -/
 abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
-  Integrable (interval a b) IntegrationParams.Riemann
+  Integrable (Ioc a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) BoxAdditiveMap.volume
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
