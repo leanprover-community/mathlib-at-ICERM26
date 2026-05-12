@@ -3,6 +3,9 @@ Copyright (c) 2026. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 
 Authors: Jaume de Dios, Bogdan Georgiev, Harald Helfgott, Terence Tao
+
+Thanks to ICERM for hosting the workshop "Formalization of Analysis" where most of this work
+was conducted.
 -/
 module
 
@@ -123,6 +126,10 @@ lemma Ioc.lower {a b : ℝ} (h : a < b) (i : Fin 1) : (Ioc a b).lower i = a := b
 lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
   ext
   simp [Ioc, Box.mem_def]
+
+@[simp]
+lemma mem_Ioc {a b : ℝ} (hab : a < b) (x : Fin 1 → ℝ) : x ∈ Ioc a b ↔ a < x 0 ∧ x 0 ≤ b := by
+  simp [Box.mem_def, Ioc.upper hab, Ioc.lower hab]
 
 end Stieltjes
 
@@ -392,6 +399,63 @@ theorem integral_map {E' F' : Type*}
     (h : Integrable I l f vol) :
     integral I l (fun x ↦ φ (f x)) vol' = ψ (integral I l f vol) := by
   rw [(h.hasIntegral.map φ ψ hvol).integral_eq, h.hasIntegral.integral_eq]
+
+/-! ### Additivity along a partition -/
+
+/-- Box-integral additivity along a partition: if `π : Prepartition I` is a partition of `I`,
+`f` is integrable on `I`, and `f` has integral `y J` over each sub-box `J ∈ π.boxes` (with the
+same volume `vol` and integration parameters `l`), then `f` has integral `∑ J ∈ π.boxes, y J`
+over `I`.
+
+This is the dual of `HasIntegral.sum`: that lemma sums *different integrands* on the same box;
+this one sums the *same integrand* on the pieces of a partition. The two-box specialization
+(via `Prepartition.split I i x`) underwrites adjacent-interval splitting for Stieltjes and
+interval integrals.
+
+The integrability assumption on `I` is the price we pay for not gluing per-box gauges; in
+practice it is supplied by separate continuity / bounded-variation hypotheses on the caller's
+side. A future strengthening would derive `Integrable I` from `∀ J ∈ π.boxes, Integrable J` via
+gauge gluing. -/
+theorem HasIntegral.sum_of_isPartition [CompleteSpace F] {π : Prepartition I} (hπ : π.IsPartition)
+    {vol : ι →ᵇᵃ E →L[ℝ] F} (hI : Integrable I l f vol) {y : Box ι → F}
+    (h : ∀ J ∈ π.boxes, HasIntegral J l f vol (y J)) :
+    HasIntegral I l f vol (∑ J ∈ π.boxes, y J) := by
+  have hsum : (∑ J ∈ π.boxes, y J) = integral I l f vol := by
+    have hba := hI.toBoxAdditive.sum_partition_boxes le_rfl hπ
+    simp only [Integrable.toBoxAdditive_apply] at hba
+    rw [← hba]
+    exact Finset.sum_congr rfl fun J hJ ↦ ((h J hJ).integral_eq).symm
+  rw [hsum]
+  exact hI.hasIntegral
+
+/-- Two-box specialization of `HasIntegral.sum_of_isPartition`. If a box `I` splits at
+coordinate `i` and value `x` into sub-boxes `J_lo` (lower) and `J_hi` (upper), both non-bot,
+`f` is integrable on `I`, and `f` has integral `y_lo` on `J_lo` and `y_hi` on `J_hi`, then `f`
+has integral `y_lo + y_hi` on `I`. -/
+theorem HasIntegral.split [CompleteSpace F] (i : ι) (x : ℝ) {J_lo J_hi : Box ι}
+    (h_lower : I.splitLower i x = ↑J_lo) (h_upper : I.splitUpper i x = ↑J_hi)
+    {vol : ι →ᵇᵃ E →L[ℝ] F} (hI : Integrable I l f vol) {y_lo y_hi : F}
+    (h₁ : HasIntegral J_lo l f vol y_lo) (h₂ : HasIntegral J_hi l f vol y_hi) :
+    HasIntegral I l f vol (y_lo + y_hi) := by
+  classical
+  have : (I.splitLower i x  : Set (ι → ℝ)) ∩ (I.splitUpper i x  : Set (ι → ℝ)) = ∅ := by
+    ext p; simp; grind
+  have hne : J_hi ≠ J_lo := by
+    intro heq
+    simp [h_lower, h_upper, heq] at this
+  let y : Box ι → F := fun J ↦ if J = J_lo then y_lo else y_hi
+  have hy_lo : y J_lo = y_lo := if_pos rfl
+  have hy_hi : y J_hi = y_hi := if_neg hne
+  rw [← hy_lo, ← hy_hi]
+  have h_sum_eq : (∑ J ∈ (Prepartition.split I i x).boxes, y J) = y J_lo + y J_hi := by
+    rw [Prepartition.sum_split_boxes, h_lower, h_upper]
+    rfl
+  rw [← h_sum_eq]
+  apply HasIntegral.sum_of_isPartition (Prepartition.isPartitionSplit I i x) hI
+  intro J hJ
+  rcases Prepartition.mem_split_iff.mp hJ with hJ | hJ
+  · rw [WithBot.coe_injective (hJ.trans h_lower), hy_lo]; exact h₁
+  · rw [WithBot.coe_injective (hJ.trans h_upper), hy_hi]; exact h₂
 
 end BoxIntegral
 
@@ -745,6 +809,84 @@ theorem HasStieltjesIntegral.smul_right {f : ℝ → E} {g : ℝ → F} {L : G}
   convert h.smul_right _ _ _ _ using 1
   norm_num
 
+/-! ### Splitting over adjacent intervals -/
+
+/-- If `f` is Stieltjes-integrable over `(a, c]`, has Stieltjes integral `L` over `(a, b]`
+and `L'` over `(b, c]`, with `a < b < c`, then `f` has Stieltjes integral `L + L'` over `(a, c]`.
+The general (signed) case extending to arbitrary real endpoints `a, b, c` will follow as
+`HasStieltjesIntegral.add_adjacent` once the prime version is in hand.
+
+The integrability assumption on `(a, c]` is the price we pay for not gluing per-box gauges in
+`HasIntegral.sum_of_isPartition`; see the docstring there. -/
+private theorem HasStieltjesIntegral'.add_adjacent [CompleteSpace G]
+    {f : ℝ → E} {g : ℝ → F} {L L' : G} {c : ℝ}
+    (hab : a < b) (hbc : b < c)
+    (h : StieltjesIntegrable' a c B f g)
+    (h₁ : HasStieltjesIntegral' a b B f g L)
+    (h₂ : HasStieltjesIntegral' b c B f g L') :
+    HasStieltjesIntegral' a c B f g (L + L') := by
+  simp only [HasStieltjesIntegral', StieltjesIntegrable'] at h h₁ h₂ ⊢
+  have hac : a < c := hab.trans hbc
+  have hb_mem :
+      b ∈ Set.Ioo ((Ioc a c).lower 0) ((Ioc a c).upper 0) := by
+    simp [Ioc.lower hac, Ioc.upper hac, hab, hbc]
+  refine HasIntegral.split 0 b ?_ ?_ h h₁ h₂
+  · rw [Box.splitLower_def hb_mem, WithBot.coe_eq_coe]
+    ext x
+    simp [Ioc.lower hac, mem_Ioc hab]
+  · rw [Box.splitUpper_def hb_mem, WithBot.coe_eq_coe]
+    ext x
+    simp [Ioc.upper hac, mem_Ioc hbc]
+
+private theorem HasStieltjesIntegral.add_adjacent_prelim [CompleteSpace G]
+    {f : ℝ → E} {g : ℝ → F} {L L' L'' : G} {c : ℝ}
+    (hab : a < b) (hbc : b < c)
+    (h₁ : HasStieltjesIntegral a b B f g L)
+    (h₂ : HasStieltjesIntegral b c B f g L')
+    (h₃ : HasStieltjesIntegral a c B f g L'') :
+    L'' = L + L' := by
+  apply unique a c B h₃
+  simp only [hab, of_lt, hbc, hab.trans hbc] at h₁ h₂ h₃ ⊢
+  exact HasStieltjesIntegral'.add_adjacent _ _ _ hab hbc ⟨L'', h₃⟩ h₁ h₂
+
+
+theorem HasStieltjesIntegral.add_adjacent [CompleteSpace G]
+    {f : ℝ → E} {g : ℝ → F} {L L' : G} {c : ℝ}
+    (h : StieltjesIntegrable a c B f g)
+    (h₁ : HasStieltjesIntegral a b B f g L)
+    (h₂ : HasStieltjesIntegral b c B f g L') :
+    HasStieltjesIntegral a c B f g (L + L') := by
+  have h₃ := h.hasStieltjesIntegral _ _ B
+  set L'' := ∫⟨B⟩ x in a..c, f x d g
+  by_cases! hab : a = b
+  · simp_all
+  by_cases! hbc : b = c
+  · simp_all
+  by_cases! hac : a = c
+  · simp_all
+    simp [h₁.unique _ _ _ h₂.symm]
+  have h₁' := h₁.symm
+  have h₂' := h₂.symm
+  have h₃' := h₃.symm
+  rcases (show a < b ∨ b < a by order) with hab | hab <;>
+  rcases (show b < c ∨ c < b by order) with hbc | hbc <;>
+  rcases (show a < c ∨ c < a by order) with hac | hac <;>
+  try order
+  · simp_all [add_adjacent_prelim _ _ _ hab hbc h₁ h₂ h₃]
+  · convert h₃
+    have := add_adjacent_prelim _ _ _ hac hbc h₃ h₂' h₁
+    grind
+  · convert h₃
+    have := add_adjacent_prelim _ _ _ hac hab h₃' h₁ h₂'
+    grind
+  · convert h₃
+    have := add_adjacent_prelim _ _ _ hab hac h₁' h₃ h₂
+    grind
+  · simp_all [add_adjacent_prelim _ _ _ hbc hac h₂ h₃' h₁']
+  · convert h₃
+    have := add_adjacent_prelim _ _ _ hbc hab h₂' h₁' h₃'
+    grind
+
 /-! ### Integrability in the integrand -/
 
 theorem StieltjesIntegrable.zero_left {g : ℝ → F} : StieltjesIntegrable a b B 0 g :=
@@ -872,7 +1014,7 @@ theorem stieltjesIntegral_smul_right {f : ℝ → E} {g : ℝ → F}
 `Ψ : G →L[ℝ] G'` satisfy the compatibility `Ψ (B e y) = B' (φ e) (ψ y)` for all `e, y`, then
 `HasStieltjesIntegral` transports along `(φ, ψ, Ψ)`: applying `φ` to the integrand, `ψ` to the
 integrator and `Ψ` to the integral preserves the Stieltjes-integral relation. -/
-theorem HasStieltjesIntegral'.map {E' F' G' : Type*}
+private theorem HasStieltjesIntegral'.map {E' F' G' : Type*}
     [NormedAddCommGroup E'] [NormedSpace ℝ E']
     [NormedAddCommGroup F'] [NormedSpace ℝ F']
     [NormedAddCommGroup G'] [NormedSpace ℝ G']
@@ -1068,7 +1210,7 @@ theorem sum_eq_integral_natSummatory_le (hab : a < b) (f : ℝ → E) (g : ℕ �
 
 /-- Sum of pairings `B (f n) (g n)` over natural `n ∈ [⌈a⌉, ⌈b⌉)`, expressed as a Stieltjes
 integral of `f` against the left-continuous summatory `x ↦ ∑ n < x, g n`. -/
-theorem sum_eq_integral_natSummatory_lt (hab : a < b)(f : ℝ → E) (g : ℕ → F) :
+theorem sum_eq_integral_natSummatory_lt (hab : a < b) (f : ℝ → E) (g : ℕ → F) :
     HasStieltjesIntegral a b B f
       (fun x ↦ ∑ n ∈ Finset.Iio ⌈x⌉₊, g n)
       (∑ n ∈ Finset.Ico ⌈a⌉₊ ⌈b⌉₊, B (f n) (g n)) := by sorry

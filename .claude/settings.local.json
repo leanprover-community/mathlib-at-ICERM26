@@ -6,7 +6,8 @@
       "PowerShell($f = 'c:\\\\github\\\\ICERM\\\\mathlib-at-ICERM26\\\\Mathlib\\\\Analysis\\\\BoxIntegral\\\\Stieltjes.lean'; $bytes = [System.IO.File]::ReadAllBytes\\($f\\); \"Total bytes: $\\($bytes.Length\\)\"; \"Last byte: $\\($bytes[-1]\\) \\(0x$\\([Convert]::ToString\\($bytes[-1], 16\\)\\)\\)\")",
       "Bash(lake env *)",
       "PowerShell($f = 'c:\\\\github\\\\ICERM\\\\mathlib-at-ICERM26\\\\Mathlib\\\\Analysis\\\\BoxIntegral\\\\Stieltjes.lean'; $bytes = [System.IO.File]::ReadAllBytes\\($f\\); \"last byte: $\\($bytes[-1]\\) \\(0x$\\([Convert]::ToString\\($bytes[-1], 16\\)\\)\\)\")",
-      "PowerShell($f = 'c:\\\\github\\\\ICERM\\\\mathlib-at-ICERM26\\\\Mathlib\\\\Analysis\\\\BoxIntegral\\\\Stieltjes.lean'; $prev = ''; $i = 0; Get-Content -Encoding UTF8 $f | ForEach-Object { $i++; if \\($_ -match '^section\\\\b' -and $prev -ne ''\\) { \"$i`: $_\" }; $prev = $_ })"
+      "PowerShell($f = 'c:\\\\github\\\\ICERM\\\\mathlib-at-ICERM26\\\\Mathlib\\\\Analysis\\\\BoxIntegral\\\\Stieltjes.lean'; $prev = ''; $i = 0; Get-Content -Encoding UTF8 $f | ForEach-Object { $i++; if \\($_ -match '^section\\\\b' -and $prev -ne ''\\) { \"$i`: $_\" }; $prev = $_ })",
+      "Bash(Get-ChildItem -Path \"c:\\\\github\\\\ICERM\\\\mathlib-at-ICERM26\\\\Mathlib\\\\Analysis\\\\BoxIntegral\\\\\" -Recurse -Filter \"*.lean\" | Select-Object -ExpandProperty FullName | Sort-Object)"
     ]
   }
 }
