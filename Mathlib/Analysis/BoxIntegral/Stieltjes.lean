@@ -68,7 +68,7 @@ namespace Stieltjes
 
 /-- Theorem A.1 of Montgomery Vaughan: if `f` is continuous and `g` is bounded variation
 then the Stieltjes integral exists. -/
-theorem exists_of_continuous_of_bounded_variation
+theorem exists_of_continuousOn_of_boundedVariationOn
   (f : ℝ → E) (g : ℝ → F)
   (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
   ∃ L, HasStieltjesIntegral a b B f g L := by sorry
@@ -109,12 +109,12 @@ theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F}
   ‖L‖ ≤ M * L' := by sorry
 
 /-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f d ⌊x⌋ -/
-theorem sum_le_integral_nat_floor (f : ℝ → E) :
+theorem sum_eq_integral_nat_floor (f : ℝ → E) :
   HasStieltjesIntegral a b (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
     (fun x ↦ Nat.floor x)
     (∑ n ∈ Finset.Ico (Nat.ceil a) (Nat.ceil b), f n) := by sorry
 
-theorem sum_le_integral_floor (f : ℝ → E) :
+theorem sum_eq_integral_int_floor (f : ℝ → E) :
   HasStieltjesIntegral a b (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
     (fun x ↦ Int.floor x)
     (∑ n ∈ Finset.Ico (Int.ceil a) (Int.ceil b), f n) := by sorry
