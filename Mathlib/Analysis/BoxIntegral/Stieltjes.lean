@@ -466,6 +466,72 @@ theorem StieltjesIntegrable.smul_right {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (c : ℝ) : StieltjesIntegrable a b B f (c • g) :=
   (h.hasStieltjesIntegral.smul_right a b B c).stieltjesIntegrable
 
+/-! ### Integral linearity in the integrand -/
+
+theorem stieltjesIntegral_zero_left {g : ℝ → F} : stieltjesIntegral a b B 0 g = 0 :=
+  (HasStieltjesIntegral.zero_left a b B).stieltjesIntegral_eq
+
+theorem stieltjesIntegral_add_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
+    (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
+    stieltjesIntegral a b B (f₁ + f₂) g
+      = stieltjesIntegral a b B f₁ g + stieltjesIntegral a b B f₂ g := by
+  rw [(h₁.hasStieltjesIntegral.add_left a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
+    h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
+    h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+theorem stieltjesIntegral_neg_left {f : ℝ → E} {g : ℝ → F}
+    (h : StieltjesIntegrable a b B f g) :
+    stieltjesIntegral a b B (-f) g = -stieltjesIntegral a b B f g := by
+  rw [(h.hasStieltjesIntegral.neg_left a b B).stieltjesIntegral_eq,
+    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+theorem stieltjesIntegral_sub_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
+    (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
+    stieltjesIntegral a b B (f₁ - f₂) g
+      = stieltjesIntegral a b B f₁ g - stieltjesIntegral a b B f₂ g := by
+  rw [(h₁.hasStieltjesIntegral.sub_left a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
+    h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
+    h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+theorem stieltjesIntegral_smul_left {f : ℝ → E} {g : ℝ → F}
+    (h : StieltjesIntegrable a b B f g) (c : ℝ) :
+    stieltjesIntegral a b B (c • f) g = c • stieltjesIntegral a b B f g := by
+  rw [(h.hasStieltjesIntegral.smul_left a b B c).stieltjesIntegral_eq,
+    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+/-! ### Integral linearity in the integrator -/
+
+theorem stieltjesIntegral_zero_right {f : ℝ → E} : stieltjesIntegral a b B f 0 = 0 :=
+  (HasStieltjesIntegral.zero_right a b B).stieltjesIntegral_eq
+
+theorem stieltjesIntegral_add_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
+    (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
+    stieltjesIntegral a b B f (g₁ + g₂)
+      = stieltjesIntegral a b B f g₁ + stieltjesIntegral a b B f g₂ := by
+  rw [(h₁.hasStieltjesIntegral.add_right a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
+    h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
+    h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+theorem stieltjesIntegral_neg_right {f : ℝ → E} {g : ℝ → F}
+    (h : StieltjesIntegrable a b B f g) :
+    stieltjesIntegral a b B f (-g) = -stieltjesIntegral a b B f g := by
+  rw [(h.hasStieltjesIntegral.neg_right a b B).stieltjesIntegral_eq,
+    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+theorem stieltjesIntegral_sub_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
+    (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
+    stieltjesIntegral a b B f (g₁ - g₂)
+      = stieltjesIntegral a b B f g₁ - stieltjesIntegral a b B f g₂ := by
+  rw [(h₁.hasStieltjesIntegral.sub_right a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
+    h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
+    h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+theorem stieltjesIntegral_smul_right {f : ℝ → E} {g : ℝ → F}
+    (h : StieltjesIntegrable a b B f g) (c : ℝ) :
+    stieltjesIntegral a b B f (c • g) = c • stieltjesIntegral a b B f g := by
+  rw [(h.hasStieltjesIntegral.smul_right a b B c).stieltjesIntegral_eq,
+    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+
 /-! ## Auxiliary lemmas -/
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
