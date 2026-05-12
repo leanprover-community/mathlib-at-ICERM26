@@ -39,40 +39,32 @@ structure IsSmoothlySimplyConnected (s : Set E) : Prop where
 theorem IsOpen.isSmoothlySimplyConnected {s : Set ℂ} (hs : IsOpen s) (hs' : IsSimplyConnected s) :
     IsSmoothlySimplyConnected s where
       exists_smooth_path x hx y hy := by
-        -- the connected component is open (ℂ is locally connected)
-        have hCompOpen : IsOpen (connectedComponentIn s x) := hs.connectedComponentIn
-        -- the connected component is connected
-        have hCompConn : IsConnected (connectedComponentIn s x) :=
-          isConnected_connectedComponentIn_iff.mpr hx
-        -- open connected subsets of ℂ are path-connected
-        have hCompPC : IsPathConnected (connectedComponentIn s x) :=
-          hCompOpen.isConnected_iff_isPathConnected.mp hCompConn
-        -- extract a continuous path from x to y inside the component
-        have hJoined : JoinedIn (connectedComponentIn s x) x y :=
-          hCompPC.joinedIn x (mem_connectedComponentIn hx) y hy
+        set sx := connectedComponentIn s x with hsx
+        have hCompOpen : IsOpen sx := hs.connectedComponentIn
+        have hCompConn : IsConnected sx := isConnected_connectedComponentIn_iff.mpr hx
+        have hCompPC : IsPathConnected sx := hCompOpen.isConnected_iff_isPathConnected.mp hCompConn
+        have hJoined : JoinedIn sx x y := hCompPC.joinedIn x (mem_connectedComponentIn hx) y hy
         let γ₀ : Path x y := hJoined.somePath
-        -- its range lies in s
         have hγ₀_range : Set.range γ₀ ⊆ s :=
           (Set.range_subset_iff.mpr hJoined.somePath_mem).trans (connectedComponentIn_subset s x)
-        -- find δ > 0 so the δ-thickening of range γ₀ lies in s
         obtain ⟨δ, hδ, hδs⟩ :=
           (isCompact_range γ₀.continuous).exists_thickening_subset_open hs hγ₀_range
-        -- C∞ approximation g with dist (g t) (γ₀.extend t) < δ/3 everywhere
         obtain ⟨g, hg_smooth, hg_dist⟩ :=
           γ₀.uniformContinuous_extend.exists_contDiff_dist_le (by linarith : 0 < δ / 3)
-        -- correct endpoints: h(t) = g(t) + (1-t)•(x - g 0) + t•(y - g 1)
         let h : ℝ → ℂ := fun t ↦ g t + (1 - t) • (x - g 0) + t • (y - g 1)
         have hh0 : h 0 = x := by simp [h]
         have hh1 : h 1 = y := by simp [h]
-        have hh_smooth : ContDiff ℝ ∞ h := by sorry
-        have hh_range : ∀ t : I, h t ∈ s := by sorry
-        -- package into a Path and verify IsC2PathIn
+        have hh_smooth : ContDiff ℝ ∞ h := by fun_prop
+        have hh_range (t : I) : h t ∈ s := by
+
+          sorry
         let γ : Path x y :=
           { toFun := fun t ↦ h t
             continuous_toFun := hh_smooth.continuous.comp continuous_subtype_val
             source' := hh0
             target' := hh1 }
-        exact ⟨γ, Set.range_subset_iff.mpr hh_range, by sorry⟩
+        refine ⟨γ, Set.range_subset_iff.mpr hh_range, ?_⟩
+        sorry
       exists_smooth_homotopy x hx y hy := by
 
         sorry
