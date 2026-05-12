@@ -111,19 +111,19 @@ lemma smul_apply {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
 variable {M : Type*} [AddCommGroup M]
 
 instance {ι : Type*} {I₀ : WithTop (Box ι)} : Neg (ι →ᵇᵃ[I₀] M) :=
-  ⟨fun f =>
-    ⟨-(f : Box ι → M), fun I hI π hπ => by
+  ⟨fun f ↦
+    ⟨-(f : Box ι → M), fun I hI π hπ ↦ by
       simp only [Pi.neg_apply, Finset.sum_neg_distrib, sum_partition_boxes _ hI hπ]⟩⟩
 
 instance {ι : Type*} {I₀ : WithTop (Box ι)} : Sub (ι →ᵇᵃ[I₀] M) :=
-  ⟨fun f g =>
-    ⟨(f : Box ι → M) - g, fun I hI π hπ => by
+  ⟨fun f g ↦
+    ⟨(f : Box ι → M) - g, fun I hI π hπ ↦ by
       simp only [Pi.sub_apply, Finset.sum_sub_distrib, sum_partition_boxes _ hI hπ]⟩⟩
 
 instance {ι : Type*} {I₀ : WithTop (Box ι)} : AddCommGroup (ι →ᵇᵃ[I₀] M) :=
   Function.Injective.addCommGroup _ DFunLike.coe_injective
-    rfl (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
-    (fun _ _ => rfl) (fun _ _ => rfl)
+    rfl (fun _ _ ↦ rfl) (fun _ ↦ rfl) (fun _ _ ↦ rfl)
+    (fun _ _ ↦ rfl) (fun _ _ ↦ rfl)
 
 @[simp]
 lemma neg_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f : ι →ᵇᵃ[I₀] M) (J : Box ι) :
@@ -135,10 +135,10 @@ lemma sub_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f g : ι →ᵇᵃ[I₀]
 
 /-- The box-additive "differential" sending a function `g : ℝ → M` to the box-additive map on
 `Box (Fin 1)` defined by `J ↦ g (J.upper 0) - g (J.lower 0)`, bundled as an
-`AddMonoidHom`. . -/
+`AddMonoidHom`. -/
 def ofDiff : (ℝ → M) →+ ((Fin 1) →ᵇᵃ M) where
   toFun g := ofMapSplitAdd
-    (fun J : Box (Fin 1) => g (J.upper 0) - g (J.lower 0)) ⊤
+    (fun J : Box (Fin 1) ↦ g (J.upper 0) - g (J.lower 0)) ⊤
     (by
       intro I _ i x hx
       fin_cases i
@@ -251,7 +251,6 @@ theorem HasStieltjesIntegral.stieltjesIntegral_eq {f : ℝ → E} {g : ℝ → F
   have hI : StieltjesIntegrable a b B f g := h.stieltjesIntegrable
   simp only [stieltjesIntegral, dif_pos hI]
   exact hI.choose_spec.unique a b B h
-
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
