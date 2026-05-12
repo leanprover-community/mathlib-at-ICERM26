@@ -145,7 +145,7 @@ noncomputable def toPartition {N : ℕ}
   pairwiseDisjoint := by sorry
 
 theorem toPartition.IsPartition {N : ℕ} {a b : ℝ} (hab : a < b)
-    (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+    (x : Fin (N + 1) → ℝ) (hx : StrictMono x) :
     (toPartition x hx).IsPartition := by
   sorry
 
