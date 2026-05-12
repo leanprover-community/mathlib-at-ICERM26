@@ -28,9 +28,17 @@ def deriv {M : Type*} [AddCommGroup M] (g : ℝ → M) :
       rw [Box.splitLower_def hx, Box.splitUpper_def hx]
       simp [Option.elim'])
 
-/-- The interval [a,b).
--/
-def interval (a b : ℝ) : Box Unit := sorry
+
+/-- The interval [a,b). Returns the dummy interval [0, 1) if a ≥ b. -/
+noncomputable def interval (a b : ℝ) : Box Unit :=
+  if h : a < b then
+    { lower := fun _ ↦ a
+      upper := fun _ ↦ b
+      lower_lt_upper := fun _ ↦ h }
+  else
+    { lower := fun _ ↦ 0
+      upper := fun _ ↦ 1
+      lower_lt_upper := fun _ ↦ zero_lt_one }
 
 /- Our notion of Stieltjes transformation requires a choice of continuous bilinear mapping from the
 ranges of `f`, `g` to the desired output range. Below we set out some standard choices. -/
