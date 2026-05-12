@@ -45,6 +45,9 @@ Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Append
   in terms of the variation of `g`.
 * `Stieltjes.sum_eq_integral_nat_floor` and `Stieltjes.sum_eq_integral_int_floor`: relate
   sums `∑ f n` to Riemann–Stieltjes integrals against the floor function.
+* `Stieltjes.sum_eq_integral_natSummatory_le` / `_lt` : relate sums `∑ B (f n) (g n)` to
+  Riemann–Stieltjes integrals against the right- or left-continuous summatory function
+  `x ↦ ∑ n ≤ x, g n` (resp. `x ↦ ∑ n < x, g n`).
 
 ## Endpoint convention
 
@@ -200,5 +203,19 @@ theorem sum_eq_integral_int_floor (f : ℝ → E) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
       (fun x ↦ Int.floor x)
       (∑ n ∈ Finset.Ico (Int.ceil a) (Int.ceil b), f n) := by sorry
+
+/-- Sum of pairings `B (f n) (g n)` over natural `n ∈ (⌊a⌋, ⌊b⌋]`, expressed as a Stieltjes
+integral of `f` against the right-continuous summatory `x ↦ ∑ n ≤ x, g n`. -/
+theorem sum_eq_integral_natSummatory_le (f : ℝ → E) (g : ℕ → F) :
+    HasStieltjesIntegral a b B f
+      (fun x ↦ ∑ n ∈ Finset.Iic (Nat.floor x), g n)
+      (∑ n ∈ Finset.Ioc (Nat.floor a) (Nat.floor b), B (f n) (g n)) := by sorry
+
+/-- Sum of pairings `B (f n) (g n)` over natural `n ∈ [⌈a⌉, ⌈b⌉)`, expressed as a Stieltjes
+integral of `f` against the left-continuous summatory `x ↦ ∑ n < x, g n`. -/
+theorem sum_eq_integral_natSummatory_lt (f : ℝ → E) (g : ℕ → F) :
+    HasStieltjesIntegral a b B f
+      (fun x ↦ ∑ n ∈ Finset.Iio (Nat.ceil x), g n)
+      (∑ n ∈ Finset.Ico (Nat.ceil a) (Nat.ceil b), B (f n) (g n)) := by sorry
 
 end Stieltjes
