@@ -347,7 +347,6 @@ noncomputable def stieltjesIntegral (f : ℝ → E) (g : ℝ → F) : G :=
 angle brackets because there is no canonical choice (e.g. `ContinuousLinearMap.mul ℝ ℝ` for
 scalar-valued `f` and `g`, `(ContinuousLinearMap.lsmul ℝ ℝ).flip` when `g` is real-valued, etc.).
 The notation parallels Mathlib's `∫ x in a..b, f x ∂μ` for `intervalIntegral`. -/
-@[inherit_doc stieltjesIntegral]
 scoped notation3 "∫⟨"B"⟩ "(...)" in "a".."b", "r:60:(scoped f => f)" d "g:70 =>
   stieltjesIntegral a b B r g
 
