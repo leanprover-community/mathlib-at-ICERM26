@@ -81,7 +81,7 @@ def ofDiff {M : Type*} [AddCommGroup M] (g : ℝ → M) :
 
 end BoxIntegral.BoxAdditiveMap
 
-open BoxIntegral
+open BoxIntegral ContinuousLinearMap
 
 namespace Stieltjes
 
@@ -124,14 +124,14 @@ and flag this as a possible future refinement. -/
 /-- The Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear
 map `B : E → F → G` and endpoints `a`, `b` takes values in `G`. -/
 def HasStieltjesIntegral (f : ℝ → E) (g : ℝ → F) (L : G) : Prop :=
-  BoxIntegral.HasIntegral (Stieltjes.interval a b) IntegrationParams.Riemann
+  HasIntegral (Stieltjes.interval a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) L
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
     (hg : BoundedVariationOn g (Set.Icc a b))
-    (π : BoxIntegral.Prepartition (interval a b)) :
+    (π : Prepartition (interval a b)) :
     ∑ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
       ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
   sorry
@@ -142,7 +142,7 @@ We separate integrability for more modular API. -/
 lemma integrable_of_continuousOn_of_boundedVariationOn
     (f : ℝ → E) (g : ℝ → F)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
-    BoxIntegral.Integrable (interval a b) IntegrationParams.Riemann
+    Integrable (interval a b) IntegrationParams.Riemann
       (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by sorry
 
 /-! ## Main theorems -/
@@ -154,7 +154,7 @@ theorem exists_of_continuousOn_of_boundedVariationOn
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
     ∃ L, HasStieltjesIntegral a b B f g L := by
   have hint := integrable_of_continuousOn_of_boundedVariationOn a b B f g hf hg
-  exact ⟨_, BoxIntegral.Integrable.hasIntegral hint⟩
+  exact ⟨_, Integrable.hasIntegral hint⟩
 
 /-- Theorem A.2 of Montgomery Vaughan: if ∫ₐᵇ f dg exists, then ∫ₐᵇ g df exists and
 ∫ₐᵇ g df = g(b) * f(b) - g(a) * f(a) - ∫ₐᵇ f dg. -/
@@ -170,7 +170,7 @@ theorem variation_of_derivative {g : ℝ → F} (hgdiff : ContDiffOn ℝ 1 g (Se
 
 /-- Placeholder abbreviation; there may be a better spelling for this. -/
 abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
-  BoxIntegral.Integrable (interval a b) IntegrationParams.Riemann
+  Integrable (interval a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) BoxAdditiveMap.volume
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
@@ -186,18 +186,18 @@ provided that both integrals exist. -/
 theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G} {L' : ℝ}
     (hgvar : BoundedVariationOn g (Set.Icc a b))
     (hfgint : HasStieltjesIntegral a b B f g L)
-    (hfabs_gstar : HasStieltjesIntegral a b (ContinuousLinearMap.mul ℝ ℝ) (fun x ↦ ‖f x‖)
+    (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (fun x ↦ ‖f x‖)
       (fun x ↦ (eVariationOn g (Set.Icc a x)).toReal) L') :
     ‖L‖ ≤ ‖B‖ * L' := by sorry
 
 /-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f d ⌊x⌋ -/
 theorem sum_eq_integral_nat_floor (f : ℝ → E) :
-    HasStieltjesIntegral a b (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
+    HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
       (fun x ↦ Nat.floor x)
       (∑ n ∈ Finset.Ico (Nat.ceil a) (Nat.ceil b), f n) := by sorry
 
 theorem sum_eq_integral_int_floor (f : ℝ → E) :
-    HasStieltjesIntegral a b (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
+    HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
       (fun x ↦ Int.floor x)
       (∑ n ∈ Finset.Ico (Int.ceil a) (Int.ceil b), f n) := by sorry
 
