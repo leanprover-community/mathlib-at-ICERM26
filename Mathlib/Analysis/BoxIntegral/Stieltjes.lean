@@ -82,9 +82,11 @@ Stieltjes integral, Riemann–Stieltjes, bounded variation
 
 namespace BoxIntegral.BoxAdditiveMap
 
-/- TODO (upstream): the declarations below up to `ofDiff` are *not* Stieltjes-specific. They
-fill in gaps in the `BoxAdditiveMap` API in
-`Mathlib.Analysis.BoxIntegral.Partition.Additive`:
+/-! ## `BoxIntegral.BoxAdditiveMap` extensions (to upstream)
+
+The declarations in this section are *not* Stieltjes-specific. They fill in gaps in the
+`BoxAdditiveMap` API in `Mathlib.Analysis.BoxIntegral.Partition.Additive`:
+
 * the `@[ext]` lemma `ext_funLike`;
 * the `_apply` simp lemmas `add_apply`, `smul_apply`, `neg_apply`, `sub_apply` (companions to
   the existing `@[simps -fullyApplied]` `Zero` instance);
@@ -92,7 +94,9 @@ fill in gaps in the `BoxAdditiveMap` API in
   `Zero` / `Add` / `SMul` / `AddCommMonoid` instances;
 * the packaged `AddCommGroup (ι →ᵇᵃ[I₀] M)` instance (via `Function.Injective.addCommGroup`
   on `DFunLike.coe`).
-Once these land upstream the local declarations here should be removed. -/
+
+Once these land upstream the local declarations here should be removed.
+-/
 
 @[ext]
 theorem ext_funLike {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
@@ -132,6 +136,8 @@ lemma neg_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f : ι →ᵇᵃ[I₀] M
 @[simp]
 lemma sub_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f g : ι →ᵇᵃ[I₀] M) (J : Box ι) :
     (f - g) J = f J - g J := rfl
+
+/-! ## The differential `ofDiff` of a function on `ℝ` -/
 
 /-- The box-additive "differential" sending a function `g : ℝ → M` to the box-additive map on
 `Box (Fin 1)` defined by `J ↦ g (J.upper 0) - g (J.lower 0)`, bundled as an
@@ -177,9 +183,12 @@ end BoxIntegral.BoxAdditiveMap
 
 namespace BoxIntegral
 
-/- TODO (upstream): the lemmas below extend `BoxIntegral.HasIntegral`'s integrand-side linearity
-(`HasIntegral.add`, `.neg`, `.sub`, `.smul`, `hasIntegral_zero` in `BoxIntegral/Basic.lean`) to
-the volume side. They belong upstream next to their integrand-side counterparts. -/
+/-! ## Linearity of `BoxIntegral.HasIntegral` in the volume (to upstream)
+
+The lemmas in this section extend `BoxIntegral.HasIntegral`'s integrand-side linearity
+(`HasIntegral.add`, `.neg`, `.sub`, `.smul`, `hasIntegral_zero` in `BoxIntegral/Basic.lean`)
+to the volume side. They belong upstream next to their integrand-side counterparts.
+-/
 
 variable {ι : Type*} {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F]
@@ -248,13 +257,15 @@ theorem HasIntegral.smul_vol {vol : ι →ᵇᵃ E →L[ℝ] F} {y : F}
     HasIntegral I l f (c • vol) (c • y) := by
   unfold HasIntegral at h ⊢
   rw [funext (integralSum_smul_vol c f vol)]
-  exact (tendsto_const_nhds : Tendsto _ _ (𝓝 c)).smul h
+  exact (tendsto_const_nhds : Filter.Tendsto _ _ (nhds c)).smul h
 
 end BoxIntegral
 
 open BoxIntegral ContinuousLinearMap
 
 namespace Stieltjes
+
+/-! ## Definition of the Riemann–Stieltjes integral -/
 
 /-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(0, 1]` if `a ≥ b`. -/
 noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
@@ -310,6 +321,8 @@ junk value `0` if no such integral exists. -/
 noncomputable def stieltjesIntegral (f : ℝ → E) (g : ℝ → F) : G :=
   if h : StieltjesIntegrable a b B f g then h.choose else 0
 
+/-! ## Basic API -/
+
 /-- Uniqueness: the Riemann–Stieltjes integral, when it exists, is unique. -/
 theorem HasStieltjesIntegral.unique {f : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral a b B f g L₁) (h₂ : HasStieltjesIntegral a b B f g L₂) :
@@ -329,7 +342,9 @@ theorem HasStieltjesIntegral.stieltjesIntegral_eq {f : ℝ → E} {g : ℝ → F
   simp only [stieltjesIntegral, dif_pos hI]
   exact hI.choose_spec.unique a b B h
 
-/-! ### Linearity in the integrand -/
+/-! ## Linearity -/
+
+/-! ### In the integrand -/
 
 theorem HasStieltjesIntegral.zero_left {g : ℝ → F} : HasStieltjesIntegral a b B 0 g 0 :=
   hasIntegral_zero
@@ -354,7 +369,7 @@ theorem HasStieltjesIntegral.smul_left {f : ℝ → E} {g : ℝ → F} {L : G}
     HasStieltjesIntegral a b B (c • f) g (c • L) :=
   HasIntegral.smul h c
 
-/-! ### Linearity in the integrator -/
+/-! ### In the integrator -/
 
 theorem HasStieltjesIntegral.zero_right {f : ℝ → E} : HasStieltjesIntegral a b B f 0 0 := by
   unfold HasStieltjesIntegral
@@ -395,6 +410,8 @@ theorem HasStieltjesIntegral.smul_right {f : ℝ → E} {g : ℝ → F} {L : G}
   have heq : (fun x : ℝ ↦ B.flip ((c • g) x)) = c • (fun x ↦ B.flip (g x)) := by ext; simp
   rw [heq, BoxIntegral.BoxAdditiveMap.ofDiff_smul]
   exact h.smul_vol c
+
+/-! ## Auxiliary lemmas -/
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
