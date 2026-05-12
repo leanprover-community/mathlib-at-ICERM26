@@ -64,18 +64,51 @@ lemma vanishesRelativeToOrder_mono {l : ℕ} (hs : vanishesRelativeToOrder s k �
 variable (I F s k x₀) in
 /-- `s` vanishes to order `k` at `x₀` -/
 def vanishesToOrderAt : Prop :=
-  ∀ (Ψ : Trivialization F (TotalSpace.proj : TotalSpace F V → B)),
-  ∀ (γ : 𝕜 → B), --∀ i ≤ k,
+  ∀ (Ψ : Trivialization F (TotalSpace.proj : TotalSpace F V → B)), ∀ (γ : 𝕜 → B),
   MemTrivializationAtlas Ψ → x₀ ∈ Ψ.baseSet → γ 0 = x₀ → CMDiffAt k γ 0 →
   vanishesRelativeToOrder s k Ψ γ
 
+-- TODO prove move!
+lemma Filter.EventuallyEq.iteratedDeriv
+    {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type u_2} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+    {f₁ f₂ : 𝕜 → F} {x : 𝕜} (h : f₁ =ᶠ[𝓝 x] f₂) (n : ℕ) :
+    iteratedDeriv n f₁ =ᶠ[𝓝 x] iteratedDeriv n f₂ := by
+  sorry
+
+lemma iteratedDeriv_congr_of_eventually
+    {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type u_2} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+    {f₁ f₂ : 𝕜 → F} {s : Set 𝕜} {x : 𝕜} (hs : s ∈ 𝓝 x) (h : ∀ x ∈ s, f₁ x = f₂ x) (n : ℕ) :
+    iteratedDeriv n f₁ x = iteratedDeriv n f₂ x := by
+  sorry
+
 /- `vanishesToOrderAt` only depends on the section `s` near `x₀` -/
-lemma vanishesToOrderAt_congr_of_eventuallyEq (heq : (T% s) =ᶠ[𝓝 x₀] (T% t)) :
-  vanishesToOrderAt I F s k x₀ ↔ vanishesToOrderAt I F t k x₀ := sorry
+lemma vanishesToOrderAt.congr_of_eventually (hs : vanishesToOrderAt I F s k x₀)
+    {u : Set B} (hu : u ∈ 𝓝 x₀) (heq : ∀ x ∈ u, s x = t x) :
+    vanishesToOrderAt I F t k x₀ := by
+  intro Ψ γ hΨ hxΨ hγ0 hγ i hik
+  specialize hs Ψ γ hΨ hxΨ hγ0 hγ i hik
+  let u' := γ ⁻¹' u
+  have hu' : u' ∈ 𝓝 0 := hγ.continuousAt.preimage_mem_nhds (hγ0 ▸ hu)
+  have heq' : ∀ y ∈ u', (Ψ.secToFun t ∘ γ) y = (Ψ.secToFun s ∘ γ) y := by
+    intro y hy
+    have heq'' : ∀ y' ∈ u, Ψ.secToFun s y' = Ψ.secToFun t y' := by
+      intro y' hy'
+      -- missing API lemma:
+      simp [secToFun, heq _ hy']
+    exact (heq'' (γ y) (by grind)).symm
+  rw [← hs]
+  exact iteratedDeriv_congr_of_eventually hu' heq' _
+
+/- `vanishesToOrderAt` only depends on the section `s` near `x₀` -/
+lemma vanishesToOrderAt_congr_iff_eventuallyEq
+    {u : Set B} (hu : u ∈ 𝓝 x₀) (heq : ∀ x ∈ u, s x = t x) :
+    vanishesToOrderAt I F s k x₀ ↔ vanishesToOrderAt I F t k x₀ :=
+  ⟨fun hs ↦ hs.congr_of_eventually hu heq, fun ht ↦ ht.congr_of_eventually hu (by grind)⟩
 
 /- `vanishesToOrderAt` is monotone in the order of vanishing -/
 lemma vanishesToOrderAt_mono {l : ℕ} (hs : vanishesToOrderAt I F s k x₀) (hkl : l ≤ k) :
-   vanishesToOrderAt I F s l x₀ := sorry
+    vanishesToOrderAt I F s l x₀ := by
+  sorry
 
 variable (I)
 
