@@ -13,7 +13,55 @@ public import Mathlib.Analysis.Calculus.ContDiff.Defs
 
 /-! # Riemann–Stieltjes integral
 
+In this file we define the (one-dimensional) Riemann–Stieltjes integral of a function
+`f : ℝ → E` against an integrator `g : ℝ → F`, paired by a continuous bilinear map
+`B : E →L[ℝ] F →L[ℝ] G`. The integral is realized as a `BoxIntegral.HasIntegral` over the
+half-open interval `(a, b]`, viewed as a `Box (Fin 1)`, with respect to the box-additive
+"differential" associated to `g`.
 
+The development follows the treatment of Riemann–Stieltjes integration in
+Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Appendix A.
+
+## Main definitions
+
+* `BoxIntegral.BoxAdditiveMap.ofDiff g`: the box-additive map associated to `g : ℝ → M`,
+  sending a box `J` to `g (J.upper 0) - g (J.lower 0)`.
+* `Stieltjes.interval a b`: the half-open interval `(a, b]` as a `Box (Fin 1)` (returning a
+  dummy box when `a ≥ b`).
+* `HasStieltjesIntegral a b B f g L`: the predicate asserting that `L : G` is the
+  Riemann–Stieltjes integral of `f` against `g`, paired by the bilinear map `B`, over `(a, b]`.
+* `Stieltjes.RiemannIntegrable a b f`: a placeholder predicate for Riemann integrability of
+  `f` on `(a, b]`.
+
+## Main theorems
+
+* `Stieltjes.exists_of_continuousOn_of_boundedVariationOn` (Theorem A.1): if `f` is continuous
+  and `g` has bounded variation on `[a, b]`, then the Riemann–Stieltjes integral exists.
+* `Stieltjes.integration_by_parts` (Theorem A.2): integration by parts.
+* `Stieltjes.variation_of_derivative` (Theorem A.3(a)) and
+  `Stieltjes.integral_of_derivative` (Theorem A.3(b)): when `g` is `C¹`, the total variation
+  and the Riemann–Stieltjes integral are computed from `g′`.
+* `Stieltjes.integral_le_integral_of_variation` (Theorem A.4): a norm bound on the integral
+  in terms of the variation of `g`.
+* `Stieltjes.sum_eq_integral_nat_floor` and `Stieltjes.sum_eq_integral_int_floor`: relate
+  sums `∑ f n` to Riemann–Stieltjes integrals against the floor function.
+
+## Endpoint convention
+
+The underlying box `Stieltjes.interval a b` is the half-open interval `(a, b]`, but the
+hypotheses below typically use `Set.Icc a b` — this is needed both for compactness
+(for `ContinuousOn` / `ContDiffOn` arguments) and to include the value `g a` in
+bounded-variation hypotheses, since the leftmost sub-box can have lower endpoint `a`.
+See the comment near `HasStieltjesIntegral` for details.
+
+## References
+
+* H. L. Montgomery and R. C. Vaughan, *Multiplicative Number Theory I: Classical Theory*,
+  Cambridge Studies in Advanced Mathematics 97, Cambridge University Press, 2007 (Appendix A).
+
+## Tags
+
+Stieltjes integral, Riemann–Stieltjes, bounded variation
 -/
 
 
