@@ -1,12 +1,18 @@
-module
 
-public import Mathlib.Geometry.Manifold.VectorBundle.Hom
-public import Mathlib.Geometry.Manifold.VectorBundle.SmoothSection
-public import Mathlib.Geometry.Manifold.VectorBundle.Tangent
-public import Mathlib.Geometry.Manifold.VectorBundle.Tensoriality
-public import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
+import Mathlib.Geometry.Manifold.VectorBundle.Hom
+import Mathlib.Geometry.Manifold.VectorBundle.SmoothSection
+import Mathlib.Geometry.Manifold.VectorBundle.Tangent
+import Mathlib.Geometry.Manifold.VectorBundle.Tensoriality
+import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
 
-public import Mathlib.SecToFun
+import Mathlib.Geometry.Manifold.VectorBundle.Hom
+import Mathlib.Geometry.Manifold.VectorBundle.SmoothSection
+import Mathlib.Geometry.Manifold.VectorBundle.Tangent
+import Mathlib.Geometry.Manifold.VectorBundle.Tensoriality
+import Mathlib.Analysis.Calculus.IteratedDeriv.FaaDiBruno
+import Mathlib
+
+import Mathlib.SecToFun
 
 @[expose] public noncomputable section
 
@@ -41,11 +47,31 @@ def vanishesRelativeToOrder (γ : 𝕜 → B) : Prop :=
 
 variable {γ γ' : 𝕜 → B}
 
+theorem coordChange_secToFun {ψ ψ' : Trivialization F (TotalSpace.proj : TotalSpace F V → B)}
+    [MemTrivializationAtlas ψ'] [MemTrivializationAtlas ψ] (b : B) (hb : b ∈ ψ.baseSet) [VectorBundle 𝕜 F V]:
+    coordChange ψ ψ' b (secToFun ψ s b) = secToFun ψ' s b := by
+  grind [secToFun, coordChange_apply_snd]
+
+theorem secToFun_zero {ψ : Trivialization F (TotalSpace.proj : TotalSpace F V → B)}
+    [MemTrivializationAtlas ψ] [VectorBundle 𝕜 F V] (b : B) (hb : b ∈ ψ.baseSet) :
+    secToFun ψ (fun x => (0 : V x)) b = 0 := by
+  simp [secToFun, ((VectorBundle.trivialization_linear' ψ).linear (R := 𝕜) b hb).map_zero]
+
 /- `vanishesRelativeToOrder` is independent of the choice of trivialisation -/
 lemma vanishesRelativeToOrder_change_triv
-  {Ψ Ψ' : Trivialization F (TotalSpace.proj : TotalSpace F V → B)}
-  [MemTrivializationAtlas Ψ] [MemTrivializationAtlas Ψ'] {γ : 𝕜 → B} :
-  vanishesRelativeToOrder s k Ψ γ ↔ vanishesRelativeToOrder s k Ψ' γ := sorry
+    {Ψ Ψ' : Trivialization F (TotalSpace.proj : TotalSpace F V → B)}
+    [MemTrivializationAtlas Ψ] [MemTrivializationAtlas Ψ'] {γ : 𝕜 → B} :
+    vanishesRelativeToOrder s k Ψ γ ↔ vanishesRelativeToOrder s k Ψ' γ := by
+  suffices ∀ (Ψ Ψ' : Trivialization F (TotalSpace.proj : TotalSpace F V → B))
+    [MemTrivializationAtlas Ψ] [MemTrivializationAtlas Ψ'] {γ : 𝕜 → B},
+    vanishesRelativeToOrder s k Ψ γ → vanishesRelativeToOrder s k Ψ' γ by
+    refine ⟨fun h ↦ this Ψ Ψ' h, fun h ↦ this Ψ' Ψ h⟩
+  intro ψ ψ' _ _ γ h i hi
+  set postCoordChange := fun b ↦ coordChange ψ ψ' b (secToFun ψ s b)
+  have (t) (ht : t ∈ γ⁻¹' ψ.baseSet) : postCoordChange (γ t) = secToFun ψ' s (γ t) := by
+    grind [coordChange_secToFun]
+  -- This follows from a general theorem
+  sorry
 
 /- `vanishesRelativeToOrder` only depends on the curve `γ` near `0` -/
 -- TODO bad name!

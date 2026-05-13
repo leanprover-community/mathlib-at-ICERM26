@@ -488,8 +488,7 @@ def trivChange (i j : ι) : OpenPartialHomeomorph (B × F) (B × F) where
 @[simp, mfld_simps]
 theorem mem_trivChange_source (i j : ι) (p : B × F) :
     p ∈ (Z.trivChange i j).source ↔ p.1 ∈ Z.baseSet i ∩ Z.baseSet j := by
-  rw [trivChange, mem_prod]
-  simp
+  simp [trivChange]
 
 /-- Associate to a trivialization index `i : ι` the corresponding trivialization, i.e., a bijection
 between `proj ⁻¹ (baseSet i)` and `baseSet i × F`. As the fiber above `x` is `F` but read in the
