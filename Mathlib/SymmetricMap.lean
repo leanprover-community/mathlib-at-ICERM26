@@ -619,56 +619,23 @@ theorem map_smul_univ {R : Type*} [CommSemiring R] {M : Type*} [AddCommMonoid M]
 
 end
 
-/- TODO: think about which of these I want!
 /-!
-### Theorems specific to symmetric maps
+### Theorems specific to symmetric maps -/
 
-Various properties of reordered and repeated inputs which follow from
-`AlternatingMap.map_eq_zero_of_eq`.
--/
+-- TODO: necessary, or already implied by previous results?
+theorem map_swap [DecidableEq ι] {i j : ι} : g (v ∘ Equiv.swap i j) = g v := by simp
 
+theorem map_perm (v : ι → M) (σ : Equiv.Perm ι) :
+    g (v ∘ σ) = g v := by
+  sorry -- TODO also done above; perhaps keep this name?
 
-theorem map_update_self [DecidableEq ι] {i j : ι} (hij : i ≠ j) :
-    f (Function.update v i (v j)) = 0 :=
-  f.map_eq_zero_of_eq _ (by rw [Function.update_self, Function.update_of_ne hij.symm]) hij
-
-theorem map_update_update [DecidableEq ι] {i j : ι} (hij : i ≠ j) (m : M) :
-    f (Function.update (Function.update v i m) j m) = 0 :=
-  f.map_eq_zero_of_eq _
-    (by rw [Function.update_self, Function.update_of_ne hij, Function.update_self]) hij
-
-theorem map_swap_add [DecidableEq ι] {i j : ι} (hij : i ≠ j) :
-    f (v ∘ Equiv.swap i j) + f v = 0 := by
-  rw [Equiv.comp_swap_eq_update]
-  convert f.map_update_update v hij (v i + v j)
-  simp [f.map_update_self _ hij, f.map_update_self _ hij.symm,
-    Function.update_comm hij (v i + v j) (v _) v, Function.update_comm hij.symm (v i) (v i) v]
-
-theorem map_add_swap [DecidableEq ι] {i j : ι} (hij : i ≠ j) :
-    f v + f (v ∘ Equiv.swap i j) = 0 := by
-  rw [add_comm]
-  exact f.map_swap_add v hij
-
-theorem map_swap [DecidableEq ι] {i j : ι} (hij : i ≠ j) : g (v ∘ Equiv.swap i j) = -g v :=
-  eq_neg_of_add_eq_zero_left <| g.map_swap_add v hij
-
-theorem map_perm [DecidableEq ι] [Fintype ι] (v : ι → M) (σ : Equiv.Perm ι) :
-    g (v ∘ σ) = Equiv.Perm.sign σ • g v := by
-  induction σ using Equiv.Perm.swap_induction_on' with
-  | one ↦ simp
-  | mul_swap s x y hxy hI ↦ simp_all [← Function.comp_assoc, g.map_swap]
-
-theorem map_congr_perm [DecidableEq ι] [Fintype ι] (σ : Equiv.Perm ι) :
-    g v = Equiv.Perm.sign σ • g (v ∘ σ) := by
-  rw [g.map_perm, smul_smul]
-  simp
--/
+theorem map_congr_perm (σ : Equiv.Perm ι) : g v = g (v ∘ σ) := by simp
 
 section DomDomCongr
 
 /-- Transfer the arguments to a map along an equivalence between argument indices.
 
-This is the alternating version of `MultilinearMap.domDomCongr`. -/
+This is the symmetric version of `MultilinearMap.domDomCongr`. -/
 @[simps]
 def domDomCongr (σ : ι ≃ ι') (f : M [Sym^ι]→ₗ[R] N) : M [Sym^ι']→ₗ[R] N :=
   { f.toMultilinearMap.domDomCongr σ with
