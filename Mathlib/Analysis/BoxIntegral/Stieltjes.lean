@@ -172,7 +172,64 @@ lemma mem_Ioc {a b : ℝ} (hab : a < b) (x : Fin 1 → ℝ) : x ∈ Ioc a b ↔ 
 
 end Stieltjes
 
+namespace BoxIntegral.IntegrationParams
 
+variable {ι : Type*} [hιfin : Fintype ι] (l : IntegrationParams) (I : Box ι) (π₀ : Prepartition I)
+
+theorem toFilteriUnion_eventually_iff (P : TaggedPrepartition I → Prop) :
+    (∀ᶠ π in l.toFilteriUnion I π₀, P π) ↔ ∃ (r : NNReal → (ι → ℝ) → ↑(Set.Ioi 0)),
+    (∀ (c : NNReal), l.RCond (r c)) ∧
+    ∀ π : TaggedPrepartition I,
+    (∃ (c : NNReal), l.MemBaseSet I c (r c) π ∧ π.iUnion = π₀.iUnion) → P π
+     := by
+  simp [(l.hasBasis_toFilteriUnion I π₀).eventually_iff]
+
+theorem Riemann_toFilteriUnion_eventually_iff (P : TaggedPrepartition I → Prop) :
+    (∀ᶠ π in Riemann.toFilteriUnion I π₀, P π) ↔ ∃ (r : Set.Ioi 0),
+    ∀ π : TaggedPrepartition I,
+    (π.IsSubordinate (fun _ ↦ r) ∧ π.IsHenstock ∧ π.iUnion = π₀.iUnion) → P π
+     := by
+  simp only [toFilteriUnion_eventually_iff, exists_and_right, and_imp, forall_exists_index,
+    Subtype.exists, Set.mem_Ioi]
+  constructor
+  · rintro ⟨ r, hr, hr' ⟩
+    use r 1 0, by grind
+    simp only [Subtype.coe_eta]
+    peel hr' with π h
+    intro hsub hhen
+    apply h 1 _
+    exact {
+      isSubordinate := by
+        convert hsub using 2 with x
+        apply hr 1; simp [Riemann]
+      isHenstock := by simp [Riemann, hhen]
+      distortion_le := by simp [Riemann]
+      exists_compl := by simp [Riemann]
+    }
+  rintro ⟨ r, hpos, hr ⟩
+  refine ⟨ fun _ _ ↦ ⟨ r, hpos ⟩, fun c ↦ ?_, fun π c ↦ ?_ ⟩
+  · simp [RCond]
+  intro hmem; apply hr π hmem.isSubordinate _
+  apply hmem.isHenstock
+  simp [Riemann]
+
+noncomputable def _root_.BoxIntegral.Prepartition.mesh_size (π : Prepartition I) : NNReal :=
+  Finset.sup (π.boxes ×ˢ (Finset.univ : Finset ι))
+  (fun ⟨ B, i ⟩ ↦ ⟨ B.upper i - B.lower i, by linarith [B.lower_lt_upper i]⟩ )
+
+/-- A statement is eventually true under the Riemann filter if it is true for all tagged (Henstock) partitions with sufficiently small mesh size. -/
+theorem Riemann_toFilteriUnion_eventually_iff_mesh (P : TaggedPrepartition I → Prop) :
+    (∀ᶠ π in Riemann.toFilteriUnion I π₀, P π) ↔ ∃ ε > 0,
+    ∀ π : TaggedPrepartition I,
+    (π.mesh_size < ε  ∧ π.IsHenstock ∧ π.iUnion = π₀.iUnion) → P π
+     := by
+  sorry
+
+
+
+
+
+end BoxIntegral.IntegrationParams
 
 
 namespace BoxIntegral.BoundaryPoints
