@@ -71,20 +71,20 @@ def vanishesToOrderAt : Prop :=
 
 section Deriv
 
--- see Filter.EventuallyEq.iteratedDerivWithin and iteratedDerivWithin_congr,
--- find the right statement and complete the proof!
-lemma iteratedDerivWithin_congr_of_eventually
+lemma iteratedDeriv_congr_of_isOpen
     {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
-    {f₁ f₂ : 𝕜 → F} {s : Set 𝕜} {x : 𝕜} (hxt : x ∈ s) (h : ∀ x ∈ s, f₁ x = f₂ x) (n : ℕ) :
-    iteratedDerivWithin n f₁ s x = iteratedDerivWithin n f₂ s x := by
-  apply iteratedDerivWithin_congr h hxt
+    {f₁ f₂ : 𝕜 → F} {s : Set 𝕜} (hs : IsOpen s) {x : 𝕜} (hxs : x ∈ s)
+    (h : ∀ x ∈ s, f₁ x = f₂ x) (n : ℕ) :
+    iteratedDeriv n f₁ x = iteratedDeriv n f₂ x := by
+  rw [← iteratedDerivWithin_of_isOpen hs hxs, ← iteratedDerivWithin_of_isOpen hs hxs]
+  exact iteratedDerivWithin_congr h hxs
 
 lemma iteratedDeriv_congr_of_eventually
     {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
     {f₁ f₂ : 𝕜 → F} {s : Set 𝕜} {x : 𝕜} (hs : s ∈ 𝓝 x) (h : ∀ x ∈ s, f₁ x = f₂ x) (n : ℕ) :
     iteratedDeriv n f₁ x = iteratedDeriv n f₂ x := by -- not quite the right statement yet!
-  simp_all [← nhdsWithin_univ, ← iteratedDerivWithin_univ]
-  sorry -- apply iteratedDerivWithin_congr_of_eventually (t := s) (s := univ) --(by simp)
+  obtain ⟨s', hss', hs', hxs'⟩ := mem_nhds_iff.mp hs
+  apply iteratedDeriv_congr_of_isOpen hs' hxs' (by grind)
 
 end Deriv
 
