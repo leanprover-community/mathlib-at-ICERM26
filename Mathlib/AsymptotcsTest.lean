@@ -131,28 +131,26 @@ lemma RSerial.iUnion_RS_iUnion {ι : Sort*} {r : α → β → Prop} {s : ι →
   obtain ⟨y, hy, hxy⟩ := h i x hx
   exact ⟨y, Set.mem_iUnion.mpr ⟨i, hy⟩, hxy⟩
 
-/- I told Claude "Write a variant of map_subset_map but for RS[EventuallyEq l] for an arbitrary filter l" and it produced this in one shot. -/
-@[gcongr]
-lemma map_RS_map {l : Filter α} {s₁ s₁' : Set (α → β → γ)} {s₂ s₂' : Set (α → β)}
-    (h₁ : s₁ RS[EventuallyEq l] s₁') (h₂ : s₂ RS[EventuallyEq l] s₂') :
-    map s₁ s₂ RS[EventuallyEq l] map s₁' s₂' := by
-  rintro g ⟨f₁, hf₁, f₂, hf₂, rfl⟩
-  obtain ⟨f₁', hf₁', hff₁⟩ := h₁ f₁ hf₁
-  obtain ⟨f₂', hf₂', hff₂⟩ := h₂ f₂ hf₂
-  refine ⟨fun x ↦ f₁' x (f₂' x), ⟨f₁', hf₁', f₂', hf₂', rfl⟩, ?_⟩
-  filter_upwards [hff₁, hff₂] with x hx₁ hx₂
-  simp [hx₁, hx₂]
-@[gcongr]
-lemma map_RS_map' {l : Filter α} {s₁ s₁' : Set (α → β → γ)} {s₂ s₂' : Set (α → β)} (r : ∀ δ, (α → δ) → (α → δ) → Prop)
-    (h₁ : s₁ RS[EventuallyEq l] s₁') (h₂ : s₂ RS[EventuallyEq l] s₂') :
-    map s₁ s₂ RS[EventuallyEq l] map s₁' s₂' := by
-  rintro g ⟨f₁, hf₁, f₂, hf₂, rfl⟩
-  obtain ⟨f₁', hf₁', hff₁⟩ := h₁ f₁ hf₁
-  obtain ⟨f₂', hf₂', hff₂⟩ := h₂ f₂ hf₂
-  refine ⟨fun x ↦ f₁' x (f₂' x), ⟨f₁', hf₁', f₂', hf₂', rfl⟩, ?_⟩
-  filter_upwards [hff₁, hff₂] with x hx₁ hx₂
-  simp [hx₁, hx₂]
+class MapClass {α β γ : Type*} (r : (α → γ) → (α → γ) → Prop)
+    (r₁ : outParam ((α → β → γ) → (α → β → γ) → Prop)) (r₂ : outParam ((α → β) → (α → β) → Prop)) where
+  imp {f₁ f₂ f₁' f₂'} : r₁ f₁ f₁' → r₂ f₂ f₂' → r (fun x ↦ f₁ x (f₂ x)) (fun x ↦ f₁' x (f₂' x))
 
+@[gcongr]
+lemma map_rightSerial_map {s₁ s₁' : Set (α → β → γ)} {s₂ s₂' : Set (α → β)} {r r₁ r₂} [MapClass r r₁ r₂]
+    (h₁ : s₁ RS[r₁] s₁') (h₂ : s₂ RS[r₂] s₂') : map s₁ s₂ RS[r] map s₁' s₂' := by
+  rintro g ⟨f₁, hf₁, f₂, hf₂, rfl⟩
+  obtain ⟨f₁', hf₁', hff₁⟩ := h₁ f₁ hf₁
+  obtain ⟨f₂', hf₂', hff₂⟩ := h₂ f₂ hf₂
+  refine ⟨fun x ↦ f₁' x (f₂' x), ⟨f₁', hf₁', f₂', hf₂', rfl⟩, ?_⟩
+  exact MapClass.imp hff₁ hff₂
+
+instance {l : Filter α} : MapClass (α := α) (β := β) (γ := γ) (EventuallyEq l) (EventuallyEq l) (EventuallyEq l) where
+  imp h₁ h₂ := by
+    filter_upwards [h₁, h₂] with x hx₁ hx₂
+    simp [hx₁, hx₂]
+
+instance : MapClass (α := α) (β := β) (γ := γ) Eq Eq Eq where
+  imp h₁ h₂ := by simp [h₁, h₂]
 
 @[simp]
 lemma mem_pure (x : α → β) (y : β) : x ∈ pure y ↔ x = fun _ ↦ y := by
@@ -251,7 +249,7 @@ lemma exp_at_one_set {l : Filter ℝ} {s : Set (ℝ → ℝ)}
   simp [hf]
 
 -- O[l](f x) + O[l](f x) = O[l](f x)
-lemma bigO_add_bigO (f : α → ℝ) : map (map (pure HAdd.hAdd) (bigO l {f})) (bigO l {f}) = bigO l {f} := by
+lemma bigO_add_bigO_self (f : α → ℝ) : map (map (pure HAdd.hAdd) (bigO l {f})) (bigO l {f}) = bigO l {f} := by
   unfold map
   ext y
   push _ ∈ _
