@@ -174,7 +174,7 @@ end Stieltjes
 
 namespace BoxIntegral.IntegrationParams
 
-variable {ι : Type*} [hιfin : Fintype ι] (l : IntegrationParams) (I : Box ι) (π₀ : Prepartition I)
+variable {ι : Type*} [Fintype ι] (l : IntegrationParams) (I : Box ι) (π₀ : Prepartition I)
 
 theorem toFilteriUnion_eventually_iff (P : TaggedPrepartition I → Prop) :
     (∀ᶠ π in l.toFilteriUnion I π₀, P π) ↔ ∃ (r : NNReal → (ι → ℝ) → ↑(Set.Ioi 0)),
@@ -217,12 +217,17 @@ noncomputable def _root_.BoxIntegral.Prepartition.mesh_size (π : Prepartition I
   Finset.sup (π.boxes ×ˢ (Finset.univ : Finset ι))
   (fun ⟨ B, i ⟩ ↦ ⟨ B.upper i - B.lower i, by linarith [B.lower_lt_upper i]⟩ )
 
-/-- A statement is eventually true under the Riemann filter if it is true for all tagged (Henstock) partitions with sufficiently small mesh size. -/
-theorem Riemann_toFilteriUnion_eventually_iff_mesh (P : TaggedPrepartition I → Prop) :
+/-- A statement is eventually true under the Riemann filter if it is true for all tagged (Henstock)
+partitions with sufficiently small mesh size. -/
+theorem Riemann_toFilteriUnion_eventually_iff_mesh [Nonempty ι] (P : TaggedPrepartition I → Prop) :
     (∀ᶠ π in Riemann.toFilteriUnion I π₀, P π) ↔ ∃ ε > 0,
     ∀ π : TaggedPrepartition I,
-    (π.mesh_size < ε  ∧ π.IsHenstock ∧ π.iUnion = π₀.iUnion) → P π
+    (π.mesh_size ≤ ε ∧ π.IsHenstock ∧ π.iUnion = π₀.iUnion) → P π
      := by
+  rw [Riemann_toFilteriUnion_eventually_iff]
+  constructor
+  · rintro ⟨ r, hr ⟩
+    sorry
   sorry
 
 
