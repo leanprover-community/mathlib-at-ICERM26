@@ -8,6 +8,10 @@ pp.unicode.fun = true # pretty-prints `fun a ↦ b`
 relaxedAutoImplicit = false
 weak.linter.mathlibStandardSet = true
 maxSynthPendingDepth = 3
+linter.style.emptyLine = false
+linter.flexible = false
+linter.style.multiGoal = false
+linter.unusedTactic = false
 
 [[require]]
 name = "mathlib"
@@ -21,7 +25,16 @@ name = "Main"
 name = "PiecewiseLinear"
 
 [[lean_lib]]
-name = "CurveIntegral"
+name = "PiecewiseC1"
+
+[[lean_lib]]
+name = "ComplexCurveIntegral"
 
 [[lean_lib]]
 name = "Complex"
+
+[[lean_lib]]
+name = "Topology"
+
+[[lean_lib]]
+name = "IntervalIntegral"

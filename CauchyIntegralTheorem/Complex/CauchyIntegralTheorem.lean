@@ -7,8 +7,9 @@ Authors: GitHub Copilot
 module
 
 
-public import CurveIntegral.Local
-public import PiecewiseLinear.Homotopy
+public import Complex.CauchyIntegralTheoremAux
+public import PiecewiseC1.Homotopy
+public import Mathlib.AlgebraicTopology.FundamentalGroupoid.SimplyConnected
 
 open MeasureTheory intervalIntegral
 open Set
@@ -16,6 +17,12 @@ open scoped Topology unitInterval Interval
 
 public section
 
+/--
+Cauchy's integral theorem in homotopy-invariance form.
+
+If two piecewise-`C¹` paths with the same endpoints are homotopic through an open set `U`, then
+the complex curve integrals of a holomorphic function on `U` along those paths agree.
+-/
 theorem complexCurveIntegral_eq_of_homotopic_piecewiseC1
     {a b : ℂ} {U : Set ℂ} {f : ℂ → ℂ} {γ γ' : Path a b}
     (hU_open : IsOpen U)
@@ -100,3 +107,38 @@ theorem complexCurveIntegral_eq_of_homotopic_piecewiseC1
   have h_eval_one : complexCurveIntegral f (Γ.eval (1 : I)) = complexCurveIntegral f γ := by
     simpa [S] using h_one_mem
   simpa using h_eval_one
+
+/-- A nullhomotopic piecewise-`C¹` loop has zero complex curve integral. -/
+theorem complexCurveIntegral_eq_zero_of_nullhomotopic_piecewiseC1
+    {a : ℂ} {U : Set ℂ} {f : ℂ → ℂ} {γ : Path a a}
+    (hU_open : IsOpen U)
+    (hf : DifferentiableOn ℂ f U)
+    (hγC1 : γ.IsPiecewiseC1)
+    (H : Path.Homotopy γ (Path.refl a))
+    (hHU : ∀ s t : I, H (s, t) ∈ U) :
+    complexCurveIntegral f γ = 0 := by
+  have hreflC1 : (Path.refl a).IsPiecewiseC1 := by
+    apply Path.isPiecewiseC1_of_contDiffOn_extend
+    simpa [Path.refl_extend] using
+      (contDiffOn_const (𝕜 := ℝ) (n := (1 : ℕ∞)) (c := a) (s := Icc (0 : ℝ) 1))
+  have hhom :
+      complexCurveIntegral f (Path.refl a) = complexCurveIntegral f γ :=
+    complexCurveIntegral_eq_of_homotopic_piecewiseC1
+      hU_open hf hγC1 hreflC1 H hHU
+  have hrefl_integral : complexCurveIntegral f (Path.refl a) = 0 := by
+    simp [complexCurveIntegral, curveIntegral_refl]
+  exact hhom.symm.trans hrefl_integral
+
+/-- On a simply connected open set, every piecewise-`C¹` loop has zero complex curve integral. -/
+theorem complexCurveIntegral_eq_zero_of_isSimplyConnected_piecewiseC1
+    {a : ℂ} {U : Set ℂ} {f : ℂ → ℂ} {γ : Path a a}
+    (hU_open : IsOpen U)
+    (hU_sc : IsSimplyConnected U)
+    (hf : DifferentiableOn ℂ f U)
+    (hγC1 : γ.IsPiecewiseC1)
+    (hγU : γ.MapsInto U) :
+    complexCurveIntegral f γ = 0 := by
+  rcases (isSimplyConnected_iff_exists_homotopy_refl_forall_mem.mp hU_sc).2 a γ hγU with
+    ⟨H, hHU⟩
+  exact complexCurveIntegral_eq_zero_of_nullhomotopic_piecewiseC1 hU_open hf hγC1 H
+    (fun s t => hHU (s, t))

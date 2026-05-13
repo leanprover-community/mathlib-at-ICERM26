@@ -6,8 +6,7 @@ Authors: GitHub Copilot
 
 module
 
-
-public import PiecewiseLinear.PiecewiseC1
+public import PiecewiseC1.Basic
 
 open MeasureTheory intervalIntegral
 open Set
@@ -21,6 +20,12 @@ universe u
 
 variable {E : Type u} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
+/-!
+This file provides infrastructure for moving between the finite-bad-set definition of
+`Path.IsPiecewiseC1` and an ordered subdivision of `[0, 1]`. The ordered form is often more
+convenient for interval-integral arguments, while the finite-set form is compact for closure
+properties.
+-/
 lemma exists_mem_subdivision
     {n : ℕ} (hn : 0 < n) {ts : Fin (n + 1) → ℝ}
     (hts0 : ts 0 = 0)
@@ -60,7 +65,7 @@ lemma exists_mem_subdivision
     exact ⟨hpred_le, by simpa [hsucc_eq] using hxk⟩
 
 /-- Recover an ordered subdivision from the finite-bad-set definition of piecewise-`C¹`. -/
-theorem IsPiecewiseC1.exists_subdivision {x y : E} {γ : Path x y}
+lemma IsPiecewiseC1.exists_subdivision {x y : E} {γ : Path x y}
     (hγ : γ.IsPiecewiseC1) :
     ∃ n : ℕ, ∃ _ : 0 < n, ∃ ts : Fin (n + 1) → ℝ,
       ts 0 = 0 ∧
@@ -152,7 +157,7 @@ theorem IsPiecewiseC1.exists_subdivision {x y : E} {γ : Path x y}
       hdisj
 
 /-- Build the finite-bad-set definition from an ordered subdivision. -/
-theorem isPiecewiseC1_of_subdivision {x y : E} {γ : Path x y}
+lemma isPiecewiseC1_of_subdivision {x y : E} {γ : Path x y}
     {n : ℕ} (hn : 0 < n) (ts : Fin (n + 1) → ℝ)
     (hts0 : ts 0 = 0)
     (hts1 : ts ⟨n, Nat.lt_succ_self n⟩ = 1)
@@ -212,51 +217,6 @@ theorem isPiecewiseC1_of_subdivision {x y : E} {γ : Path x y}
       exact (hγ_smooth ⟨0, hn⟩).mono fun r hr => by
         exact False.elim (not_le_of_gt hba (hr.1.trans hr.2))
 
-theorem IsPiecewiseLinear.isPiecewiseC1 {x y : E} {γ : Path x y}
-    (hγ : γ.IsPiecewiseLinear) : γ.IsPiecewiseC1 := by
-  rcases (show ∃ (N : ℕ) (hpos : 0 < N) (p : Fin (N + 1) → E) (h0 : p 0 = x)
-    (hN : p (Fin.last N) = y), γ = piecewiseLinearInterpolation hpos p h0 hN from hγ) with
-    ⟨N, hpos, p, h0, hN, rfl⟩
-  refine isPiecewiseC1_of_subdivision (n := N) hpos (fun i => (i : ℝ) / N)
-    ?_ ?_ ?_ ?_ ?_
-  · simp
-  · change (N : ℝ) / (N : ℝ) = 1
-    exact div_self (by exact_mod_cast hpos.ne')
-  · intro i
-    constructor
-    · positivity
-    · exact div_le_one_of_le₀ (by exact_mod_cast Nat.lt_succ_iff.mp i.isLt) (by positivity)
-  · intro i
-    change ((i.castSucc : Fin (N + 1)) : ℝ) / (N : ℝ) <
-      ((i.succ : Fin (N + 1)) : ℝ) / (N : ℝ)
-    simp [Fin.val_succ, Nat.cast_add, Nat.cast_one]
-    gcongr
-    norm_num
-  · intro i
-    let φ : ℝ → E := fun t =>
-      AffineMap.lineMap (p i.castSucc) (p i.succ) ((N : ℝ) * t - i)
-    have hφ : ContDiff ℝ 1 φ := by
-      dsimp [φ, AffineMap.lineMap]
-      fun_prop
-    refine hφ.contDiffOn.congr ?_
-    intro t ht
-    have ht01 : t ∈ Set.Icc (0 : ℝ) 1 := by
-      have hleft0 : (0 : ℝ) ≤ (fun j : Fin (N + 1) => (j : ℝ) / N) i.castSucc := by
-        positivity
-      have hright1 : (fun j : Fin (N + 1) => (j : ℝ) / N) i.succ ≤ 1 := by
-        have hNpos : (0 : ℝ) < N := by exact_mod_cast hpos
-        change ((i.succ : Fin (N + 1)) : ℝ) / (N : ℝ) ≤ 1
-        rw [div_le_one₀ hNpos]
-        exact_mod_cast Nat.succ_le_iff.mpr i.isLt
-      exact ⟨hleft0.trans ht.1, ht.2.trans hright1⟩
-    have htI : (⟨t, ht01⟩ : I) ∈
-        Set.Icc (equalGrid N i.castSucc) (equalGrid N i.succ) := by
-      constructor
-      · simpa [equalGrid] using ht.1
-      · simpa [equalGrid] using ht.2
-    have happly :=
-      piecewiseLinearInterpolation_apply_of_mem_Icc hpos p h0 hN i htI
-    rw [Path.extend_apply _ ht01]
-    exact happly
 
 end Path
+

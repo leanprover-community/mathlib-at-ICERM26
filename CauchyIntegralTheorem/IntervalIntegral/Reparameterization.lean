@@ -196,3 +196,4 @@ noncomputable abbrev equalGrid (N : ℕ) : Fin (N + 1) → I := fun i => ⟨i / 
   · exact div_le_one_of_le₀ (by exact_mod_cast Nat.lt_succ_iff.mp i.isLt) (by positivity)⟩
 
 end Path
+

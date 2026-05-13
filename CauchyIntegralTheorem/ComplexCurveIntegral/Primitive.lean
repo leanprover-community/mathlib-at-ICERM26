@@ -6,9 +6,9 @@ Authors: GitHub Copilot
 
 module
 
-
-public import PiecewiseLinear.PiecewiseC1_Adapter
-public import Mathlib.LinearAlgebra.Complex.Module
+public import ComplexCurveIntegral.Basic
+public import PiecewiseC1.Adapter
+public import Mathlib.Analysis.Complex.HasPrimitives
 
 open MeasureTheory intervalIntegral
 open Set
@@ -16,30 +16,11 @@ open scoped Topology unitInterval Interval
 
 public section
 
-public noncomputable abbrev fdzForm (f : ℂ → ℂ) (z : ℂ) : ℂ →L[ℂ] ℂ :=
-  ContinuousLinearMap.mul ℂ ℂ (f z)
-
-@[simp]
-lemma fdzForm_apply (f : ℂ → ℂ) (z v : ℂ) :
-    fdzForm f z v = f z * v := by
-  simp [fdzForm]
-
-/-- Complex curve integral `∫_γ f dz`, defined via mathlib's `curveIntegral`. -/
-public noncomputable abbrev complexCurveIntegral {a b : ℂ} (f : ℂ → ℂ) (γ : Path a b) : ℂ :=
-  ∫ᶜ z in γ, fdzForm f z
-
-lemma complexCurveIntegral_def {a b : ℂ} (f : ℂ → ℂ) (γ : Path a b) :
-    complexCurveIntegral f γ = ∫ᶜ z in γ, fdzForm f z := rfl
-
-/-- Unfolding gives the usual `∫₀¹ f(γ t) γ'(t) dt`. -/
-lemma complexCurveIntegral_eq_intervalIntegral_deriv
-    {a b : ℂ} (f : ℂ → ℂ) (γ : Path a b) :
-    complexCurveIntegral f γ =
-      ∫ t in (0 : ℝ)..1, f (γ.extend t) * deriv (⇑γ.extend) t := by
-  rw [complexCurveIntegral, curveIntegral_eq_intervalIntegral_deriv]
-  simp [fdzForm]
-
-theorem complexCurveIntegral_eq_sub_of_hasDerivAt_comp
+/--
+Fundamental theorem of calculus for complex curve integrals, stated with an explicit derivative
+of `F ∘ γ` and an explicit integrability hypothesis.
+-/
+lemma complexCurveIntegral_eq_sub_of_hasDerivAt_comp
     {a b : ℂ} (f F : ℂ → ℂ) (γ : Path a b)
     (hderiv : ∀ t ∈ Set.uIcc (0 : ℝ) 1,
       HasDerivAt
@@ -56,6 +37,11 @@ theorem complexCurveIntegral_eq_sub_of_hasDerivAt_comp
     intervalIntegral.integral_eq_sub_of_hasDerivAt hderiv hint
   simpa using hFTC
 
+/--
+If `F` is a primitive for `f` along a differentiable path, then the complex curve integral of
+`f` is `F b - F a`. This low-level form keeps differentiability and integrability hypotheses
+explicit.
+-/
 theorem complexCurveIntegral_eq_sub_of_hasPrimitiveOn
     {a b : ℂ} {U : Set ℂ} {f F : ℂ → ℂ} {γ : Path a b}
     (hγU : ∀ t ∈ Set.uIcc (0 : ℝ) 1, γ.extend t ∈ U)
@@ -73,23 +59,14 @@ theorem complexCurveIntegral_eq_sub_of_hasPrimitiveOn
     (hF (γ.extend t) (hγU t ht)).comp_hasDerivAt t (hγderiv t ht)
   simpa [fdzForm] using hcomp
 
-lemma sum_range_sub_consecutive {G : Type*} [AddCommGroup G]
-    (A : ℕ → G) (n : ℕ) :
-    (∑ k ∈ Finset.range n, (A (k + 1) - A k)) = A n - A 0 := by
-  induction n with
-  | zero =>
-      simp
-  | succ n ih =>
-      rw [Finset.sum_range_succ, ih]
-      abel
+/--
+Auxiliary primitive theorem for piecewise-`C¹` paths.
 
-@[expose] noncomputable def complexCurveIntegrand {a b : ℂ} (f : ℂ → ℂ) (γ : Path a b) : ℝ → ℂ :=
-  fun t => f (γ.extend t) * deriv (⇑γ.extend) t
-
-lemma complexCurveIntegrand_apply {a b : ℂ} (f : ℂ → ℂ) (γ : Path a b) (t : ℝ) :
-    complexCurveIntegrand f γ t = f (γ.extend t) * deriv (⇑γ.extend) t := rfl
-
-theorem complexCurveIntegral_eq_sub_of_hasPrimitiveOn_piecewiseC1
+This version keeps integrability of the complex curve integrand as an explicit hypothesis. For
+open exact domains, prefer `complexCurveIntegral_eq_sub_of_isExactOn_piecewiseC1`, which derives
+that integrability from continuity of the derivative on the path image.
+-/
+lemma complexCurveIntegral_eq_sub_of_hasPrimitiveOn_piecewiseC1
     {a b : ℂ} {U : Set ℂ} {f F : ℂ → ℂ} {γ : Path a b}
     (hγC1 : γ.IsPiecewiseC1)
     (hγU : ∀ t : ℝ, t ∈ Icc (0 : ℝ) 1 → γ.extend t ∈ U)
@@ -191,10 +168,9 @@ theorem complexCurveIntegral_eq_sub_of_hasPrimitiveOn_piecewiseC1
           refine Finset.sum_congr rfl ?_
           intro k hk
           exact hpiece_eq k (Finset.mem_range.mp hk)
-    _ = G (as n) - G (as 0) := sum_range_sub_consecutive (fun k => G (as k)) n
+    _ = G (as n) - G (as 0) := Finset.sum_range_sub (fun k => G (as k)) n
     _ = F b - F a := by
       simp [G, has0, hasn]
-
 
 lemma Path.IsPiecewiseC1.intervalIntegrable_complexCurveIntegrand
     {a b : ℂ} {U : Set ℂ} {f : ℂ → ℂ} {γ : Path a b}
@@ -274,8 +250,11 @@ lemma Path.IsPiecewiseC1.curveIntegrable_fdzForm
     simp [complexCurveIntegrand, fdzForm, hderiv_eq]
   exact hint.congr_ae hcongr.symm
 
-
-theorem complexCurveIntegral_eq_sub_of_hasPrimitiveOn_open_piecewiseC1
+/--
+If `f` is exact on an open set containing a piecewise-`C¹` path, then its complex curve integral
+depends only on the endpoints.
+-/
+theorem complexCurveIntegral_eq_sub_of_isExactOn_piecewiseC1
     {a b : ℂ} {U : Set ℂ} {f : ℂ → ℂ} {γ : Path a b}
     (hU : IsOpen U)
     (hγC1 : γ.IsPiecewiseC1)
@@ -296,6 +275,3 @@ theorem complexCurveIntegral_eq_sub_of_hasPrimitiveOn_open_piecewiseC1
     · exact IsScalarTower.complexToReal
   · -- Derive integrability from exactness and piecewise C¹-ness of `γ`.
     exact hγC1.intervalIntegrable_complexCurveIntegrand hγU hfU
-
-public abbrev Path.UniformClose {a b : ℂ} (γ γ' : Path a b) (ε : ℝ) : Prop :=
-  ∀ t : I, dist (γ t) (γ' t) < ε

@@ -6,8 +6,8 @@ Authors: GitHub Copilot
 
 module
 
-
-public import PiecewiseLinear.PiecewiseC1_Adapter
+public import PiecewiseC1.OfPiecewiseLinear
+public import PiecewiseLinear.Approximation
 
 open MeasureTheory intervalIntegral
 open Set
@@ -20,8 +20,75 @@ namespace Path
 universe u
 
 variable {E : Type u} [NormedAddCommGroup E] [NormedSpace ℝ E]
+/-- The straight-line homotopy between two paths with the same endpoints. -/
+public noncomputable abbrev linearHomotopy {x y : E} (γ γ' : Path x y) : Homotopy γ γ' where
+  toFun st := AffineMap.lineMap (γ st.2) (γ' st.2) (st.1 : ℝ)
+  continuous_toFun := by
+    have hfun :
+        (fun st : I × I => AffineMap.lineMap (γ st.2) (γ' st.2) (st.1 : ℝ)) =
+          fun st : I × I => (1 - (st.1 : ℝ)) • γ st.2 + (st.1 : ℝ) • γ' st.2 := by
+      ext st
+      rw [AffineMap.lineMap_apply_module]
+    rw [hfun]
+    exact ((continuous_const.sub (continuous_subtype_val.comp continuous_fst)).smul
+      (γ.continuous.comp continuous_snd)).add
+      ((continuous_subtype_val.comp continuous_fst).smul (γ'.continuous.comp continuous_snd))
+  map_zero_left := by
+    intro t
+    simp [AffineMap.lineMap_apply_zero]
+  map_one_left := by
+    intro t
+    simp [AffineMap.lineMap_apply_one]
+  prop' := by
+    intro s f hf
+    rcases hf with rfl | rfl
+    · simp
+    · simp
 
-theorem exists_uniform_grid_homotopy_slices_close
+/-- Piecewise-`C¹` paths are closed under pointwise affine interpolation. -/
+lemma IsPiecewiseC1.lineMap {x y : E} {γ γ' : Path x y}
+    (hγ : γ.IsPiecewiseC1) (hγ' : γ'.IsPiecewiseC1) (s : I) :
+    ((linearHomotopy γ γ').eval s).IsPiecewiseC1 := by
+  rcases hγ with ⟨Sγ, hSγ01, hγ_smooth⟩
+  rcases hγ' with ⟨Sγ', hSγ'01, hγ'_smooth⟩
+  let S : Finset ℝ := Sγ ∪ Sγ'
+  refine ⟨S, ?_, ?_⟩
+  · intro r hr
+    simp only [S, Finset.mem_union] at hr
+    rcases hr with hr | hr
+    · exact hSγ01 r hr
+    · exact hSγ'01 r hr
+  · intro a b ha hb hdisj
+    have hdisjγ : Disjoint (Ioo a b) (↑Sγ : Set ℝ) := by
+      rw [Set.disjoint_left]
+      intro t ht htSγ
+      exact (Set.disjoint_left.mp hdisj) ht (by
+        simp [S, htSγ])
+    have hdisjγ' : Disjoint (Ioo a b) (↑Sγ' : Set ℝ) := by
+      rw [Set.disjoint_left]
+      intro t ht htSγ'
+      exact (Set.disjoint_left.mp hdisj) ht (by
+        simp [S, htSγ'])
+    have hγab := hγ_smooth a b ha hb hdisjγ
+    have hγ'ab := hγ'_smooth a b ha hb hdisjγ'
+    have hlin : ContDiffOn ℝ 1
+        (fun r : ℝ => (1 - (s : ℝ)) • γ.extend r + (s : ℝ) • γ'.extend r)
+        (Icc a b) := by
+      exact ((contDiffOn_const.sub contDiffOn_const).smul hγab).add
+        (contDiffOn_const.smul hγ'ab)
+    refine hlin.congr ?_
+    intro r hr
+    have hr01 : r ∈ Icc (0 : ℝ) 1 := ⟨ha.1.trans hr.1, hr.2.trans hb.2⟩
+    rw [Path.extend_apply _ hr01, Path.extend_apply γ hr01, Path.extend_apply γ' hr01]
+    change AffineMap.lineMap (γ ⟨r, hr01⟩) (γ' ⟨r, hr01⟩) (s : ℝ) =
+      (1 - (s : ℝ)) • γ ⟨r, hr01⟩ + (s : ℝ) • γ' ⟨r, hr01⟩
+    rw [AffineMap.lineMap_apply_module]
+
+/--
+Given a homotopy `H : I × I → E`, choose an equal grid in the homotopy parameter such that
+successive slices are uniformly close as paths.
+-/
+lemma exists_uniform_grid_homotopy_slices_close
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {x y : E} (γ γ' : Path x y) (H : Homotopy γ γ') :
     let hmap := ContinuousMap.curry H.toContinuousMap
@@ -58,7 +125,11 @@ theorem exists_uniform_grid_homotopy_slices_close
       norm_num
   simpa [hdist_eq] using hstep
 
-theorem exists_piecewiseC1_chain_of_homotopy
+/--
+Approximate a homotopy by a finite chain of piecewise-`C¹` paths whose consecutive members are
+uniformly close and remain in the prescribed open set.
+-/
+lemma exists_piecewiseC1_chain_of_homotopy
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {x y : E} {γ γ' : Path x y}
     {U : Set E} (hU_open : IsOpen U)
@@ -195,14 +266,14 @@ theorem exists_piecewiseC1_chain_of_homotopy
       _ ≤ ε := by
               linarith
 
-/-- A homotopy can be replaced by a homotopy through piecewise-`C¹` paths, staying uniformly
-close to the original homotopy and hence inside the same open set.
+/--
+A homotopy can be replaced by a homotopy through piecewise-`C¹` paths, staying uniformly close to
+the original homotopy and hence inside the same open set.
 
-The construction is the one suggested by the finite chain theorem above: sample the original
-homotopy finely in the homotopy parameter, approximate the sampled slices by piecewise-linear
-paths, keep the endpoints fixed as `γ` and `γ'`, and concatenate the straight-line homotopies
-between consecutive sampled paths. The mesh is chosen small enough that every straight segment
-stays inside the thickening of the image of `H`. -/
+The construction samples the original homotopy finely in the homotopy parameter, approximates the
+sampled slices by piecewise-linear paths, keeps the endpoint slices fixed as `γ` and `γ'`, and
+concatenates the straight-line homotopies between consecutive sampled paths.
+-/
 theorem exists_piecewiseC1_homotopy_of_homotopy
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {x y : E} {γ γ' : Path x y}
@@ -565,4 +636,6 @@ theorem exists_piecewiseC1_homotopy_of_homotopy
 
 
 
+
 end Path
+
