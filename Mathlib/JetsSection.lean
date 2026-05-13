@@ -25,7 +25,7 @@ variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
   -- future? ContMDiffVectorBundle also?
 
 -- let s, t be sections of V
-variable {f : B → 𝕜} {a : 𝕜} {s t : Π x : B, V x} {u : Set B} {k : ℕ} {x₀ : B}
+variable {f : B → 𝕜} {a : 𝕜} {s t : Π x : B, V x} {u : Set B} {k : ℕ} [hkn : Fact (k ≤ n)] {x₀ : B}
 
 
 -- given local trivialisation Ψ,
@@ -89,6 +89,7 @@ def vanishesToOrderAt : Prop :=
 
 section Deriv
 
+omit hkn in
 lemma iteratedDeriv_congr_of_isOpen
     {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
     {f₁ f₂ : 𝕜 → F} {s : Set 𝕜} (hs : IsOpen s) {x : 𝕜} (hxs : x ∈ s)
@@ -97,6 +98,7 @@ lemma iteratedDeriv_congr_of_isOpen
   rw [← iteratedDerivWithin_of_isOpen hs hxs, ← iteratedDerivWithin_of_isOpen hs hxs]
   exact iteratedDerivWithin_congr h hxs
 
+omit hkn in
 lemma iteratedDeriv_congr_of_eventually
     {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
     {f₁ f₂ : 𝕜 → F} {s : Set 𝕜} {x : 𝕜} (hs : s ∈ 𝓝 x) (h : ∀ x ∈ s, f₁ x = f₂ x) (n : ℕ) :
@@ -107,6 +109,7 @@ lemma iteratedDeriv_congr_of_eventually
 end Deriv
 
 variable {n} in
+omit [(x : B) → AddCommGroup (V x)] hkn in
 /- `vanishesToOrderAt` only depends on the section `s` near `x₀` -/
 lemma vanishesToOrderAt.congr_of_eventually (hs : vanishesToOrderAt I F n s k x₀)
     {u : Set B} (hu : u ∈ 𝓝 x₀) (heq : ∀ x ∈ u, s x = t x) :
@@ -126,6 +129,7 @@ lemma vanishesToOrderAt.congr_of_eventually (hs : vanishesToOrderAt I F n s k x�
   exact iteratedDeriv_congr_of_eventually hu' heq' _
 
 variable {n} in
+omit [(x : B) → AddCommGroup (V x)] hkn in
 /- `vanishesToOrderAt` only depends on the section `s` near `x₀` -/
 lemma vanishesToOrderAt_congr_iff_eventuallyEq
     {u : Set B} (hu : u ∈ 𝓝 x₀) (heq : ∀ x ∈ u, s x = t x) :
@@ -133,7 +137,7 @@ lemma vanishesToOrderAt_congr_iff_eventuallyEq
   ⟨fun hs ↦ hs.congr_of_eventually hu heq, fun ht ↦ ht.congr_of_eventually hu (by grind)⟩
 
 variable {n} in
-omit [(x : B) → AddCommGroup (V x)] in
+omit [(x : B) → AddCommGroup (V x)] hkn in
 /- `vanishesToOrderAt` is monotone in the order of vanishing -/
 lemma vanishesToOrderAt_mono {l : ℕ} (hs : vanishesToOrderAt I F n s k x₀) (hkl : l ≤ k) :
     vanishesToOrderAt I F n s l x₀ := by
@@ -146,12 +150,14 @@ variable (I)
 -- would need to switch to a germ-based definition.
 
 -- TODO: this seems to be the wrong lemma (as the one below)
+omit hkn in
 lemma vanishesRelativeToOrder_zero {Ψ : Trivialization F TotalSpace.proj} :
     vanishesRelativeToOrder (fun x ↦ (0 : V x)) k Ψ γ := by
   intro i hik
   have : Ψ.secToFun (fun x ↦ (0 : V x)) = 0 := sorry -- missing API lemma: secToFun_zero
   simp [this]
 
+omit hkn in
 variable {n} in
 lemma vanishesToOrderAt_zero : vanishesToOrderAt I F n (fun x ↦ (0 : V x)) k x₀ := by
   intro Ψ γ hΨ hx₀ hγ₀ hγ
@@ -161,22 +167,29 @@ lemma vanishesToOrderAt_zero : vanishesToOrderAt I F n (fun x ↦ (0 : V x)) k x
 variable (V k x₀) in
 def foo : Submodule 𝕜 (ContMDiffSection I F n V) where
   carrier := { s | vanishesToOrderAt (I := I) F n s k x₀}
-  add_mem' hs ht Ψ γ := by
+  add_mem' {a b} ha hb Ψ γ := by
     intro hΨ hx₀ hγ₀ hγ'
     unfold vanishesRelativeToOrder
-    intro i' hik'
-    specialize hs Ψ γ hΨ hx₀ hγ₀ hγ' i' hik'
-    specialize ht Ψ γ hΨ hx₀ hγ₀ hγ' i' hik'
-    -- secToFun is linear on an individual fiber (missing lemma)
-    -- iteratedDeriv is linear
+    intro i hik
+    specialize ha Ψ γ hΨ hx₀ hγ₀ hγ' i hik
+    specialize hb Ψ γ hΨ hx₀ hγ₀ hγ' i hik
+    have hik' : (i : WithTop ℕ∞) ≤ k := Nat.cast_le.mpr hik
     -- exercise!
-    sorry
+    convert iteratedDeriv_add (n := i) (f := Ψ.secToFun a ∘ γ) (g := Ψ.secToFun b ∘ γ) (x := 0) ?_ ?_
+    · -- secToFun is linear on an individual fiber (missing lemma)
+      sorry
+    · simp [ha, hb]
+    · have H : CMDiffAt n (Ψ.secToFun a) (γ 0) := sorry -- missing lemma
+      exact ((H.comp 0 hγ').of_le (m := i) (hik'.trans hkn.elim)).contDiffAt
+    · have H : CMDiffAt n (Ψ.secToFun b) (γ 0) := sorry -- missing lemma
+      exact ((H.comp 0 hγ').of_le (m := i) (hik'.trans hkn.elim)).contDiffAt
   zero_mem' := by
     simp only [mem_setOf_eq, ContMDiffSection.coe_zero]
     exact vanishesToOrderAt_zero _
   smul_mem' := sorry -- exercise!
 
-theorem foo_mono {n k l} (hkl : k ≤ l) : foo (F := F) I V n l x₀ ≤ foo I V n k x₀ := by
+theorem foo_mono {k l : ℕ} [hln : Fact (l ≤ n)] (hkl : k ≤ l) (x₀) :
+    foo (F := F) I V n l x₀ ≤ foo I V n k (hkn := ⟨(Nat.cast_le.mpr hkl).trans hln.elim⟩) x₀ := by
   intro s hs
   exact vanishesToOrderAt_mono hs hkl
 
@@ -187,16 +200,24 @@ deriving AddCommGroup, Module 𝕜
 
 variable (F V k x₀) in
 /-- The canonical linear map from `(k + 1)`-jets to `k`-jets. -/
-def kjetsMono : kjets I F V n (k + 1) x₀ →ₗ[𝕜] kjets I F V n k x₀ :=
+def kjetsMono [hkn : Fact (k + 1 ≤ n)] (x₀ : B) :
+    kjets I F V n (k + 1) (hkn := ⟨Eq.trans_le (Nat.cast_add k 1) hkn.elim⟩) x₀ →ₗ[𝕜]
+      kjets I F V n k (hkn :=
+        -- should we let `grind` handle this silently?
+        ⟨((Nat.cast_le.mpr (Nat.le_add_right k 1)).trans_eq (Nat.cast_add k 1)).trans hkn.elim⟩)
+        x₀ :=
   have hk : k ≤ k + 1 := Nat.le_add_right k 1
-  Submodule.factor (foo_mono I hk)
+  Submodule.factor (foo_mono I n (hln := ⟨Eq.trans_le (Nat.cast_add k 1) hkn.elim⟩) hk x₀)
 
 -- xxx: also from l to k? also continuous, when we put a topology?
 
+omit hkn in
 /-- The canonical linear map from `(k + 1)`-jets to `k`-jets is surjective. -/
-theorem kjetsMono_surjective : Function.Surjective (kjetsMono I F V n k x₀) :=
+theorem kjetsMono_surjective [hkn : Fact (k + 1 ≤ n)] (x₀ : B) :
+    Function.Surjective (kjetsMono I F V n k x₀) :=
   have hk : k ≤ k + 1 := Nat.le_add_right k 1
-  Submodule.factor_surjective (foo_mono I hk)
+  Submodule.factor_surjective <|
+    foo_mono I n (hln := ⟨Eq.trans_le (Nat.cast_add k 1) hkn.elim⟩) hk x₀
 
 -- lemma: kjets does not
 
