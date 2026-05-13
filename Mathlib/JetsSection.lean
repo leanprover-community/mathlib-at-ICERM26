@@ -39,11 +39,17 @@ def vanishesRelativeToOrder (γ : 𝕜 → B) : Prop :=
 
 variable {γ γ' : 𝕜 → B}
 
+omit [∀ (x : B), IsTopologicalAddGroup (V x)]
+  [∀ (x : B), ContinuousSMul 𝕜 (V x)]
+  [VectorBundle 𝕜 F V] in
 theorem coordChange_secToFun {ψ ψ' : Trivialization F (TotalSpace.proj : TotalSpace F V → B)}
     [MemTrivializationAtlas ψ'] [MemTrivializationAtlas ψ] (b : B) (hb : b ∈ ψ.baseSet) [VectorBundle 𝕜 F V]:
     coordChange ψ ψ' b (secToFun ψ s b) = secToFun ψ' s b := by
   grind [secToFun, coordChange_apply_snd]
 
+omit [∀ (x : B), IsTopologicalAddGroup (V x)]
+  [∀ (x : B), ContinuousSMul 𝕜 (V x)]
+  [VectorBundle 𝕜 F V] in
 theorem secToFun_zero {ψ : Trivialization F (TotalSpace.proj : TotalSpace F V → B)}
     [MemTrivializationAtlas ψ] [VectorBundle 𝕜 F V] (b : B) (hb : b ∈ ψ.baseSet) :
     secToFun ψ (fun x => (0 : V x)) b = 0 := by
