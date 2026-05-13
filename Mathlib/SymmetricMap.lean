@@ -354,7 +354,7 @@ instance instModule : Module S (M [Sym^ι]→ₗ[R] N) where
 instance instIsTorsionFree [IsTorsionFree S N] : IsTorsionFree S (M [Sym^ι]→ₗ[R] N) :=
   coe_injective.moduleIsTorsionFree _ coeFn_smul
 
-/-- Embedding of alternating maps into multilinear maps as a linear map. -/
+/-- Embedding of symmetric maps into multilinear maps as a linear map. -/
 @[simps]
 def toMultilinearMapLM : (M [Sym^ι]→ₗ[R] N) →ₗ[S] MultilinearMap R (fun _ : ι ↦ M) N where
   toFun := toMultilinearMap
@@ -488,8 +488,8 @@ namespace SymmetricMap
 variable {M₂ : Type*} [AddCommMonoid M₂] [Module R M₂]
 variable {M₃ : Type*} [AddCommMonoid M₃] [Module R M₃]
 
-/-- Composing an alternating map with the same linear map on each argument gives again an
-alternating map. -/
+/-- Composing a symmetric map with the same linear map on each argument gives again a symmetric
+map. -/
 def compLinearMap (f : M [Sym^ι]→ₗ[R] N) (g : M₂ →ₗ[R] M) : M₂ [Sym^ι]→ₗ[R] N :=
   { (f : MultilinearMap R (fun _ : ι ↦ M) N).compLinearMap fun _ ↦ g with
     map_eq_map_of_swap' v i j _ := by
@@ -558,9 +558,9 @@ variable (S : Type*) [Semiring S] [Module S N] [SMulCommClass R S N]
 
 /-- Construct a linear equivalence between maps from a linear equivalence between domains.
 
-This is `AlternatingMap.compLinearMap` as an isomorphism,
-and the alternating version of `LinearEquiv.multilinearMapCongrLeft`.
-It could also have been called `LinearEquiv.alternatingMapCongrLeft`. -/
+This is `SymmetricMap.compLinearMap` as an isomorphism,
+and the symmetric version of `LinearEquiv.multilinearMapCongrLeft`.
+It could also have been called `LinearEquiv.symmetricMapCongrLeft`. -/
 @[simps apply]
 def domLCongr (e : M ≃ₗ[R] M₂) : M [Sym^ι]→ₗ[R] N ≃ₗ[S] (M₂ [Sym^ι]→ₗ[R] N) where
   toFun f := f.compLinearMap e.symm
@@ -584,8 +584,8 @@ theorem domLCongr_trans (e : M ≃ₗ[R] M₂) (f : M₂ ≃ₗ[R] M₃) :
 
 end DomLcongr
 
-/-- Composing an alternating map with the same linear equiv on each argument gives the zero map
-if and only if the alternating map is the zero map. -/
+/-- Composing a symmetric map with the same linear equiv on each argument gives the zero map
+if and only if the symmetric map is the zero map. -/
 @[simp]
 theorem compLinearEquiv_eq_zero_iff (f : M [Sym^ι]→ₗ[R] N) (g : M₂ ≃ₗ[R] M) :
     f.compLinearMap (g : M₂ →ₗ[R] M) = 0 ↔ f = 0 :=
@@ -703,7 +703,7 @@ theorem domDomCongr_smul {S : Type*} [Monoid S] [DistribMulAction S N] [SMulComm
     (c • f).domDomCongr σ = c • f.domDomCongr σ :=
   rfl
 
-/-- `AlternatingMap.domDomCongr` as an equivalence.
+/-- `SymmetricMap.domDomCongr` as an equivalence.
 
 This is declared separately because it does not work with dot notation. -/
 @[simps apply symm_apply]
@@ -894,7 +894,7 @@ variable {R' : Type*} {M'' M₂'' N'' N₂'' : Type*} [CommSemiring R'] [AddComm
 /-- An isomorphism of multilinear maps given an isomorphism between their codomains.
 
 This is `Linear.compSymmetricMap` as an isomorphism,
-and the alternating version of `LinearEquiv.multilinearMapCongrRight`. -/
+and the symmetric version of `LinearEquiv.multilinearMapCongrRight`. -/
 @[simps!]
 def LinearEquiv.symmetricMapCongrRight (e : N'' ≃ₗ[R'] N₂'') :
     M'' [Sym^ι]→ₗ[R'] N'' ≃ₗ[R'] (M'' [Sym^ι]→ₗ[R'] N₂'') where
@@ -905,7 +905,7 @@ def LinearEquiv.symmetricMapCongrRight (e : N'' ≃ₗ[R'] N₂'') :
   left_inv _ := by ext; simp
   right_inv _ := by ext; simp
 
-/-- The space of constant maps is equivalent to the space of maps that are alternating with respect
+/-- The space of constant maps is equivalent to the space of maps that are symmetric with respect
 to an empty family. -/
 @[simps]
 def Symmetric.constLinearEquivOfIsEmpty [IsEmpty ι] : N'' ≃ₗ[R'] (M'' [Sym^ι]→ₗ[R'] N'') where
