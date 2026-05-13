@@ -23,7 +23,7 @@ variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
   [∀ x, AddCommGroup (V x)] [∀ x, Module 𝕜 (V x)]
   [∀ x : B, TopologicalSpace (V x)]
   [∀ x, IsTopologicalAddGroup (V x)] [∀ x, ContinuousSMul 𝕜 (V x)]
-  [FiberBundle F V] [VectorBundle 𝕜 F V]
+  [FiberBundle F V] [VectorBundle 𝕜 F V] (n : WithTop ℕ∞)
   -- future? ContMDiffVectorBundle also?
 
 -- let s, t be sections of V
@@ -123,7 +123,7 @@ variable (I)
 
 -- the sections vanishing to order k form a submodule
 variable (V k x₀) in
-def foo : Submodule 𝕜 (ContMDiffSection I F k V) where
+def foo : Submodule 𝕜 (ContMDiffSection I F n V) where
   carrier := { s | vanishesToOrderAt (I := I) F s k x₀}
   add_mem' hs ht Ψ γ := by
     intro hΨ hx₀ hγ₀ hγ'
@@ -138,16 +138,27 @@ def foo : Submodule 𝕜 (ContMDiffSection I F k V) where
   zero_mem' := sorry -- exercise!
   smul_mem' := sorry -- exercise!
 
+theorem foo_mono {n k l} (hkl : k ≤ l) : foo (F := F) I V n l x₀ ≤ foo I V n k x₀ := by
+  intro s hs
+  exact vanishesToOrderAt_mono hs hkl
+
 variable (V F k x₀) in
 /-- The module of `k`-jets of sections of `V` at `x₀` -/
-def kjets := (ContMDiffSection I F k V) ⧸ (foo I V k x₀)
+def kjets := (ContMDiffSection I F n V) ⧸ (foo I V n k x₀)
+deriving AddCommGroup, Module 𝕜
 
-instance : AddCommMonoid (kjets I F V k x₀) := sorry
+variable (F V k x₀) in
+/-- The canonical linear map from `(k + 1)`-jets to `k`-jets. -/
+def kjetsMono : kjets I F V n (k + 1) x₀ →ₗ[𝕜] kjets I F V n k x₀ :=
+  have hk : k ≤ k + 1 := Nat.le_add_right k 1
+  Submodule.factor (foo_mono I hk)
 
-instance : Module 𝕜 (kjets I F V k x₀) := sorry
-
-def kjets_mono : kjets I F V (k + 1) x₀ →ₗ[𝕜] kjets I F V k x₀ := sorry
 -- xxx: also from l to k? also continuous, when we put a topology?
+
+/-- The canonical linear map from `(k + 1)`-jets to `k`-jets is surjective. -/
+theorem kjetsMono_surjective : Function.Surjective (kjetsMono I F V n k x₀) :=
+  have hk : k ≤ k + 1 := Nat.le_add_right k 1
+  Submodule.factor_surjective (foo_mono I hk)
 
 -- lemma: kjets does not
 
