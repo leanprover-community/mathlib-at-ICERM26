@@ -71,8 +71,32 @@ lemma RSerial.eq (a b : Set α) : (a RS[Eq] b) ↔ a ⊆ b := by
   unfold RSerial
   grind
 
+@[simp, gcongr]
+lemma RSerial.singleton_RS_singleton {r : α → α → Prop} (a : α) (b : α) :
+    ({a} RS[r] {b}) ↔ r a b := by
+  unfold RSerial
+  simp
+
 @[simp]
 lemma mem_bigO (f : α → E) (s : Set (α → E)) : f ∈ bigO l s ↔ ∃ g ∈ s, f =O[l] g := .rfl
+
+@[gcongr]
+lemma bigO_mono_set (s₁ s₂ : Set (α → E)) (h : s₁ ⊆ s₂) : bigO l s₁ ⊆ bigO l s₂ := by
+  intro x
+  simp only [mem_bigO, forall_exists_index, and_imp]
+  grind
+
+/- Written by Claude -/
+@[simp]
+lemma bigO_bigO (s : Set (α → ℝ)) : bigO l (bigO l s) = bigO l s := by
+  ext f
+  simp only [mem_bigO]
+  refine ⟨?_, ?_⟩
+  · rintro ⟨g, ⟨h, hh, hgh⟩, hfg⟩
+    exact ⟨h, hh, IsBigO.trans hfg hgh⟩
+  · rintro ⟨g, hg, hfg⟩
+    exact ⟨g, ⟨g, hg, isBigO_refl _ _⟩, hfg⟩
+
 
 def map (s₁ : Set (α → β → γ)) (s₂ : Set (α → β)) : Set (α → γ) :=
   { g | ∃ f₁ ∈ s₁, ∃ f₂ ∈ s₂, g = fun x ↦ f₁ x (f₂ x) }
@@ -84,6 +108,53 @@ lemma map_subset_map {s₁ s₁' : Set (α → β → γ)} {s₂ s₂' : Set (α
     (h₁ : s₁ ⊆ s₁') (h₂ : s₂ ⊆ s₂') : map s₁ s₂ ⊆ map s₁' s₂' := by
   rintro g ⟨f₁, hf₁, f₂, hf₂, rfl⟩
   exact ⟨f₁, h₁ hf₁, f₂, h₂ hf₂, rfl⟩
+
+/- Written by Claude -/
+@[simp, push]
+lemma map_iUnion_left {ι : Sort*} (s : ι → Set (α → β → γ)) (t : Set (α → β)) :
+    map (⋃ i, s i) t = ⋃ i, map (s i) t := by
+  ext g
+  simp only [map, Set.mem_setOf_eq, Set.mem_iUnion]
+  grind
+
+/- Written by Claude -/
+@[simp, push]
+lemma map_iUnion_right {ι : Sort*} (s : Set (α → β → γ)) (t : ι → Set (α → β)) :
+    map s (⋃ i, t i) = ⋃ i, map s (t i) := by
+  ext g
+  simp only [map, Set.mem_setOf_eq, Set.mem_iUnion]
+  grind
+
+/- Written by Claude -/
+@[gcongr]
+lemma RSerial.iUnion_RS_iUnion {ι : Sort*} {r : α → β → Prop} {s : ι → Set α} {t : ι → Set β}
+    (h : ∀ i, s i RS[r] t i) : (⋃ i, s i) RS[r] (⋃ i, t i) := by
+  rintro x ⟨_, ⟨i, rfl⟩, hx⟩
+  obtain ⟨y, hy, hxy⟩ := h i x hx
+  exact ⟨y, Set.mem_iUnion.mpr ⟨i, hy⟩, hxy⟩
+
+/- I told Claude "Write a variant of map_subset_map but for RS[EventuallyEq l] for an arbitrary filter l" and it produced this in one shot. -/
+@[gcongr]
+lemma map_RS_map {l : Filter α} {s₁ s₁' : Set (α → β → γ)} {s₂ s₂' : Set (α → β)}
+    (h₁ : s₁ RS[EventuallyEq l] s₁') (h₂ : s₂ RS[EventuallyEq l] s₂') :
+    map s₁ s₂ RS[EventuallyEq l] map s₁' s₂' := by
+  rintro g ⟨f₁, hf₁, f₂, hf₂, rfl⟩
+  obtain ⟨f₁', hf₁', hff₁⟩ := h₁ f₁ hf₁
+  obtain ⟨f₂', hf₂', hff₂⟩ := h₂ f₂ hf₂
+  refine ⟨fun x ↦ f₁' x (f₂' x), ⟨f₁', hf₁', f₂', hf₂', rfl⟩, ?_⟩
+  filter_upwards [hff₁, hff₂] with x hx₁ hx₂
+  simp [hx₁, hx₂]
+@[gcongr]
+lemma map_RS_map' {l : Filter α} {s₁ s₁' : Set (α → β → γ)} {s₂ s₂' : Set (α → β)} (r : ∀ δ, (α → δ) → (α → δ) → Prop)
+    (h₁ : s₁ RS[EventuallyEq l] s₁') (h₂ : s₂ RS[EventuallyEq l] s₂') :
+    map s₁ s₂ RS[EventuallyEq l] map s₁' s₂' := by
+  rintro g ⟨f₁, hf₁, f₂, hf₂, rfl⟩
+  obtain ⟨f₁', hf₁', hff₁⟩ := h₁ f₁ hf₁
+  obtain ⟨f₂', hf₂', hff₂⟩ := h₂ f₂ hf₂
+  refine ⟨fun x ↦ f₁' x (f₂' x), ⟨f₁', hf₁', f₂', hf₂', rfl⟩, ?_⟩
+  filter_upwards [hff₁, hff₂] with x hx₁ hx₂
+  simp [hx₁, hx₂]
+
 
 @[simp]
 lemma mem_pure (x : α → β) (y : β) : x ∈ pure y ↔ x = fun _ ↦ y := by
@@ -170,6 +241,16 @@ lemma exp_at_one'' {l : Filter ℝ} {f : ℝ → ℝ} (hf : Filter.Tendsto f l (
     exact h
   · apply Set.monotone_image
 
+lemma exp_at_one_set {l : Filter ℝ} {s : Set (ℝ → ℝ)}
+    (hs : ∀ f ∈ s, Filter.Tendsto f l (𝓝 0)) :
+    map (pure exp) s ⊆ map (pure <| HAdd.hAdd 1) (bigO l s) := by
+  /- Written partly using Claude, but I want to see if we can do this more systematically? -/
+  conv_lhs => rw [← Set.biUnion_of_singleton s]
+  push map
+  simp only [map_iUnion_right, Set.iUnion_subset_iff]
+  rintro f hf
+  grw [exp_at_one'' (hs _ hf), bigO_mono_set]
+  simp [hf]
 
 -- O[l](f x) + O[l](f x) = O[l](f x)
 lemma bigO_add_bigO (f : α → ℝ) : map (map (pure HAdd.hAdd) (bigO l {f})) (bigO l {f}) = bigO l {f} := by
@@ -269,13 +350,21 @@ theorem terry :
       _ RS[EventuallyEq atTop] map (map (pure HMul.hMul) ({fun x ↦ x})) (map (pure Real.exp) (bigO Filter.atTop (map (map (pure HDiv.hDiv) {fun x ↦ Real.log x}) {fun x ↦ x}))) := by
         magic_tac
         gcongr with f
-        ext x
-        grind
-        sorry
-      _ RS[Eq] map (map (pure HMul.hMul) {id})
+        filter_upwards [eventually_gt_atTop 0]
+        intro x hx
+        rw [Real.exp_add, Real.exp_log hx]
+      _ RS[Eq] map (map (pure HMul.hMul) {fun x ↦ x})
             (map (pure <| HAdd.hAdd 1)
-              (bigO Filter.atTop (map (map (pure HDiv.hDiv) {Real.log}) {id}))) := by
-        sorry
+              (bigO Filter.atTop (map (map (pure HDiv.hDiv) {Real.log}) {fun x ↦ x}))) := by
+        rw [RSerial.eq]
+        -- magic_tac
+        grw [exp_at_one_set (l := atTop), bigO_bigO]
+        · simp
+          intro f hf
+          apply hf.trans_tendsto
+          have := Real.tendsto_pow_log_div_mul_add_atTop 1 0 1
+          simpa [ne_eq, one_ne_zero, not_false_eq_true, pow_one, one_mul, add_zero,
+            forall_const] using this
       _ RS[Eq] map (map (pure HAdd.hAdd) {fun x ↦ x}) (map (map (pure HMul.hMul) {fun x ↦ x}) (bigO Filter.atTop {fun x ↦ Real.log x / x})) := by
         rw [RSerial.eq]
         magic_tac
