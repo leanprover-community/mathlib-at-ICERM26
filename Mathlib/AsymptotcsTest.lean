@@ -12,8 +12,6 @@ set_option linter.all false
 
 variable {α β γ δ E : Type*} [Norm E] (l : Filter α)
 
--- Do we always want this to be an existential? Maybe on the LHS of an inequality we'd
--- interpret O(O(f)) = ... as ∀ g =O f, O(g) = ..., or: ∀ g =O f, ∀ h =O g, h = ...
 def bigO (s : Set (α → E)) : Set (α → E) :=
   { f | ∃ g ∈ s, f =O[l] g }
 
@@ -52,26 +50,26 @@ Additional things we need to support:
 
 -/
 
-def RSerial (r : α → β → Prop) (s₁ : Set α) (s₂ : Set β) : Prop :=
+def RightSerial (r : α → β → Prop) (s₁ : Set α) (s₂ : Set β) : Prop :=
   ∀ x₁ ∈ s₁, ∃ x₂ ∈ s₂, r x₁ x₂
 
-notation3 x " RS[" r "] " y => RSerial r x y
+notation3 x " RS[" r "] " y => RightSerial r x y
 
 universe u v w
 
 instance (r : α → β → Prop) (s : β → γ → Prop) (t : α → γ → Prop) [Trans r s t] :
-  Trans (RSerial r) (RSerial s) (RSerial t) where
+  Trans (RightSerial r) (RightSerial s) (RightSerial t) where
   trans hab hbc := by
-    simp only [RSerial] at hab hbc ⊢
+    simp only [RightSerial] at hab hbc ⊢
     have := @Trans.trans (r := r) (s := s) (t := t) _ _ _ _
     grind
 
 @[simp]
-lemma RSerial.eq (a b : Set α) : (a RS[Eq] b) ↔ a ⊆ b := by
-  unfold RSerial
+lemma rightSerial_eq (a b : Set α) : (a RS[Eq] b) ↔ a ⊆ b := by
+  unfold RightSerial
   grind
 
-@[simp]
+@[simp, push]
 lemma mem_bigO (f : α → E) (s : Set (α → E)) : f ∈ bigO l s ↔ ∃ g ∈ s, f =O[l] g := .rfl
 
 def map (s₁ : Set (α → β → γ)) (s₂ : Set (α → β)) : Set (α → γ) :=
@@ -203,30 +201,30 @@ lemma map_eq (s₁ : Set (α → β → γ)) (s₂ : Set (α → β)) :
   simp [map]
 
 
-macro "magic_tac":tactic => `(tactic| simp only [map_eq, mem_pure, Set.mem_singleton_iff, Set.iUnion_iUnion_eq_left, id_eq,
-          Set.mem_iUnion, exists_prop, Set.iUnion_exists,
-          Set.biUnion_and'])
+macro "magic_tac" loc:(Lean.Parser.Tactic.location)? : tactic => `(tactic|
+  simp only [map_eq, mem_pure, Set.mem_singleton_iff, Set.iUnion_iUnion_eq_left,
+    Set.mem_iUnion, exists_prop, Set.iUnion_exists,
+    Set.biUnion_and'] $[$loc]?)
 
--- syntax "a":tactic
-
--- macro_rules
--- | `(tactic|a) => `()
--- f x * O(g x) = O(f x * g x)
-lemma mul_bigO {f g : ℝ → ℝ} {l : Filter ℝ} :
-    map (map (pure HMul.hMul) {f}) (bigO l {g}) ⊆ bigO l {fun x ↦ f x * g x} := by
-  sorry
-
-lemma mul_bigO' {f g : Set (ℝ → ℝ)} {l : Filter ℝ} :
+lemma mul_bigO {f g : Set (ℝ → ℝ)} {l : Filter ℝ} :
     map (map (pure HMul.hMul) f) (bigO l g) ⊆ bigO l (map (map (pure HMul.hMul) f) g) := by
   magic_tac
   intro x
-  simp
-  rintro p hp q hq r hr rfl
-  use p, q, ⟨hp, hq⟩
-  apply IsBigO.mul
-  · exact isBigO_refl p l
-  . exact hr
+  push _ ∈ _
+  simp only [exists_prop, ↓existsAndEq, true_and, forall_exists_index, and_imp]
+  rintro p hp r q hq hr rfl
+  use p, hp, q, hq
+  exact IsBigO.mul (isBigO_refl p l) hr
 
+lemma bigO_mul {f g : Set (ℝ → ℝ)} {l : Filter ℝ} :
+    map (map (pure HMul.hMul) (bigO l f)) g ⊆ bigO l (map (map (pure HMul.hMul) f) g) := by
+  magic_tac
+  intro x
+  push _ ∈ _
+  simp only [exists_prop, ↓existsAndEq, true_and, forall_exists_index, and_imp]
+  rintro r p hp hr q hq rfl
+  use p, hp, q, hq
+  exact IsBigO.mul hr (isBigO_refl q l)
 attribute [refl] isBigO_refl
 
 @[gcongr]
@@ -277,13 +275,13 @@ theorem terry :
               (bigO Filter.atTop (map (map (pure HDiv.hDiv) {Real.log}) {id}))) := by
         sorry
       _ RS[Eq] map (map (pure HAdd.hAdd) {fun x ↦ x}) (map (map (pure HMul.hMul) {fun x ↦ x}) (bigO Filter.atTop {fun x ↦ Real.log x / x})) := by
-        rw [RSerial.eq]
+        rw [rightSerial_eq]
         magic_tac
         ring_nf
         rfl
       _ RS[Eq] map (map (pure HAdd.hAdd) {fun x ↦ x}) (bigO Filter.atTop {fun x ↦ Real.log x}) := by
-        rw [RSerial.eq]
-        grw [mul_bigO']
+        rw [rightSerial_eq]
+        grw [mul_bigO]
         gcongr
         simp
         apply Filter.EventuallyEq.isBigO
