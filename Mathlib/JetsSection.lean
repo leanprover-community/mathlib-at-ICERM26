@@ -115,11 +115,12 @@ lemma vanishesToOrderAt_congr_iff_eventuallyEq
   ⟨fun hs ↦ hs.congr_of_eventually hu heq, fun ht ↦ ht.congr_of_eventually hu (by grind)⟩
 
 variable {n} in
+omit [(x : B) → AddCommGroup (V x)] in
 /- `vanishesToOrderAt` is monotone in the order of vanishing -/
--- TODO: this is only true/easy to prove under certain conditions!
 lemma vanishesToOrderAt_mono {l : ℕ} (hs : vanishesToOrderAt I F n s k x₀) (hkl : l ≤ k) :
     vanishesToOrderAt I F n s l x₀ := by
-  sorry
+  intro Ψ γ hΨ hx₀Ψ hγx₀ hγ i hi
+  exact hs Ψ γ hΨ hx₀Ψ hγx₀ hγ i (hi.trans hkl)
 
 variable (I)
 
