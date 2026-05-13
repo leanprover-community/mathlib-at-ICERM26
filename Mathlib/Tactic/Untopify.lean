@@ -36,8 +36,9 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
   ENNReal.coe_ne_top ENNReal.top_ne_coe ENNReal.coe_lt_top top_le_iff le_top
   top_add add_top ENNReal.sub_top ENNReal.top_sub_coe ENNReal.mul_top ENNReal.top_mul
   ENNReal.one_ne_top ENNReal.top_ne_one ENNReal.zero_ne_top ENNReal.top_ne_zero
-  ENNReal.mul_top' ENNReal.top_mul'
+  ENNReal.mul_top ENNReal.top_mul
   ENNReal.inv_top ENNReal.inv_zero ENNReal.div_top ENNReal.top_pow
+  tsub_zero zero_tsub add_zero zero_add mul_zero zero_mul ENNReal.zero_div ENNReal.div_zero
 
 -- coercion lemmas: ENNReal.coe_rpow_of_ne_zero, ENNReal.coe_rpow_of_nonneg
 
@@ -56,11 +57,22 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
 @[untopify_coe] lemma coe_ofNat (n : ℕ) [n.AtLeastTwo] :
     (OfNat.ofNat n : ℝ≥0∞) = (OfNat.ofNat n : ℝ≥0) := rfl
 
+@[untopify_coe] lemma coe_ofScientific (m : ℕ) (b : Bool) (e : ℕ) :
+    (OfScientific.ofScientific m b e : ℝ≥0∞) = (OfScientific.ofScientific m b e : ℝ≥0) :=
+  rfl
+
 @[untopify_coe] lemma coe_zero : (0 : ℝ≥0∞) = ((0 : ℝ≥0) : ℝ≥0∞) := rfl
 
 @[untopify_coe] lemma coe_one : (1 : ℝ≥0∞) = ((1 : ℝ≥0) : ℝ≥0∞) := rfl
 
 attribute [untopify_coe] ENNReal.coe_inj ENNReal.coe_le_coe ENNReal.coe_lt_coe
+
+lemma ENNReal.trichotomy_induction {C : ℝ≥0∞ → Prop} (zero : C 0) (infty : C ∞)
+    (pos : (x : ℝ≥0) → (hx : 0 < x) → C ↑x) (x : ℝ≥0∞) : C x := by
+  refine ENNReal.recTopCoe infty (fun x ↦ ?_) x
+  obtain (rfl | hx) := zero_le (a := x) |>.eq_or_lt
+  · exact zero
+  · exact pos x hx
 
 open Qq Lean Elab Tactic Term Meta in
 /-- Finds the first `ENat` in the context and applies the `cases` tactic to it.
@@ -80,18 +92,23 @@ elab "cases_first_with_top" : tactic => focus do
       let name : Name := `untopify_aux
       setGoals [← g.rename decl.fvarId name]
       let x := mkIdent name
-      evalTactic (← `(tactic| cases $x:ident using ENNReal.recTopCoe))
+      evalTactic (← `(tactic| cases $x:ident using ENNReal.trichotomy_induction))
     else
       let x := mkIdent decl.userName
+      let hx ← mkFreshIdent .missing
       evalTactic
-        (← `(tactic| cases $x:ident using ENNReal.recTopCoe with | top => _ | coe $x:ident => _))
-    evalTactic (← `(tactic| all_goals try simp only [untopify_top] at *))
+        (← `(tactic| cases $x:ident using ENNReal.trichotomy_induction with
+            | zero => _
+            | infty => _
+            | pos $x:ident $hx:ident => _))
+    evalTactic (← `(tactic| all_goals try simp_all only [untopify_top]))
+
 
 /-- `enat_to_nat` shifts all `ENat`s in the context to `Nat`, rewriting propositions about them.
 A typical use case is `enat_to_nat; lia`. -/
 macro "untopify" : tactic => `(tactic| focus (
     (repeat' cases_first_with_top) <;>
-    (try simp only [untopify_top, untopify_coe] at *)
+    (try simp_all only [untopify_top, untopify_coe])
   )
 )
 
