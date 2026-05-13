@@ -170,11 +170,6 @@ theorem map_update_smul [DecidableEq ι] (i : ι) (r : R) (x : M) :
 theorem map_eq_map_of_swap [DecidableEq ι] (v : ι → M) {i j : ι} : f (v ∘ Equiv.swap i j) = f v :=
   f.map_eq_map_of_swap' v i j
 
-@[simp]
-theorem map_eq_map_of_permutation (v : ι → M) (σ : Equiv.Perm ι) : f (v ∘ σ) = f v := by
-  -- TODO: σ is a product of transpositions...
-  sorry
-
 theorem map_coord_zero {m : ι → M} (i : ι) (h : m i = 0) : f m = 0 :=
   f.toMultilinearMap.map_coord_zero i h
 
@@ -625,11 +620,16 @@ end
 -- TODO: necessary, or already implied by previous results?
 theorem map_swap [DecidableEq ι] {i j : ι} : g (v ∘ Equiv.swap i j) = g v := by simp
 
-theorem map_perm (v : ι → M) (σ : Equiv.Perm ι) :
+@[simp]
+theorem map_perm [Finite ι] (v : ι → M) (σ : Equiv.Perm ι) :
     g (v ∘ σ) = g v := by
-  sorry -- TODO also done above; perhaps keep this name?
+  classical
+  induction σ using Equiv.Perm.swap_induction_on' with
+  | one => simp
+  | mul_swap s x y hxy hI =>
+    simp_all [← Function.comp_assoc, g.map_swap]
 
-theorem map_congr_perm (σ : Equiv.Perm ι) : g v = g (v ∘ σ) := by simp
+theorem map_congr_perm [Finite ι] (σ : Equiv.Perm ι) : g v = g (v ∘ σ) := by simp
 
 section DomDomCongr
 
@@ -724,9 +724,7 @@ theorem domDomCongr_eq_zero_iff (σ : ι ≃ ι') (f : M [Sym^ι]→ₗ[R] N) :
     f.domDomCongr σ = 0 ↔ f = 0 :=
   (domDomCongrEquiv σ : M [Sym^ι]→ₗ[R] N ≃+ M [Sym^ι']→ₗ[R] N).map_eq_zero_iff
 
-theorem domDomCongr_perm [Fintype ι] [DecidableEq ι] (σ : Equiv.Perm ι) :
-    g.domDomCongr σ = Equiv.Perm.sign σ • g :=
-  SymmetricMap.ext fun v ↦ sorry -- g.map_perm v σ -- TODO: missing API!
+theorem domDomCongr_perm [Finite ι] (σ : Equiv.Perm ι) : g.domDomCongr σ = g := by ext v; simp
 
 @[norm_cast]
 theorem coe_domDomCongr (σ : ι ≃ ι') :
@@ -773,32 +771,25 @@ variable [Fintype ι] [DecidableEq ι]
 permutations. -/
 def symmetrization : MultilinearMap R (fun _ : ι ↦ M) N' →+ M [Sym^ι]→ₗ[R] N' where
   toFun m :=
-    { ∑ σ : Perm ι, Equiv.Perm.sign σ • m.domDomCongr σ with
-      toFun := ⇑(∑ σ : Perm ι, Equiv.Perm.sign σ • m.domDomCongr σ)
-      --map_eq_zero_of_eq' := private fun v i j hvij hij ↦
-      --  alternization_map_eq_zero_of_eq_aux m v i j hij hvij
-      map_eq_map_of_swap' v i j _ := by simp; sorry }
-  map_add' a b := by
-    ext
-    simp
-    sorry
-    --simp only [mk_coe, AlternatingMap.coe_mk, sum_apply, smul_apply, domDomCongr_apply, add_apply,
-    --  smul_add, Finset.sum_add_distrib, AlternatingMap.add_apply]
-  map_zero' := by
-    ext
-    simp
+    { ∑ σ : Perm ι, m.domDomCongr σ with
+      toFun := ⇑(∑ σ : Perm ι, m.domDomCongr σ)
+      -- proof in the alternating case is essentially alternization_map_eq_zero_of_eq_aux
+      -- TODO: think about this and fill it in!
+      map_eq_map_of_swap' v i j _ := by sorry }
+  map_add' a b := by ext; simp [Finset.sum_add_distrib]
+  map_zero' := by ext; simp
 
 theorem symmetrization_def (m : MultilinearMap R (fun _ : ι ↦ M) N') :
-    ⇑(symmetrization m) = (∑ σ : Perm ι, Equiv.Perm.sign σ • m.domDomCongr σ :) :=
+    ⇑(symmetrization m) = (∑ σ : Perm ι, m.domDomCongr σ :) :=
   rfl
 
 theorem symmetrization_coe (m : MultilinearMap R (fun _ : ι ↦ M) N') :
-    ↑(symmetrization m) = (∑ σ : Perm ι, Equiv.Perm.sign σ • m.domDomCongr σ :) :=
+    ↑(symmetrization m) = (∑ σ : Perm ι, m.domDomCongr σ :) :=
   coe_injective rfl
 
 theorem symmetrization_apply (m : MultilinearMap R (fun _ : ι ↦ M) N') (v : ι → M) :
-    symmetrization m v = ∑ σ : Perm ι, Equiv.Perm.sign σ • m.domDomCongr σ v := by
-  simp only [symmetrization_def, smul_apply, sum_apply]
+    symmetrization m v = ∑ σ : Perm ι, m.domDomCongr σ v := by
+  simp only [symmetrization_def, sum_apply]
 
 end MultilinearMap
 
@@ -810,10 +801,9 @@ theorem coe_symmetrization [DecidableEq ι] [Fintype ι] (a : M [Sym^ι]→ₗ[R
     MultilinearMap.symmetrization (a : MultilinearMap R (fun _ ↦ M) N')
     = Nat.factorial (Fintype.card ι) • a := by
   apply SymmetricMap.coe_injective
-  --simp_rw [MultilinearMap.symmetrization_def, ← coe_domDomCongr, domDomCongr_perm, coe_smul,
-  --  smul_smul, Int.units_mul_self, one_smul, Finset.sum_const, Finset.card_univ, Fintype.card_perm,
-  --  ← coe_multilinearMap, coe_smul]
-  sorry
+  simp_rw [MultilinearMap.symmetrization_def, ← coe_domDomCongr, domDomCongr_perm,
+    Finset.sum_const, Finset.card_univ, Fintype.card_perm,
+    ← coe_multilinearMap, coe_smul]
 
 end SymmetricMap
 
@@ -841,7 +831,7 @@ variable {ι₁ : Type*} [Finite ι]
 
 /-- Two symmetric maps indexed by a `Fintype` are equal if they are equal when all arguments
 are distinct basis vectors. -/
--- TODO: is this actually true for symmetric maps??
+-- TODO: is this actually true for symmetric maps?? if so, fix the proof!
 theorem Module.Basis.ext_symmetric {f g : N₁ [Sym^ι]→ₗ[R'] N₂} (e : Basis ι₁ R' N₁)
     (h : ∀ v : ι → ι₁, Function.Injective v → (f fun i ↦ e (v i)) = g fun i ↦ e (v i)) :
     f = g := by
@@ -882,5 +872,4 @@ def Symmetric.constLinearEquivOfIsEmpty [IsEmpty ι] : N'' ≃ₗ[R'] (M'' [Sym^
   invFun f := f 0
   right_inv f := by--ext fun _ ↦ AlternatingMap.congr_arg f <| Subsingleton.elim _ _
     ext
-    congr
-    sorry -- TODO!
+    sorry
