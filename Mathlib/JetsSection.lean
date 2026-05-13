@@ -1,16 +1,8 @@
-
 import Mathlib.Geometry.Manifold.VectorBundle.Hom
 import Mathlib.Geometry.Manifold.VectorBundle.SmoothSection
 import Mathlib.Geometry.Manifold.VectorBundle.Tangent
 import Mathlib.Geometry.Manifold.VectorBundle.Tensoriality
 import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
-
-import Mathlib.Geometry.Manifold.VectorBundle.Hom
-import Mathlib.Geometry.Manifold.VectorBundle.SmoothSection
-import Mathlib.Geometry.Manifold.VectorBundle.Tangent
-import Mathlib.Geometry.Manifold.VectorBundle.Tensoriality
-import Mathlib.Analysis.Calculus.IteratedDeriv.FaaDiBruno
-import Mathlib
 
 import Mathlib.SecToFun
 
