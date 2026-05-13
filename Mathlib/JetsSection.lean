@@ -58,6 +58,7 @@ lemma vanishesRelativeToOrder_congr_of_eventuallyEq (heq : (T% s) =ᶠ[𝓝 x₀
   vanishesRelativeToOrder s k Ψ γ ↔ vanishesRelativeToOrder t k Ψ γ := sorry
 
 /- `vanishesRelativeToOrder` is monotone in the order of vanishing -/
+-- TODO: this is only true/easy to prove under certain conditions!
 lemma vanishesRelativeToOrder_mono {l : ℕ} (hs : vanishesRelativeToOrder s k Ψ γ) (hkl : l ≤ k) :
    vanishesRelativeToOrder t l Ψ γ := sorry
 
@@ -74,9 +75,9 @@ section Deriv
 -- find the right statement and complete the proof!
 lemma iteratedDerivWithin_congr_of_eventually
     {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
-    {f₁ f₂ : 𝕜 → F} {s t : Set 𝕜} {x : 𝕜} (ht : t ∈ 𝓝[s] x) (h : ∀ x ∈ t, f₁ x = f₂ x) (n : ℕ) :
-    iteratedDerivWithin n f₁ t x = iteratedDerivWithin n f₂ t x := by
-  sorry -- not quite the right statement yet!
+    {f₁ f₂ : 𝕜 → F} {s : Set 𝕜} {x : 𝕜} (hxt : x ∈ s) (h : ∀ x ∈ s, f₁ x = f₂ x) (n : ℕ) :
+    iteratedDerivWithin n f₁ s x = iteratedDerivWithin n f₂ s x := by
+  apply iteratedDerivWithin_congr h hxt
 
 lemma iteratedDeriv_congr_of_eventually
     {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
@@ -112,6 +113,7 @@ lemma vanishesToOrderAt_congr_iff_eventuallyEq
   ⟨fun hs ↦ hs.congr_of_eventually hu heq, fun ht ↦ ht.congr_of_eventually hu (by grind)⟩
 
 /- `vanishesToOrderAt` is monotone in the order of vanishing -/
+-- TODO: this is only true/easy to prove under certain conditions!
 lemma vanishesToOrderAt_mono {l : ℕ} (hs : vanishesToOrderAt I F s k x₀) (hkl : l ≤ k) :
     vanishesToOrderAt I F s l x₀ := by
   sorry
@@ -123,12 +125,12 @@ variable (I)
 
 -- TODO: this seems to be the wrong lemma (as the one below)
 lemma vanishesRelativeToOrder_zero {Ψ : Trivialization F TotalSpace.proj} :
-    vanishesRelativeToOrder (fun x ↦ (0 : F)) k Ψ γ := by
+    vanishesRelativeToOrder (fun x ↦ (0 : V x)) k Ψ γ := by
   intro i hik
-  have : Ψ.secToFun (fun x ↦ (0 : F)) = 0 := sorry -- missing API lemma: secToFun_zero
+  have : Ψ.secToFun (fun x ↦ (0 : V x)) = 0 := sorry -- missing API lemma: secToFun_zero
   simp [this]
 
-lemma vanishesToOrderAt_zero : vanishesToOrderAt I F (fun x ↦ (0 : F)) k x₀ := by
+lemma vanishesToOrderAt_zero : vanishesToOrderAt I F (fun x ↦ (0 : V x)) k x₀ := by
   intro Ψ γ hΨ hx₀ hγ₀ hγ
   exact vanishesRelativeToOrder_zero
 
@@ -147,9 +149,8 @@ def foo : Submodule 𝕜 (ContMDiffSection I F n V) where
     -- exercise!
     sorry
   zero_mem' := by
-    simp
-    sorry -- TODO: the following lemma is not quite right!
-    -- apply vanishesToOrderAt_zero (I := I) (F := F) (k := k) (x₀ := x₀)
+    simp only [mem_setOf_eq, ContMDiffSection.coe_zero]
+    exact vanishesToOrderAt_zero _
   smul_mem' := sorry -- exercise!
 
 theorem foo_mono {n k l} (hkl : k ≤ l) : foo (F := F) I V n l x₀ ≤ foo I V n k x₀ := by
