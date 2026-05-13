@@ -66,7 +66,7 @@ variable (I F s k x₀) in
 /-- `s` vanishes to order `k` at `x₀` -/
 def vanishesToOrderAt : Prop :=
   ∀ (Ψ : Trivialization F (TotalSpace.proj : TotalSpace F V → B)), ∀ (γ : 𝕜 → B),
-  MemTrivializationAtlas Ψ → x₀ ∈ Ψ.baseSet → γ 0 = x₀ → CMDiffAt k γ 0 →
+  MemTrivializationAtlas Ψ → x₀ ∈ Ψ.baseSet → γ 0 = x₀ → CMDiffAt n γ 0 →
   vanishesRelativeToOrder s k Ψ γ
 
 section Deriv
@@ -88,10 +88,11 @@ lemma iteratedDeriv_congr_of_eventually
 
 end Deriv
 
+variable {n} in
 /- `vanishesToOrderAt` only depends on the section `s` near `x₀` -/
-lemma vanishesToOrderAt.congr_of_eventually (hs : vanishesToOrderAt I F s k x₀)
+lemma vanishesToOrderAt.congr_of_eventually (hs : vanishesToOrderAt I F n s k x₀)
     {u : Set B} (hu : u ∈ 𝓝 x₀) (heq : ∀ x ∈ u, s x = t x) :
-    vanishesToOrderAt I F t k x₀ := by
+    vanishesToOrderAt I F n t k x₀ := by
   intro Ψ γ hΨ hxΨ hγ0 hγ i hik
   specialize hs Ψ γ hΨ hxΨ hγ0 hγ i hik
   let u' := γ ⁻¹' u
@@ -106,16 +107,18 @@ lemma vanishesToOrderAt.congr_of_eventually (hs : vanishesToOrderAt I F s k x₀
   rw [← hs]
   exact iteratedDeriv_congr_of_eventually hu' heq' _
 
+variable {n} in
 /- `vanishesToOrderAt` only depends on the section `s` near `x₀` -/
 lemma vanishesToOrderAt_congr_iff_eventuallyEq
     {u : Set B} (hu : u ∈ 𝓝 x₀) (heq : ∀ x ∈ u, s x = t x) :
-    vanishesToOrderAt I F s k x₀ ↔ vanishesToOrderAt I F t k x₀ :=
+    vanishesToOrderAt I F n s k x₀ ↔ vanishesToOrderAt I F n t k x₀ :=
   ⟨fun hs ↦ hs.congr_of_eventually hu heq, fun ht ↦ ht.congr_of_eventually hu (by grind)⟩
 
+variable {n} in
 /- `vanishesToOrderAt` is monotone in the order of vanishing -/
 -- TODO: this is only true/easy to prove under certain conditions!
-lemma vanishesToOrderAt_mono {l : ℕ} (hs : vanishesToOrderAt I F s k x₀) (hkl : l ≤ k) :
-    vanishesToOrderAt I F s l x₀ := by
+lemma vanishesToOrderAt_mono {l : ℕ} (hs : vanishesToOrderAt I F n s k x₀) (hkl : l ≤ k) :
+    vanishesToOrderAt I F n s l x₀ := by
   sorry
 
 variable (I)
@@ -130,14 +133,15 @@ lemma vanishesRelativeToOrder_zero {Ψ : Trivialization F TotalSpace.proj} :
   have : Ψ.secToFun (fun x ↦ (0 : V x)) = 0 := sorry -- missing API lemma: secToFun_zero
   simp [this]
 
-lemma vanishesToOrderAt_zero : vanishesToOrderAt I F (fun x ↦ (0 : V x)) k x₀ := by
+variable {n} in
+lemma vanishesToOrderAt_zero : vanishesToOrderAt I F n (fun x ↦ (0 : V x)) k x₀ := by
   intro Ψ γ hΨ hx₀ hγ₀ hγ
   exact vanishesRelativeToOrder_zero
 
 -- the sections vanishing to order k form a submodule
 variable (V k x₀) in
 def foo : Submodule 𝕜 (ContMDiffSection I F n V) where
-  carrier := { s | vanishesToOrderAt (I := I) F s k x₀}
+  carrier := { s | vanishesToOrderAt (I := I) F n s k x₀}
   add_mem' hs ht Ψ γ := by
     intro hΨ hx₀ hγ₀ hγ'
     unfold vanishesRelativeToOrder
