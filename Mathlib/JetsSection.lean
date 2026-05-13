@@ -4,7 +4,7 @@ public import Mathlib.Geometry.Manifold.VectorBundle.Hom
 public import Mathlib.Geometry.Manifold.VectorBundle.SmoothSection
 public import Mathlib.Geometry.Manifold.VectorBundle.Tangent
 public import Mathlib.Geometry.Manifold.VectorBundle.Tensoriality
-public import Mathlib.Analysis.Calculus.IteratedDeriv.FaaDiBruno
+public import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
 
 public import Mathlib.SecToFun
 
@@ -68,18 +68,24 @@ def vanishesToOrderAt : Prop :=
   MemTrivializationAtlas Ψ → x₀ ∈ Ψ.baseSet → γ 0 = x₀ → CMDiffAt k γ 0 →
   vanishesRelativeToOrder s k Ψ γ
 
--- TODO prove move!
-lemma Filter.EventuallyEq.iteratedDeriv
-    {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type u_2} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
-    {f₁ f₂ : 𝕜 → F} {x : 𝕜} (h : f₁ =ᶠ[𝓝 x] f₂) (n : ℕ) :
-    iteratedDeriv n f₁ =ᶠ[𝓝 x] iteratedDeriv n f₂ := by
-  sorry
+section Deriv
+
+-- see Filter.EventuallyEq.iteratedDerivWithin and iteratedDerivWithin_congr,
+-- find the right statement and complete the proof!
+lemma iteratedDerivWithin_congr_of_eventually
+    {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+    {f₁ f₂ : 𝕜 → F} {s t : Set 𝕜} {x : 𝕜} (ht : t ∈ 𝓝[s] x) (h : ∀ x ∈ t, f₁ x = f₂ x) (n : ℕ) :
+    iteratedDerivWithin n f₁ t x = iteratedDerivWithin n f₂ t x := by
+  sorry -- not quite the right statement yet!
 
 lemma iteratedDeriv_congr_of_eventually
-    {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type u_2} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+    {𝕜 : Type*} [NontriviallyNormedField 𝕜] {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
     {f₁ f₂ : 𝕜 → F} {s : Set 𝕜} {x : 𝕜} (hs : s ∈ 𝓝 x) (h : ∀ x ∈ s, f₁ x = f₂ x) (n : ℕ) :
-    iteratedDeriv n f₁ x = iteratedDeriv n f₂ x := by
-  sorry
+    iteratedDeriv n f₁ x = iteratedDeriv n f₂ x := by -- not quite the right statement yet!
+  simp_all [← nhdsWithin_univ, ← iteratedDerivWithin_univ]
+  sorry -- apply iteratedDerivWithin_congr_of_eventually (t := s) (s := univ) --(by simp)
+
+end Deriv
 
 /- `vanishesToOrderAt` only depends on the section `s` near `x₀` -/
 lemma vanishesToOrderAt.congr_of_eventually (hs : vanishesToOrderAt I F s k x₀)
