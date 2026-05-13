@@ -15,6 +15,16 @@ variable {α β γ δ E : Type*} [Norm E] (l : Filter α)
 def bigO (s : Set (α → E)) : Set (α → E) :=
   { f | ∃ g ∈ s, f =O[l] g }
 
+-- TODO: figure out the > 0 in this definition. It's not necessary, but
+-- very helpful to have while proving things about bigO.
+def bigO' (s : Set (α → E)) : Set (α → E) :=
+  {f | ∃ c > 0, ∀ᶠ x in l, ∃ g ∈ s, ‖f x‖ ≤ c * ‖g x‖}
+
+@[simp, push]
+lemma mem_bigO' (f : α → E) (s : Set (α → E)) :
+    f ∈ bigO' l s ↔ ∃ c > 0, ∀ᶠ x in l, ∃ g ∈ s, ‖f x‖ ≤ c * ‖g x‖ := .rfl
+
+
 /-
 To spell it out more explicitly, I'm not sure the interpretation of O(O(s)) makes sense
 if we interpret it in terms of universal / existential quantifiers. In that setting,
@@ -99,6 +109,10 @@ lemma bigO_bigO (s : Set (α → ℝ)) : bigO l (bigO l s) = bigO l s := by
 def map (s₁ : Set (α → β → γ)) (s₂ : Set (α → β)) : Set (α → γ) :=
   { g | ∃ f₁ ∈ s₁, ∃ f₂ ∈ s₂, g = fun x ↦ f₁ x (f₂ x) }
 
+@[simp, push]
+lemma mem_map (g : α → γ) (s₁ : Set (α → β → γ)) (s₂ : Set (α → β)) :
+    g ∈ map s₁ s₂ ↔ ∃ f₁ ∈ s₁, ∃ f₂ ∈ s₂, g = fun x ↦ f₁ x (f₂ x) := .rfl
+
 def pure (x : β) : Set (α → β) := {fun _ ↦ x}
 
 @[gcongr]
@@ -162,7 +176,6 @@ lemma exp_at_one : map (pure exp) {fun x ↦ x} ⊆ map (pure <| HAdd.hAdd 1) (b
   have := Real.exp_sub_sum_range_isBigO_pow 1
   simp at this
   intro y
-  unfold map
   simp
   rintro rfl
   use fun x ↦ Real.exp x - 1
@@ -172,7 +185,6 @@ lemma exp_at_one_ : map (pure exp) {fun x ↦ x} ⊆ map (map (pure HAdd.hAdd) (
   have := Real.exp_sub_sum_range_isBigO_pow 1
   simp at this
   intro y
-  unfold map
   simp
   rintro rfl
   use fun x ↦ Real.exp x - 1
@@ -184,7 +196,6 @@ lemma exp_at_one' {l : Filter ℝ} {f : ℝ → ℝ} (hf : Filter.Tendsto f l (�
   have := this.comp_tendsto hf
   simp at this
   intro y
-  unfold map
   simp
   rintro rfl
   use fun x ↦ Real.exp (f x) - 1
@@ -250,7 +261,6 @@ lemma exp_at_one_set {l : Filter ℝ} {s : Set (ℝ → ℝ)}
 
 -- O[l](f x) + O[l](f x) = O[l](f x)
 lemma bigO_add_bigO_self (f : α → ℝ) : map (map (pure HAdd.hAdd) (bigO l {f})) (bigO l {f}) = bigO l {f} := by
-  unfold map
   ext y
   push _ ∈ _
   constructor
@@ -262,6 +272,30 @@ lemma bigO_add_bigO_self (f : α → ℝ) : map (map (pure HAdd.hAdd) (bigO l {f
     refine ⟨y, hy, fun _ ↦ 0, ?_⟩
     simp only [add_zero, and_true]
     exact isBigO_zero f l
+
+lemma bigO_add_bigO_set_eq_union (s₁  s₂ : Set (α → ℝ)) : map (map (pure HAdd.hAdd) (bigO' l s₁)) (bigO' l s₂) ⊆ bigO' l (s₁ ∪ s₂) := by
+  intro y
+  push _ ∈ _
+  simp
+  rintro f₀ c₀ hc₀ hf₀ f₁ c₁ hc₁ hf₁ rfl
+  use c₀ + c₁, (by linarith)
+  filter_upwards [hf₀, hf₁]
+  intro x ⟨g₀, hg₀s, hg₀⟩ ⟨g₁, hg₁s, hg₁⟩
+  grw [abs_add_le, hg₀, hg₁]
+  simp_rw [add_mul]
+  by_cases! h : |g₀ x| ≤ |g₁ x|
+  · grw [h]
+    use g₁, (.inr hg₁s)
+  · grw [h]
+    use g₀, (.inl hg₀s)
+
+-- O[l](f x) + O[l](f x) = O[l](f x)
+lemma bigO_add_bigO_set (f : Set (α → ℝ)) : map (map (pure HAdd.hAdd) (bigO' l f)) (bigO' l f) ⊆ bigO' l f := by
+  grw [bigO_add_bigO_set_eq_union, Set.union_self]
+
+-- Do we even need this? It's just a grw?
+lemma bigO_add_bigO_eq_left (s₁ s₂ : Set (α → ℝ)) (h : bigO' l s₂ ⊆ bigO' l s₁) : map (map (pure HAdd.hAdd) (bigO' l s₁)) (bigO' l s₂) ⊆ bigO' l s₁ := by
+  grw [h, bigO_add_bigO_set]
 
 set_option autoImplicit false
 /-
@@ -379,7 +413,6 @@ theorem terry :
 -- -- Aha!, this is true if we define O(s) to be {f | ∀ g ∈ s, f =O[l] g}. Is this what we really want? It's not! O(f) contains 0, so O(O(f)) becomes {0}.
 -- -- O[l](f x) + O[l](f x) = O[l](f x)
 -- lemma bigO_add_bigO' (x : Set (α → ℝ)) : map (map (pure HAdd.hAdd) (bigO l x)) (bigO l x) = bigO l x := by
---   unfold map
 --   ext y
 --   push _ ∈ _
 --   constructor
