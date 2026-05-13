@@ -180,8 +180,7 @@ open BoxIntegral Stieltjes
 
 noncomputable def toPartition {N : ℕ} {a b : ℝ}
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
-    (ha : (x 0) = a) (hb : x (Fin.last N) = b) :
-    Prepartition (Ioc a b) where
+    (ha : (x 0) = a) (hb : x (Fin.last N) = b) : Prepartition (Ioc a b) where
   boxes := by
     classical
     exact (Finset.univ : Finset (Fin N)).image fun i ↦ Ioc (x i.castSucc) (x i.succ)
@@ -190,14 +189,14 @@ noncomputable def toPartition {N : ℕ} {a b : ℝ}
 
 theorem toPartition.IsPartition {N : ℕ} {a b : ℝ} (hab : a < b)
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
-    (ha : (x 0) = a) (hb : x (Fin.last N) = b):
+    (ha : (x 0) = a) (hb : x (Fin.last N) = b) :
     (toPartition x hx ha hb).IsPartition := by
   sorry
 
 theorem fromPartition
     {a b : ℝ} (hab : a < b)
     (π : Prepartition (Ioc a b))
-    (hπ : π.IsPartition):
+    (hπ : π.IsPartition) :
     letI N := Finset.card π.boxes
     ∃ (x : Fin (N + 1) → ℝ) (hx : StrictMono x) (ha : (x 0) = a) (hb : x (Fin.last N) = b),
      π = toPartition x hx ha hb := by
@@ -340,7 +339,10 @@ agrees with the ordinary Riemann integral on the real line. -/
 lemma ofDiff_lsmul_eq_volume {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] :
     ofDiff (fun x : ℝ ↦ (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E) x) =
       (BoxAdditiveMap.volume : (Fin 1) →ᵇᵃ E →L[ℝ] E) := by
-  sorry
+  ext 
+  simp [BoxAdditiveMap.volume_apply]
+  module
+
 
 end BoxIntegral.BoxAdditiveMap
 
