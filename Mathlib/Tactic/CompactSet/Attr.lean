@@ -10,6 +10,6 @@ public import Lean.Meta.Tactic.Grind.RegisterCommand
 public import Mathlib.Init
 
 /-!
-Register grind attribute `compact_set`.
+Mark a lemma to be used in the `compact_set` tactic.
 -/
 register_grind_attr compact_set
