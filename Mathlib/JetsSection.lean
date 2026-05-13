@@ -73,18 +73,18 @@ lemma vanishesRelativeToOrder_change_triv
   -- This follows from a general theorem
   sorry
 
-/- `vanishesRelativeToOrder` only depends on the curve `γ` near `0` -/
--- TODO bad name!
-lemma vanishesRelativeToOrder_congr_of_eventuallyEq_γ (heq : γ =ᶠ[𝓝 0] γ') :
-  vanishesRelativeToOrder s k Ψ γ ↔ vanishesRelativeToOrder s k Ψ γ' := sorry
+-- unused
+-- /- `vanishesRelativeToOrder` only depends on the curve `γ` near `0` -/
+-- -- TODO bad name!
+-- lemma vanishesRelativeToOrder_congr_of_eventuallyEq_γ (heq : γ =ᶠ[𝓝 0] γ') :
+--   vanishesRelativeToOrder s k Ψ γ ↔ vanishesRelativeToOrder s k Ψ γ' := sorry
 
--- XXX: is this actually true? the lemma below certainly is
-/- `vanishesRelativeToOrder` only depends on the section `s` near `x₀` -/
-lemma vanishesRelativeToOrder_congr_of_eventuallyEq (heq : (T% s) =ᶠ[𝓝 x₀] (T% t)) :
-  vanishesRelativeToOrder s k Ψ γ ↔ vanishesRelativeToOrder t k Ψ γ := sorry
+-- -- XXX: is this actually true? the lemma below certainly is
+-- /- `vanishesRelativeToOrder` only depends on the section `s` near `x₀` -/
+-- lemma vanishesRelativeToOrder_congr_of_eventuallyEq (heq : (T% s) =ᶠ[𝓝 x₀] (T% t)) :
+--   vanishesRelativeToOrder s k Ψ γ ↔ vanishesRelativeToOrder t k Ψ γ := sorry
 
 /- `vanishesRelativeToOrder` is monotone in the order of vanishing -/
--- TODO: this is only true/easy to prove under certain conditions!
 lemma vanishesRelativeToOrder_mono {l : ℕ} (hs : vanishesRelativeToOrder s k Ψ γ) (hkl : l ≤ k) :
    vanishesRelativeToOrder t l Ψ γ := sorry
 
