@@ -222,15 +222,38 @@ partitions with sufficiently small mesh size. -/
 theorem Riemann_toFilteriUnion_eventually_iff_mesh [Nonempty ι] (P : TaggedPrepartition I → Prop) :
     (∀ᶠ π in Riemann.toFilteriUnion I π₀, P π) ↔ ∃ ε > 0,
     ∀ π : TaggedPrepartition I,
-    (π.mesh_size ≤ ε ∧ π.IsHenstock ∧ π.iUnion = π₀.iUnion) → P π
+    ((π.mesh_size:ℝ) ≤ ε ∧ π.IsHenstock ∧ π.iUnion = π₀.iUnion) → P π
      := by
+  let d := Nat.card ι
+  have hd : d > 0 := Nat.card_pos
   rw [Riemann_toFilteriUnion_eventually_iff]
   constructor
-  · rintro ⟨ r, hr ⟩
+  · rintro ⟨ ⟨ r, hpos ⟩, hr ⟩
+    simp only [Set.mem_Ioi] at hpos
+    refine ⟨ r / (2 * d), by positivity, ?_ ⟩
+    peel hr with π h
+    rintro ⟨ hmesh, hhen, hunion ⟩
+    refine h ⟨ ?_, hhen, hunion ⟩
+    simp only [TaggedPrepartition.IsSubordinate]
+    intro J hJ x hx
+    simp
     sorry
+  rintro ⟨ ε, εpos, hε ⟩
+  refine ⟨ ⟨ ε / (2 * d), by simp only [Set.mem_Ioi]; positivity ⟩, ?_ ⟩
+  peel hε with π h
+  rintro ⟨ hsub, hhen, hunion ⟩
+  refine h ⟨ ?_, hhen, hunion ⟩
+  simp only [TaggedPrepartition.IsSubordinate, Prepartition.mesh_size] at hsub ⊢
+  have hε' : ε = ((⟨ ε, le_of_lt εpos ⟩ : NNReal):ℝ) := by grind
+  rw [hε']
+  convert NNReal.coe_le_coe.mpr ?_
+  apply Finset.sup_le
+  rintro ⟨ J, i ⟩ hJi
+  simp only [Finset.mem_product, Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition,
+    Finset.mem_univ, and_true] at hJi ⊢
+  rw [NNReal.toReal_le, NNReal.toReal]
+  simp
   sorry
-
-
 
 
 
