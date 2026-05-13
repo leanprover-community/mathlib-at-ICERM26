@@ -174,6 +174,7 @@ end Stieltjes
 
 
 
+
 namespace BoxIntegral.BoundaryPoints
 
 open BoxIntegral Stieltjes
@@ -182,25 +183,65 @@ noncomputable def toPartition {N : ℕ} {a b : ℝ}
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
     (ha : (x 0) = a) (hb : x (Fin.last N) = b) :
     Prepartition (Ioc a b) where
-  boxes := by
-    classical
-    exact (Finset.univ : Finset (Fin N)).image fun i ↦ Ioc (x i.castSucc) (x i.succ)
-  le_of_mem' := by sorry
-  pairwiseDisjoint := by sorry
+      boxes := (Finset.univ : Finset (Fin N)).map
+        ⟨fun i ↦ Ioc (x i.castSucc) (x i.succ), by sorry⟩
+      le_of_mem' := by sorry
+      pairwiseDisjoint := by sorry
 
-theorem toPartition.IsPartition {N : ℕ} {a b : ℝ} (hab : a < b)
+noncomputable def toTaggedPartition {N : ℕ} {a b : ℝ}
+    (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+    (y: Fin N → ℝ) (hy : ∀ i : Fin N,  (x i.castSucc ≤ y i) ∧ (y i ≤ x i.succ))
+    (ha : (x 0) = a) (hb : x (Fin.last N) = b) :
+    TaggedPrepartition (Ioc a b) :=
+    {toPartition x hx ha hb with
+      tag := by
+        classical
+        exact fun J _ ↦
+          if h : ∃ i : Fin N, Ioc (x i.castSucc) (x i.succ) = J then y h.choose else a
+      tag_mem_Icc := by sorry
+    }
+
+
+theorem toPartition_isPartition {N : ℕ} {a b : ℝ} (hab : a < b)
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
     (ha : (x 0) = a) (hb : x (Fin.last N) = b):
     (toPartition x hx ha hb).IsPartition := by
   sorry
 
+
 theorem fromPartition
     {a b : ℝ} (hab : a < b)
     (π : Prepartition (Ioc a b))
     (hπ : π.IsPartition):
-    letI N := Finset.card π.boxes
-    ∃ (x : Fin (N + 1) → ℝ) (hx : StrictMono x) (ha : (x 0) = a) (hb : x (Fin.last N) = b),
-     π = toPartition x hx ha hb := by
+    ∃ (N : ℕ) (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+      (ha : (x 0) = a) (hb : x (Fin.last N) = b),
+      π = toPartition x hx ha hb := by
+  sorry
+
+theorem fromTaggedPartition
+    {a b : ℝ} (hab : a < b)
+    (π : TaggedPrepartition (Ioc a b))
+    (hπ : π.IsPartition):
+    ∃ (N : ℕ) (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+      (ha : (x 0) = a) (hb : x (Fin.last N) = b)
+      (y : Fin N → ℝ) (hy : ∀ i : Fin N, (x i.castSucc ≤ y i) ∧ (y i ≤ x i.succ)),
+      π.toPrepartition = toPartition x hx ha hb ∧
+        ∀ i : Fin N, y i = π.tag (Ioc (x i.castSucc) (x i.succ)) 0 := by
+  sorry
+
+open TaggedPrepartition
+variable {E : Type} {F : Type} [NormedAddCommGroup E] [NormedSpace ℝ E]
+  [NormedAddCommGroup F] [NormedSpace ℝ F]
+
+theorem taggedSum_eq_integralSum {N : ℕ} {a b : ℝ} (hab : a < b)
+    (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
+    (y : Fin N → ℝ) (hy : ∀ i : Fin N,  (x i.castSucc ≤ y i) ∧ (y i ≤ x i.succ))
+    (ha : (x 0) = a) (hb : x (Fin.last N) = b)
+    (vol : (Fin 1) →ᵇᵃ E →L[ℝ] F)
+    (f :  ℝ → E):
+    integralSum (fun x => (f (x 1))) vol (toTaggedPartition x hx y hy ha hb) =
+      Finset.sum (Finset.univ)
+        (fun i: Fin N ↦ (vol (Ioc (x i.succ) (x i.castSucc))) (f (y i))) := by
   sorry
 
 end BoxIntegral.BoundaryPoints
