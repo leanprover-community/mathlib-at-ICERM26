@@ -121,6 +121,17 @@ variable (I)
 -- Note. This particular definition doesn't work in the holomorphic category,
 -- would need to switch to a germ-based definition.
 
+-- TODO: this seems to be the wrong lemma (as the one below)
+lemma vanishesRelativeToOrder_zero {Ψ : Trivialization F TotalSpace.proj} :
+    vanishesRelativeToOrder (fun x ↦ (0 : F)) k Ψ γ := by
+  intro i hik
+  have : Ψ.secToFun (fun x ↦ (0 : F)) = 0 := sorry -- missing API lemma: secToFun_zero
+  simp [this]
+
+lemma vanishesToOrderAt_zero : vanishesToOrderAt I F (fun x ↦ (0 : F)) k x₀ := by
+  intro Ψ γ hΨ hx₀ hγ₀ hγ
+  exact vanishesRelativeToOrder_zero
+
 -- the sections vanishing to order k form a submodule
 variable (V k x₀) in
 def foo : Submodule 𝕜 (ContMDiffSection I F n V) where
@@ -131,11 +142,14 @@ def foo : Submodule 𝕜 (ContMDiffSection I F n V) where
     intro i' hik'
     specialize hs Ψ γ hΨ hx₀ hγ₀ hγ' i' hik'
     specialize ht Ψ γ hΨ hx₀ hγ₀ hγ' i' hik'
-    -- secToFun is linear on an individual fiber(missing lemma)
+    -- secToFun is linear on an individual fiber (missing lemma)
     -- iteratedDeriv is linear
     -- exercise!
     sorry
-  zero_mem' := sorry -- exercise!
+  zero_mem' := by
+    simp
+    sorry -- TODO: the following lemma is not quite right!
+    -- apply vanishesToOrderAt_zero (I := I) (F := F) (k := k) (x₀ := x₀)
   smul_mem' := sorry -- exercise!
 
 theorem foo_mono {n k l} (hkl : k ≤ l) : foo (F := F) I V n l x₀ ≤ foo I V n k x₀ := by
