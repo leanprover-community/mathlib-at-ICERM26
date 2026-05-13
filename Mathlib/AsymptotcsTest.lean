@@ -18,7 +18,7 @@ def bigO (s : Set (α → E)) : Set (α → E) :=
 -- TODO: figure out the > 0 in this definition. It's not necessary, but
 -- very helpful to have while proving things about bigO.
 def bigO' (s : Set (α → E)) : Set (α → E) :=
-  {f | ∃ c > 0, ∀ᶠ x in l, ∃ g ∈ s, ‖f x‖ ≤ c * ‖g x‖}
+  { f | ∃ g : Finset (α → E), (g : Set _) ⊆ s ∧ f =O[l] (fun x ↦ ⨆ i ∈ g, ‖i x‖) }
 
 @[simp, push]
 lemma mem_bigO' (f : α → E) (s : Set (α → E)) :
@@ -307,17 +307,35 @@ set_option autoImplicit false
   = n + O(log n) := _
 -/
 
-@[simp]
 lemma map_eq (s₁ : Set (α → β → γ)) (s₂ : Set (α → β)) :
     map s₁ s₂ = ⋃ i₁ ∈ s₁, ⋃ i₂ ∈ s₂, {fun x ↦ i₁ x (i₂ x)} := by
   ext x
   simp [map]
 
+lemma singleton_eq_map_singleton_singleton (f : α → β → γ) (a : α → β) :
+    ({fun x ↦ f x (a x)} : Set (α → γ)) = map {f} {a} := by
+  simp [map_eq, pure]
+
+opaque dummyBigO [Norm E] (l : Filter α) (a : E) : E := a
+
+open Qq Lean Meta in
+partial def mappify (x : FVarId) (e : Expr) : MetaM Expr := do
+  match_expr e with
+  | dummyBigO α E instNormE l e' =>
+    mkAppOptM ``bigO #[α, E, instNormE, l, ← mappify x e']
+  | _ =>
+  if let .app f a := e then
+    let fType ← inferType f
+    if let .forallE _ _ _ .default := fType then
+      let f ← mappify x f
+      let a ← mappify x a
+      return ← mkAppM ``map #[f, a]
+  let e ← mkForallFVars #[.fvar x] e
+  mkAppM ``singleton #[e]
 
 macro "magic_tac" loc:(Lean.Parser.Tactic.location)? : tactic => `(tactic|
   simp only [map_eq, mem_pure, Set.mem_singleton_iff, Set.iUnion_iUnion_eq_left,
-    Set.mem_iUnion, exists_prop, Set.iUnion_exists,
-    Set.biUnion_and'] $[$loc]?)
+    Set.mem_iUnion, exists_prop, Set.iUnion_exists, Set.biUnion_and'] $[$loc]?)
 
 lemma mul_bigO {f g : Set (ℝ → ℝ)} {l : Filter ℝ} :
     map (map (pure HMul.hMul) f) (bigO l g) ⊆ bigO l (map (map (pure HMul.hMul) f) g) := by
@@ -349,11 +367,6 @@ lemma bigO_subset_bigO {l : Filter ℝ} {s₁ s₂ : Set (ℝ → ℝ)} (h : ∀
   specialize h f' hf's
   grw [hf']
   exact h
-
-public section
-
-
-end
 
 theorem terry :
     map (map (pure HPow.hPow) (map (map (pure HAdd.hAdd) {fun x ↦ x}) (pure 1))) (map (pure Real.exp) (map (pure Inv.inv) {fun x ↦ x})) RS[EventuallyEq atTop]
