@@ -1830,10 +1830,22 @@ theorem stieltjesIntegral_map {E' F' G' : Type*}
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
     (hg : BoundedVariationOn g (Set.Icc a b))
-    (π : Prepartition (Ioc a b)) :
-    ∑ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
+    (π : BoxIntegral.Prepartition (Ioc a b)) :
+    ∑ J ∈ π.boxes, ‖(BoxIntegral.BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
       ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
+  -- Step 1: Bound each local subbox evaluation by the operator norm of B.flip
+  have h_term : ∀ J ∈ π.boxes, ‖(BoxIntegral.BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
+      ‖B‖ * ‖g (J.upper 0) - g (J.lower 0)‖ := by
+    intro J hJ
+    change ‖B.flip (g (J.upper 0)) - B.flip (g (J.lower 0))‖ ≤ _
+    rw [← map_sub]
+    have h_iso : ‖B.flip‖ = ‖B‖ := ContinuousLinearMap.opNorm_flip B
+    rw [← h_iso]
+    exact (B.flip).le_opNorm (g (J.upper 0) - g (J.lower 0))
+
   sorry
+
+
 
 /-- Continuous integrand and a
 bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
