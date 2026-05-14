@@ -319,7 +319,7 @@ section RightSerial
 def RightSerial (r : α → β → Prop) (s₁ : Set α) (s₂ : Set β) : Prop :=
   ∀ x₁ ∈ s₁, ∃ x₂ ∈ s₂, r x₁ x₂
 
-notation3 x " RS[" r "] " y => RightSerial r x y
+notation x " RS[" r "] " y => RightSerial r x y
 
 universe u v w
 
@@ -450,8 +450,8 @@ meta partial def mappify (fvar : Expr) (e : Expr) : MetaM Expr := do
     unless ← isDefEq α (← inferType fvar) do
       throwError
         "Filter `{l}` lives in type `{α}`, but is expected to live in type `{← inferType fvar}"
-    return mkAppN (.const ``bigO [← getDecLevel α, ← getDecLevel E])
-      #[α, E, instNormE, l, ← mappify fvar e']
+    return mkApp5 (.const ``bigO [← getDecLevel α, ← getDecLevel E])
+      α E instNormE l (← mappify fvar e')
   | _ =>
     if let .app f a := e then
       let fType ← inferType f
@@ -463,6 +463,20 @@ meta partial def mappify (fvar : Expr) (e : Expr) : MetaM Expr := do
     let α ← inferType e
     let setα ← mkAppM ``Set #[α]
     mkAppOptM ``singleton #[α, setα, none, e]
+
+meta partial def unmappify (e : Expr) : OptionT MetaM Expr := do
+  match_expr e with
+  | map _ _ _ f a =>
+    let f ← unmappify f
+    let a ← unmappify a
+    return f.app a
+  | singleton _ _ _ f =>
+    if let .lam _ _ b _ := f then
+      return b
+    failure
+  | f@bigO α E instE l a =>
+    return mkApp5 (.const ``dummyBigO f.constLevels!) α E instE l (← unmappify a)
+  | _ => failure
 
 declare_syntax_cat asymp_rel
 
@@ -490,18 +504,48 @@ meta def elabAsympPercent : Elab.Term.TermElab := fun stx _ ↦ do
         else
           Meta.mkFreshTypeMVar
       let type ← mkFreshTypeMVar
-      let fnType := Expr.forallE `a fvarType type .default
+      let fnType := Expr.forallE x.getId fvarType type .default
       let r ← Elab.Term.elabTermEnsuringType r
         (Expr.forallE `a fnType (.forallE `a fnType (.sort 0) .default) .default)
       Meta.withLocalDeclD x.getId fvarType fun fvar ↦ do
+        let u ← getDecLevel fnType
         let elabSide (stx : Syntax) : Elab.Term.TermElabM Expr := do
           if let `(_) := stx then
-            mkFreshExprMVar (some <| .app (.const ``Set [← getDecLevel fnType]) fnType)
+            mkFreshExprMVar (some <| .app (.const ``Set [u]) fnType)
           else
             mappify fvar <| ← Elab.Term.elabTermEnsuringType stx type
-        mkAppM ``RightSerial #[r, ← elabSide lhs, ← elabSide rhs]
+        return mkApp5 (.const ``RightSerial [u, u]) fnType fnType r (← elabSide lhs) (← elabSide rhs)
     | _ => Elab.throwUnsupportedSyntax
   | _ => Elab.throwUnsupportedSyntax
+
+open PrettyPrinter Delaborator SubExpr in
+@[app_delab RightSerial]
+meta def delabAsympPercent : Delab := do
+  let_expr RightSerial fnType _ r lhs rhs := ← SubExpr.getExpr | failure
+  let .forallE name d _ _ := fnType | failure
+  let some lhs ← (unmappify lhs).run | failure
+  let some rhs ← (unmappify rhs).run | failure
+  let (lhs, rhs) ← withLocalDeclD name d fun fvar ↦ do
+    let lhs ← withAppFn <| withAppArg <| delab <| lhs.instantiate1 fvar
+    let rhs ← withAppArg <| delab <| rhs.instantiate1 fvar
+    return (lhs, rhs)
+  let d ← withAppFn <| withAppFn <| withAppFn <| delab d
+  let rel ← withAppFn <| withAppFn <| withAppArg do
+    match_expr r with
+    | Eq _ => `(asymp_rel| $lhs:term = $rhs)
+    | LE.le _ _=> `(asymp_rel| $lhs:term ≤ $rhs)
+    | Filter.EventuallyEq _ _ l' => `(asymp_rel| $lhs:term =ᶠ[$(← delab l')] $rhs)
+    | Filter.EventuallyLE _ _ _ l' => `(asymp_rel| $lhs:term ≤ᶠ[$(← delab l')] $rhs)
+    -- | IsBigO _  l' => `(asymp_rel| $lhs:term =O[$l':term] $rhs:term)
+    -- | IsLittleO _  l' => `(asymp_rel| $lhs:term =o[$l'] $rhs)
+    | IsEquivalent _ _ _ l' => `(asymp_rel| $lhs:term ~[$(← delab l')] $rhs)
+    | _ =>`(asymp_rel| $lhs:term; $(← delab r); $rhs)
+  `(asymp% $(mkIdent name) : $d => $rel)
+
+@[app_unexpander dummyBigO]
+meta def dummyBigOUnexpander : Lean.PrettyPrinter.Unexpander
+  | `($_ $l $a) => `(O[$l]($a))
+  | _ => throw ()
 
 end Meta
 
