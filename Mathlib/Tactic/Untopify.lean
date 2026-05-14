@@ -9,6 +9,7 @@ public import Mathlib.Data.ENat.Basic
 public import Mathlib.Data.ENNReal.Operations
 public import Mathlib.Data.ENNReal.Inv
 public import Mathlib.Tactic.UntopifyAttr
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
 public meta import Mathlib.Tactic.ToAdditive
 
 /-!
@@ -39,6 +40,7 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
   ENNReal.mul_top ENNReal.top_mul
   ENNReal.inv_top ENNReal.inv_zero ENNReal.div_top ENNReal.top_pow
   tsub_zero zero_tsub add_zero zero_add mul_zero zero_mul ENNReal.zero_div ENNReal.div_zero
+  pow_zero zero_pow zpow_zero
 
 -- coercion lemmas: ENNReal.coe_rpow_of_ne_zero, ENNReal.coe_rpow_of_nonneg
 
@@ -66,6 +68,7 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
 @[untopify_coe] lemma coe_one : (1 : ℝ≥0∞) = ((1 : ℝ≥0) : ℝ≥0∞) := rfl
 
 attribute [untopify_coe] ENNReal.coe_inj ENNReal.coe_le_coe ENNReal.coe_lt_coe
+  ENNReal.coe_pow ENNReal.coe_zpow ENNReal.coe_rpow_of_ne_zero
 
 lemma ENNReal.trichotomy_induction {C : ℝ≥0∞ → Prop} (zero : C 0) (infty : C ∞)
     (pos : (x : ℝ≥0) → (hx : 0 < x) → C ↑x) (x : ℝ≥0∞) : C x := by
@@ -107,6 +110,7 @@ elab "cases_first_with_top" : tactic => focus do
 /-- `enat_to_nat` shifts all `ENat`s in the context to `Nat`, rewriting propositions about them.
 A typical use case is `enat_to_nat; lia`. -/
 macro "untopify" : tactic => `(tactic| focus (
+    (try simp_all only [untopify_top]) <;>
     (repeat' cases_first_with_top) <;>
     (try simp_all only [untopify_top, untopify_coe])
   )
