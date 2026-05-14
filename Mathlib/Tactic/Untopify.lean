@@ -40,7 +40,7 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
   ENNReal.mul_top ENNReal.top_mul
   ENNReal.inv_top ENNReal.inv_zero ENNReal.div_top ENNReal.top_pow
   tsub_zero zero_tsub add_zero zero_add mul_zero zero_mul ENNReal.zero_div ENNReal.div_zero
-  pow_zero zero_pow zpow_zero
+  pow_zero zero_pow zpow_zero zero_le le_zero_iff le_rfl one_ne_zero not_true
 
 @[untopify_top] lemma top_zpow_ofNat {n : ℕ} : ∞ ^ (OfNat.ofNat (n + 1) : ℤ) = ∞ := by
   rw [ENNReal.top_zpow_def]
@@ -90,6 +90,12 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
 @[untopify_coe] lemma coe_zero : (0 : ℝ≥0∞) = ((0 : ℝ≥0) : ℝ≥0∞) := rfl
 
 @[untopify_coe] lemma coe_one : (1 : ℝ≥0∞) = ((1 : ℝ≥0) : ℝ≥0∞) := rfl
+
+@[untopify_coe] lemma coe_div (a b : ℝ≥0) (hb : 0 < b) : (a / b : ℝ≥0∞) = ↑(a / b) :=
+  (ENNReal.coe_div hb.ne').symm
+
+@[untopify_coe] lemma coe_inv (b : ℝ≥0) (hb : 0 < b) : (b⁻¹ : ℝ≥0∞) = ↑(b⁻¹) :=
+  (ENNReal.coe_inv hb.ne').symm
 
 attribute [untopify_coe] ENNReal.coe_inj ENNReal.coe_le_coe ENNReal.coe_lt_coe
 
