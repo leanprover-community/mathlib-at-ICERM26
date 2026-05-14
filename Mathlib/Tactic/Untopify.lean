@@ -63,12 +63,19 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
     (OfScientific.ofScientific m b e : ℝ≥0∞) = (OfScientific.ofScientific m b e : ℝ≥0) :=
   rfl
 
+@[untopify_coe] lemma coe_pow (x : ℝ≥0) (n : ℕ) : (↑x : ℝ≥0∞) ^ n = ↑(x ^ n) := by simp
+
+@[untopify_coe] lemma coe_zpow {r : ℝ≥0} (hr : r ≠ 0) (n : ℤ) : (↑r : ℝ≥0∞) ^ n = ↑(r ^ n) :=
+  (ENNReal.coe_zpow hr n).symm
+
+@[untopify_coe] lemma coe_rpow_of_ne_zero {x : ℝ≥0} (h : x ≠ 0) (y : ℝ) : (↑x : ℝ≥0∞) ^ y = ↑(x ^ y)
+ := (ENNReal.coe_rpow_of_ne_zero h y).symm
+
 @[untopify_coe] lemma coe_zero : (0 : ℝ≥0∞) = ((0 : ℝ≥0) : ℝ≥0∞) := rfl
 
 @[untopify_coe] lemma coe_one : (1 : ℝ≥0∞) = ((1 : ℝ≥0) : ℝ≥0∞) := rfl
 
 attribute [untopify_coe] ENNReal.coe_inj ENNReal.coe_le_coe ENNReal.coe_lt_coe
-  ENNReal.coe_pow ENNReal.coe_zpow ENNReal.coe_rpow_of_ne_zero
 
 lemma ENNReal.trichotomy_induction {C : ℝ≥0∞ → Prop} (zero : C 0) (infty : C ∞)
     (pos : (x : ℝ≥0) → (hx : 0 < x) → C ↑x) (x : ℝ≥0∞) : C x := by
