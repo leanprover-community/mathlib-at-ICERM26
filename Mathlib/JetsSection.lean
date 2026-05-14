@@ -39,9 +39,29 @@ def vanishesRelativeToOrder (γ : 𝕜 → B) : Prop :=
 
 variable {γ γ' : 𝕜 → B}
 
+private lemma vanishesRelativeToOrder_zero_iff' (γ : 𝕜 → B) : vanishesRelativeToOrder s 0 Ψ γ ↔ Ψ.secToFun s (γ 0) = 0 := by
+  simp [vanishesRelativeToOrder]
+
+variable (Ψ) in
 /-- A section `s` vanishes to order zero relative to `Ψ` and `γ` iff `s (γ 0) = 0`. -/
 --@[simp]
-lemma vanishesRelativeToOrder_zero_iff (γ : 𝕜 → B) : vanishesRelativToOrder s 0 Ψ γ ↔ s (γ 0) = 0 := by
+lemma vanishesRelativeToOrder_zero_iff {γ : 𝕜 → B} (hγ : γ 0 ∈ Ψ.baseSet) :
+    vanishesRelativeToOrder s 0 Ψ γ ↔ s (γ 0) = 0 := by
+  rw [vanishesRelativeToOrder_zero_iff']
+  refine ⟨fun hs ↦ ?_, fun hs ↦ ?_⟩
+  · -- goal: s (γ 0) = 0
+    sorry
+  · -- missing API for secToFun, if this is even true??
+    --rw [Ψ.secToFun_apply_of_eq]
+    --unfold secToFun
+    --rw [← mk_proj_snd Ψ ?_] does the wrong direction
+    --· simp
+    --simp (disch := assumption)
+    --grind
+    --simp (disch := sorry)
+    --dsimp
+    --simp [Ψ.secToFun]
+    sorry
 
 omit [∀ (x : B), IsTopologicalAddGroup (V x)]
   [∀ (x : B), ContinuousSMul 𝕜 (V x)]
@@ -98,8 +118,18 @@ def vanishesToOrderAt : Prop :=
   vanishesRelativeToOrder s k Ψ γ
 
 /-- A section `s` vanishes to order zero at `x₀` iff `s x₀ = 0`. -/
---@[simp]
-lemma vanishesRelativeToOrder_zero_iff (γ : 𝕜 → B) : vanishesToOrderAt I F 0 s k x₀ ↔ s x₀ = 0 := by
+@[simp]
+lemma vanishesToOrderAt_zero_iff : vanishesToOrderAt I F n s 0 x₀ ↔ s x₀ = 0 := by
+  refine ⟨fun hs ↦ ?_, fun hs ↦ ?_⟩
+  · let t := trivializationAt F V x₀
+    let γ : 𝕜 → B := fun a ↦ x₀
+    have hγ₀ : γ 0 = x₀ := by simp [γ]
+    have hx₀ : x₀ ∈ t.baseSet := by
+      simpa [γ] using FiberBundle.mem_baseSet_trivializationAt' x₀
+    rw [← hγ₀, ← vanishesRelativeToOrder_zero_iff t hx₀]
+    exact hs t γ (by infer_instance) hx₀ (by simp [γ]) contMDiffAt_const
+  · intro Ψ γ hΨ hx₀ hγ₀ hγ
+    rw [vanishesRelativeToOrder_zero_iff Ψ (by rwa [hγ₀]), hγ₀, hs]
 
 section Deriv
 
