@@ -17,35 +17,32 @@ public import Mathlib.Analysis.Calculus.ContDiff.Defs
 
 /-! # Riemann–Stieltjes integral
 
-In this file we define the (one-dimensional) Riemann–Stieltjes integral of a function
+In this file we define the (one-dimensional) Riemann–Stieltjes integral on an interval `(a, b]` of a function
 `f : ℝ → E` against an integrator `g : ℝ → F`, paired by a continuous bilinear map
-`B : E →L[ℝ] F →L[ℝ] G`. The integral is realized as a `BoxIntegral.HasIntegral` over the
-half-open interval `(a, b]`, viewed as a `Box (Fin 1)`, with respect to the box-additive
-"differential" associated to `g`.
+`B : E →L[ℝ] F →L[ℝ] G`. The integral (taking values in `G`) is realized as a
+`BoxIntegral.HasIntegral` over the half-open interval, viewed as a `Box (Fin 1)`,
+with respect to the box-additive "differential" associated to `g`.
+
+If `a = b`, the integral is defined to vanish, and if `a > b`, the integral is defined to be the
+egative of the integral
+Carrying the bilinear pairing `B` lets a single definition cover the three common variants of
+Stieltjes integration encountered in practice:
+
+* **Scalar multiplication on the left** — when `E = 𝕜` is a scalar field acting continuously on
+  `G = F`, take `B = ContinuousLinearMap.lsmul ℝ 𝕜`, i.e. `B c v = c • v`. This is the form
+  `∫ f(x) dg(x)` in which `f` is scalar-valued and `g` takes values in a normed module.
+* **Scalar multiplication on the right** — when `F = 𝕜` is a scalar field acting continuously on
+  `G = E`, take `B = (ContinuousLinearMap.lsmul ℝ 𝕜).flip`, i.e. `B v c = c • v`. This is the
+  form `∫ f(x) dg(x)` in which `g` is scalar-valued and `f` takes values in a normed module.
+* **Multiplication in an algebra** — when `E = F = G = A` is a normed `ℝ`-algebra, take
+  `B = ContinuousLinearMap.mul ℝ A`, i.e. `B u v = u * v`. This recovers the classical
+  Riemann–Stieltjes integral of two real- (or complex-) valued functions.
 
 The development follows the treatment of Riemann–Stieltjes integration in
 Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Appendix A.
 
 Currently we are using `Stieltjes` to refer to the one-dimensional Riemann–Stieltjes integral; the
 name may be subject to change if further variants of Stieltjes integration are introduced.
-
-## Main definitions
-
-* `BoxIntegral.Prepartition.mesh_size`: the mesh size of a prepartition — the largest side
-  length of any sub-box. Used to phrase the textbook ε-δ characterization of the Riemann and
-  Riemann–Stieltjes integrals.
-* `BoxIntegral.BoxAdditiveMap.ofDiff g`: the box-additive map associated to `g : ℝ → M`,
-  sending a box `J` to `g (J.upper 0) - g (J.lower 0)`.
-* `Stieltjes.Ioc a b`: the half-open interval `(a, b]` as a `Box (Fin 1)` (returning a
-  dummy box when `a ≥ b`).
-* `HasStieltjesIntegral a b B f g L`: the predicate asserting that `L : G` is the
-  Riemann–Stieltjes integral of `f` against `g`, paired by the bilinear map `B`, over `(a, b]`.
-* `StieltjesIntegrable a b B f g`: existence of the integral, i.e. some `L` with
-  `HasStieltjesIntegral a b B f g L`.
-* `stieltjesIntegral a b B f g`: the integral as a function, returning `0` on non-integrable
-  inputs (analogous to `BoxIntegral.integral`, `MeasureTheory.integral`, etc.).
-* `Stieltjes.RiemannIntegrable a b f`: a placeholder predicate for Riemann integrability of
-  `f` on `(a, b]`.
 
 ## Notation
 
@@ -360,8 +357,9 @@ variable (f : (ι → ℝ) → E) (vol : BoxAdditiveMap ι (E →L[ℝ] F) ⊤)
 
 theorem HasIntegral_Riemann_iff (L : F) :
     HasIntegral I Riemann f vol L ↔ ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition I,
-    π.IsHenstock → π.iUnion = I.toSet → π.mesh_size ≤ δ → dist (integralSum f vol π) L < ε := by
-  simp only [HasIntegral, tendsto_iff_eventually, Riemann_toFilteriUnion_eventually_iff_mesh]
+    π.IsHenstock → π.IsPartition → π.mesh_size ≤ δ → dist (integralSum f vol π) L < ε := by
+  simp only [HasIntegral, tendsto_iff_eventually, Riemann_toFilteriUnion_eventually_iff_mesh,
+  TaggedPrepartition.isPartition_iff_iUnion_eq]
   refine ⟨ fun h ε εpos ↦ ?_, fun h p hp ↦ ?_ ⟩
   · have : ∀ᶠ y in nhds L, dist y L < ε := by
       simp only [Metric.eventually_nhds_iff, gt_iff_lt]
@@ -1265,7 +1263,7 @@ lemma HasStieltjesIntegral.symm {f : ℝ → E} {g : ℝ → F} {L : G}
 one uses unordered partitions of the interval. -/
 theorem HasStieltjesIntegral_iff_lim_sum (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
     HasStieltjesIntegral a b B f g L ↔
-    ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.iUnion = ↑(Ioc a b)
+    ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
      dist (∑ x ∈ π.boxes, ((B (f (π.tag x 0))) (g (x.upper 0) - g (x.lower 0)))) L < ε := by
   simp only [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral', Fin.isValue,

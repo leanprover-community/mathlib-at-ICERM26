@@ -590,6 +590,10 @@ theorem sum_disj_union_boxes {M : Type*} [AddCommMonoid M] (h : Disjoint π₁.i
     ∑ J ∈ π₁.boxes ∪ π₂.boxes, f J = (∑ J ∈ π₁.boxes, f J) + ∑ J ∈ π₂.boxes, f J :=
   sum_union <| disjoint_boxes_of_disjoint_iUnion h
 
+section Mesh
+
+end Mesh
+
 section Distortion
 
 variable [Fintype ι]
