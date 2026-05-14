@@ -177,25 +177,32 @@ namespace NNReal
 lemma le_iff_coe_le {x : NNReal} {R : ℝ} (hR : 0 ≤ R) :
     x ≤ ⟨R, hR⟩ ↔ ↑x ≤ R := by rfl
 
+@[simp]
+lemma coe_sup_le_iff_forall_le {β : Type*} {s : Finset β} {f : β → NNReal} {R : ℝ} (hR : 0 ≤ R) :
+    ↑(s.sup f) ≤ R ↔ ∀ b ∈ s, ↑(f b) ≤ R := by
+  simp [←le_iff_coe_le hR]
+
 end NNReal
 
 namespace BoxIntegral.Prepartition
 
+open Finset NNReal
+
 variable {ι : Type*} [Fintype ι]
 
 noncomputable def mesh_size {I : Box ι} (π : Prepartition I) : NNReal :=
-  (π.boxes ×ˢ (Finset.univ : Finset ι)).sup
+  (π.boxes ×ˢ (univ : Finset ι)).sup
   (fun ⟨ B, i ⟩ ↦ ⟨ B.upper i - B.lower i, by linarith [B.lower_lt_upper i]⟩ )
 
+@[simp]
 theorem mesh_size_le_iff {I : Box ι} (π : Prepartition I) {ε : ℝ} (hε : 0 ≤ ε) :
     π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, ∀ i, B.upper i - B.lower i ≤ ε := by
-  simp only [mesh_size, ← NNReal.le_iff_coe_le hε, Finset.sup_le_iff, Finset.mem_product, mem_boxes,
-    Finset.mem_univ, and_true, Prod.forall, tsub_le_iff_right]
-  refine ⟨ fun h B hB i ↦ ?_, fun h B i hB ↦ ?_ ⟩
-  · replace h : B.upper i - B.lower i ≤ ε := h B i hB
+  simp only [mesh_size, coe_sup_le_iff_forall_le hε, mem_product, mem_boxes,
+    mem_univ, and_true, Prod.forall, tsub_le_iff_right]
+  refine ⟨ fun h B hB i ↦ ?_, fun h B i hB ↦ (?_ : B.upper i - B.lower i ≤ ε) ⟩
+  · have : B.upper i - B.lower i ≤ ε := h B i hB
     linarith
-  · change B.upper i - B.lower i ≤ ε
-    linarith [h B hB i]
+  · linarith [h B hB i]
 
 theorem mesh_size_of_fin_one {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_size
     = π.boxes.sup (fun B ↦ ⟨ B.upper 0 - B.lower 0, by linarith [B.lower_lt_upper 0]⟩)
@@ -203,13 +210,13 @@ theorem mesh_size_of_fin_one {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_s
 
 theorem mesh_size_of_fin_one_le_iff {I : Box (Fin 1)} (π : Prepartition I) {ε : ℝ} (hε : 0 ≤ ε) :
     π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, B.upper 0 - B.lower 0 ≤ ε := by
-  simp [mesh_size_le_iff π hε]
+  simp [hε]
 
 end BoxIntegral.Prepartition
 
 namespace BoxIntegral.IntegrationParams
 
-open Prepartition TaggedPrepartition
+open Prepartition TaggedPrepartition Finset NNReal
 
 variable {ι : Type*} [Fintype ι] (l : IntegrationParams) (I : Box ι) (π₀ : Prepartition I)
 
@@ -221,6 +228,15 @@ theorem toFilteriUnion_eventually_iff (P : TaggedPrepartition I → Prop) :
      := by
   simp [(l.hasBasis_toFilteriUnion I π₀).eventually_iff]
 
+@[simp]
+lemma Riemann_bRiemann_true : Riemann.bRiemann = true := rfl
+
+@[simp]
+lemma Riemann_bHenstock_true : Riemann.bHenstock = true := rfl
+
+@[simp]
+lemma Riemann_bDistortion_false : Riemann.bDistortion = false := rfl
+
 theorem Riemann_toFilteriUnion_eventually_iff (P : TaggedPrepartition I → Prop) :
     (∀ᶠ π in Riemann.toFilteriUnion I π₀, P π) ↔ ∃ (r : Set.Ioi 0),
     ∀ π : TaggedPrepartition I,
@@ -228,21 +244,14 @@ theorem Riemann_toFilteriUnion_eventually_iff (P : TaggedPrepartition I → Prop
      := by
   simp only [toFilteriUnion_eventually_iff, exists_and_right, and_imp, forall_exists_index,
     Subtype.exists, Set.mem_Ioi]
-  constructor
-  · refine fun ⟨ r, hr, hr' ⟩ ↦ ⟨ r 1 0, by grind, ?_ ⟩
-    simp only [Subtype.coe_eta]
+  refine ⟨ fun ⟨ r, hr, hr' ⟩ ↦ ⟨ r 1 0, by grind, ?_ ⟩,
+    fun ⟨ r, hpos, hr ⟩ ↦ ⟨ fun _ _ ↦ ⟨ r, hpos ⟩, fun c ↦ by simp [RCond], fun π c hmem ↦ ?_ ⟩ ⟩
+  · simp only [Subtype.coe_eta]
     peel hr' with π h
-    exact fun hsub hhen ↦ h 1 {
-      isSubordinate := by
-        convert hsub using 2 with x
-        apply hr 1; simp [Riemann]
-      isHenstock := by simp [Riemann, hhen]
-      distortion_le := by simp [Riemann]
-      exists_compl := by simp [Riemann]
-    }
-  refine fun ⟨ r, hpos, hr ⟩ ↦ ⟨ fun _ _ ↦ ⟨ r, hpos ⟩, fun c ↦ ?_, fun π c hmem ↦ ?_ ⟩
-  · simp [RCond]
-  apply hr π hmem.isSubordinate (hmem.isHenstock (by simp [Riemann]))
+    refine fun hsub hhen ↦ h 1 ⟨ ?_, by simp [hhen], by simp, by simp ⟩
+    convert hsub using 2 with x
+    apply hr 1; simp
+  apply hr π hmem.isSubordinate (hmem.isHenstock (by simp))
 
 /-- A statement is eventually true under the Riemann filter if it is true for all tagged (Henstock)
 partitions with sufficiently small mesh size. -/
@@ -251,45 +260,41 @@ theorem Riemann_toFilteriUnion_eventually_iff_mesh (P : TaggedPrepartition I →
     ∀ π : TaggedPrepartition I,
     ((π.mesh_size:ℝ) ≤ ε ∧ π.IsHenstock ∧ π.iUnion = π₀.iUnion) → P π
      := by
-  rw [Riemann_toFilteriUnion_eventually_iff]
-  constructor
-  · rintro ⟨ ⟨ r, hpos ⟩, hr ⟩
-    simp only [Set.mem_Ioi] at hpos
-    refine ⟨ r, hpos, ?_ ⟩
+  simp only [Riemann_toFilteriUnion_eventually_iff, IsSubordinate, Box.Icc_def, IsHenstock,
+    Set.mem_Icc, and_imp, Subtype.exists, Set.mem_Ioi, exists_prop, gt_iff_lt]
+  refine ⟨ fun ⟨ r, hpos, hr ⟩ ↦ ?_, fun ⟨ ε, εpos, hε ⟩ ↦ ⟨ ε/2, by simp [εpos], ?_ ⟩ ⟩
+  · refine ⟨ r, hpos, ?_ ⟩
     replace hpos := le_of_lt hpos
     peel hr with π h
-    refine fun ⟨ hmesh, hhen, hunion ⟩ ↦ h ⟨ ?_, hhen, hunion ⟩
-    simp only [IsSubordinate, IsHenstock] at hhen ⊢
+    refine fun hmesh hhen hunion ↦ h ?_ hhen hunion
     intro J hJ x hx
-    simp only [Metric.mem_closedBall, dist_pi_def]
-    apply (NNReal.le_iff_coe_le hpos).mp (Finset.sup_le _)
-    intro i _
-    simp only [Box.Icc_def, Set.mem_Icc, nndist, π.mesh_size_le_iff hpos, Pi.le_def]
+    simp only [Metric.mem_closedBall, dist_pi_def, hpos, coe_sup_le_iff_forall_le,
+      mem_univ, coe_nndist, forall_const]
+    intro i
+    simp only [Set.mem_Icc, π.mesh_size_le_iff, hpos, Pi.le_def]
       at hx hmesh hhen ⊢
-    specialize hmesh J hJ i
+    have : J.upper i - J.lower i ≤ r := hmesh J hJ i
     specialize hhen J (by simp [hJ])
-    change dist (x i) (π.tag J i) ≤ r
-    change J.upper i - J.lower i ≤ r at hmesh
     grind [Real.dist_eq, abs_le, neg_le_sub_iff_le_add, tsub_le_iff_right]
-  rintro ⟨ ε, εpos, hε ⟩
-  refine ⟨ ⟨ ε/2, by simp [εpos] ⟩, ?_ ⟩
   peel hε with π h
-  refine fun ⟨ hsub, hhen, hunion ⟩ ↦ h ⟨ ?_, hhen, hunion ⟩
-  simp only [IsSubordinate, π.mesh_size_le_iff (le_of_lt εpos), IsHenstock, Box.Icc_def]
+  refine fun hsub hhen hunion ↦ h ?_ hhen hunion
+  simp only [π.mesh_size_le_iff (le_of_lt εpos)]
     at hsub hhen ⊢
   rintro J hJi i
   simp only [mem_boxes, mem_toPrepartition, tsub_le_iff_right] at hJi ⊢
   have hsub1 := hsub J hJi J.lower_mem_Icc
   have hsub2 := hsub J hJi J.upper_mem_Icc
   specialize hhen J hJi
-  simp only [Set.mem_Icc, Pi.le_def, Metric.mem_closedBall, dist_pi_def, nndist,
-    ← NNReal.le_iff_coe_le (show 0 ≤ ε/2 by positivity), Finset.sup_le_iff, Finset.mem_univ,
+  simp only [Pi.le_def, Metric.mem_closedBall, dist_pi_def, nndist,
+    ← le_iff_coe_le (show 0 ≤ ε/2 by positivity), Finset.sup_le_iff, mem_univ,
     forall_const] at hhen hsub1 hsub2
   replace hsub1 : dist (J.lower i) (π.tag J i) ≤ ε/2 := hsub1 i
   replace hsub2 : dist (J.upper i) (π.tag J i) ≤ ε/2 := hsub2 i
   grind [Real.dist_eq, abs_le]
 
 end BoxIntegral.IntegrationParams
+
+#exit
 
 namespace BoxIntegral.BoundaryPoints
 
