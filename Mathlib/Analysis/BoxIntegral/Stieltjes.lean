@@ -135,9 +135,9 @@ Stieltjes integral, Riemann–Stieltjes, bounded variation
 
 @[expose] public section
 
-/-! ## Intervals -/
-
 namespace Stieltjes
+
+/-! ## Intervals -/
 
 open BoxIntegral
 
@@ -174,6 +174,12 @@ end Stieltjes
 
 namespace NNReal
 
+/-! ## Nonnegative real API
+
+To be upstreamed to NNReal
+
+-/
+
 lemma le_iff_coe_le {x : NNReal} {R : ℝ} (hR : 0 ≤ R) :
     x ≤ ⟨R, hR⟩ ↔ ↑x ≤ R := by rfl
 
@@ -187,6 +193,12 @@ lemma coe_sup_le_iff_forall_le {β : Type*} {s : Finset β} {f : β → NNReal} 
 end NNReal
 
 namespace BoxIntegral.Prepartition
+
+/-! ## Mesh size
+
+API for the mesh size of a partition.
+
+-/
 
 open Finset NNReal
 
@@ -217,6 +229,12 @@ theorem mesh_size_of_fin_one_le_iff {I : Box (Fin 1)} (π : Prepartition I) {ε 
 end BoxIntegral.Prepartition
 
 namespace BoxIntegral.IntegrationParams
+
+/-! ## Simplifying the BoxIntegral filters
+
+API for simplifying the filters in `BoxIntegral`
+
+-/
 
 open Prepartition TaggedPrepartition Finset NNReal
 
@@ -295,6 +313,11 @@ end BoxIntegral.IntegrationParams
 
 namespace BoxIntegral
 
+/-! ## Standard description of the Riemann integral
+
+Shows that the Riemann integral defined via `BoxIntegral` matches the textbook definition
+-/
+
 open IntegrationParams Filter
 
 variable {ι : Type*} [Fintype ι] (I : Box ι) {E : Type*} {F : Type*}
@@ -322,6 +345,11 @@ theorem HasIntegral_Riemann_iff (L : F) :
 end BoxIntegral
 
 namespace BoxIntegral.BoundaryPoints
+
+/-! ## One-dimensional interval partitions
+
+API for one-dimensional partitions and tagged partitions
+-/
 
 open BoxIntegral Stieltjes
 
