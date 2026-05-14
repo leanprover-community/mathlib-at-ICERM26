@@ -275,7 +275,7 @@ section
 variable (R M N)
 
 /-- The natural equivalence between continuous linear maps from `M` to `N`
-and continuous 1-multilinear alternating maps from `M` to `N`. -/
+and continuous 1-multilinear symmetric maps from `M` to `N`. -/
 @[simps! apply_apply symm_apply_apply apply_toContinuousMultilinearMap]
 def ofSubsingleton [Subsingleton ι] (i : ι) :
     (M →L[R] N) ≃ M [Sym^ι]→L[R] N where
@@ -293,7 +293,7 @@ theorem ofSubsingleton_toSymmetricMap [Subsingleton ι] (i : ι) (f : M →L[R] 
 
 variable (ι) {N}
 
-/-- The constant map is alternating when `ι` is empty. -/
+/-- The constant map is symmetric when `ι` is empty. -/
 @[simps! toContinuousMultilinearMap apply]
 def constOfIsEmpty [IsEmpty ι] (m : N) : M [Sym^ι]→L[R] N :=
   { SymmetricMap.constOfIsEmpty R M ι m with
@@ -306,8 +306,8 @@ theorem constOfIsEmpty_toSymmetricMap [IsEmpty ι] (m : N) :
 
 end
 
-/-- If `g` is continuous alternating and `f` is a continuous linear map, then `g (f m₁, ..., f mₙ)`
-is again a continuous alternating map, that we call `g.compContinuousLinearMap f`. -/
+/-- If `g` is continuous symmetric and `f` is a continuous linear map, then `g (f m₁, ..., f mₙ)`
+is again a continuous symmetric map, that we call `g.compContinuousLinearMap f`. -/
 def compContinuousLinearMap (g : M [Sym^ι]→L[R] N) (f : M' →L[R] M) : M' [Sym^ι]→L[R] N :=
   { g.toSymmetricMap.compLinearMap (f : M' →ₗ[R] M) with
     toContinuousMultilinearMap := g.1.compContinuousLinearMap fun _ => f }
@@ -317,8 +317,8 @@ theorem compContinuousLinearMap_apply (g : M [Sym^ι]→L[R] N) (f : M' →L[R] 
     g.compContinuousLinearMap f m = g (f ∘ m) :=
   rfl
 
-/-- Composing a continuous alternating map with a continuous linear map gives again a
-continuous alternating map. -/
+/-- Composing a continuous symmetric map with a continuous linear map gives again a
+continuous symmetric map. -/
 def _root_.ContinuousLinearMap.compContinuousSymmetricMap (g : N →L[R] N') (f : M [Sym^ι]→L[R] N) :
     M [Sym^ι]→L[R] N' :=
   { (g : N →ₗ[R] N').compSymmetricMap f.toSymmetricMap with
@@ -330,7 +330,7 @@ theorem _root_.ContinuousLinearMap.compContinuousSymmetricMap_coe (g : N →L[R]
   rfl
 
 /-- A continuous linear equivalence of domains
-defines an equivalence between continuous alternating maps.
+defines an equivalence between continuous symmetric maps.
 
 This is available as a continuous linear isomorphism at
 `ContinuousLinearEquiv.continuousSymmetricMapCongrLeft`.
@@ -345,7 +345,7 @@ def _root_.ContinuousLinearEquiv.continuousSymmetricMapCongrLeftEquiv (e : M ≃
   right_inv f := by ext; simp [Function.comp_def]
 
 /-- A continuous linear equivalence of codomains
-defines an equivalence between continuous alternating maps. -/
+defines an equivalence between continuous symmetric maps. -/
 @[simps -fullyApplied apply]
 def _root_.ContinuousLinearEquiv.continuousSymmetricMapCongrRightEquiv (e : N ≃L[R] N') :
     M [Sym^ι]→L[R] N ≃ M [Sym^ι]→L[R] N' where
@@ -361,7 +361,7 @@ theorem _root_.ContinuousLinearEquiv.compContinuousSymmetricMap_coe
   rfl
 
 /-- Continuous linear equivalences between domains and codomains
-define an equivalence between the spaces of continuous alternating maps. -/
+define an equivalence between the spaces of continuous symmetric maps. -/
 def _root_.ContinuousLinearEquiv.continuousSymmetricMapCongrEquiv
     (e : M ≃L[R] M') (e' : N ≃L[R] N') : M [Sym^ι]→L[R] N ≃ M' [Sym^ι]→L[R] N' :=
   e.continuousSymmetricMapCongrLeftEquiv.trans e'.continuousSymmetricMapCongrRightEquiv
@@ -373,30 +373,30 @@ def piEquiv {ι' : Type*} {N : ι' → Type*} [∀ i, AddCommMonoid (N i)] [∀ 
   toFun := pi
   invFun f i := (ContinuousLinearMap.proj i : _ →L[R] N i).compContinuousSymmetricMap f
 
-/-- In the specific case of continuous alternating maps on spaces indexed by `Fin (n+1)`, where one
+/-- In the specific case of continuous symmetric maps on spaces indexed by `Fin (n+1)`, where one
 can build an element of `Π(i : Fin (n+1)), M i` using `cons`, one can express directly the
-additivity of an alternating map along the first variable. -/
+additivity of a symmetric map along the first variable. -/
 theorem cons_add (f : ContinuousSymmetricMap R M N (Fin (n + 1))) (m : Fin n → M) (x y : M) :
     f (Fin.cons (x + y) m) = f (Fin.cons x m) + f (Fin.cons y m) :=
   f.toMultilinearMap.cons_add m x y
 
-/-- In the specific case of continuous alternating maps on spaces indexed by `Fin (n+1)`, where one
+/-- In the specific case of continuous symmetric maps on spaces indexed by `Fin (n+1)`, where one
 can build an element of `Π(i : Fin (n+1)), M i` using `cons`, one can express directly the
-additivity of an alternating map along the first variable. -/
+additivity of a symmetric map along the first variable. -/
 theorem vecCons_add (f : ContinuousSymmetricMap R M N (Fin (n + 1))) (m : Fin n → M) (x y : M) :
     f (vecCons (x + y) m) = f (vecCons x m) + f (vecCons y m) :=
   f.toMultilinearMap.cons_add m x y
 
-/-- In the specific case of continuous alternating maps on spaces indexed by `Fin (n+1)`, where one
+/-- In the specific case of continuous symmetric maps on spaces indexed by `Fin (n+1)`, where one
 can build an element of `Π(i : Fin (n+1)), M i` using `cons`, one can express directly the
-multiplicativity of an alternating map along the first variable. -/
+multiplicativity of a symmetric map along the first variable. -/
 theorem cons_smul (f : ContinuousSymmetricMap R M N (Fin (n + 1))) (m : Fin n → M) (c : R)
     (x : M) : f (Fin.cons (c • x) m) = c • f (Fin.cons x m) :=
   f.toMultilinearMap.cons_smul m c x
 
-/-- In the specific case of continuous alternating maps on spaces indexed by `Fin (n+1)`, where one
+/-- In the specific case of continuous symmetric maps on spaces indexed by `Fin (n+1)`, where one
 can build an element of `Π(i : Fin (n+1)), M i` using `cons`, one can express directly the
-multiplicativity of an alternating map along the first variable. -/
+multiplicativity of a symmetric map along the first variable. -/
 theorem vecCons_smul (f : ContinuousSymmetricMap R M N (Fin (n + 1))) (m : Fin n → M) (c : R)
     (x : M) : f (vecCons (c • x) m) = c • f (vecCons x m) :=
   f.toMultilinearMap.cons_smul m c x
@@ -405,7 +405,7 @@ theorem map_piecewise_add [DecidableEq ι] (m m' : ι → M) (t : Finset ι) :
     f (t.piecewise (m + m') m') = ∑ s ∈ t.powerset, f (s.piecewise m m') :=
   f.toMultilinearMap.map_piecewise_add _ _ _
 
-/-- Additivity of a continuous alternating map along all coordinates at the same time,
+/-- Additivity of a continuous symmetric map along all coordinates at the same time,
 writing `f (m + m')` as the sum of `f (s.piecewise m m')` over all sets `s`. -/
 theorem map_add_univ [DecidableEq ι] [Fintype ι] (m m' : ι → M) :
     f (m + m') = ∑ s : Finset ι, f (s.piecewise m m') :=
@@ -417,7 +417,7 @@ open Fintype Finset
 
 variable {α : ι → Type*} [Fintype ι] [DecidableEq ι] (g' : ∀ i, α i → M) (A : ∀ i, Finset (α i))
 
-/-- If `f` is continuous alternating, then `f (Σ_{j₁ ∈ A₁} g₁ j₁, ..., Σ_{jₙ ∈ Aₙ} gₙ jₙ)` is the
+/-- If `f` is continuous symmetric, then `f (Σ_{j₁ ∈ A₁} g₁ j₁, ..., Σ_{jₙ ∈ Aₙ} gₙ jₙ)` is the
 sum of `f (g₁ (r 1), ..., gₙ (r n))` where `r` ranges over all functions with `r 1 ∈ A₁`, ...,
 `r n ∈ Aₙ`. This follows from multilinearity by expanding successively with respect to each
 coordinate. -/
@@ -425,7 +425,7 @@ theorem map_sum_finset :
     (f fun i => ∑ j ∈ A i, g' i j) = ∑ r ∈ piFinset A, f fun i => g' i (r i) :=
   f.toMultilinearMap.map_sum_finset _ _
 
-/-- If `f` is continuous alternating, then `f (Σ_{j₁} g₁ j₁, ..., Σ_{jₙ} gₙ jₙ)` is the sum of
+/-- If `f` is continuous symmetric, then `f (Σ_{j₁} g₁ j₁, ..., Σ_{jₙ} gₙ jₙ)` is the sum of
 `f (g₁ (r 1), ..., gₙ (r n))` where `r` ranges over all functions `r`. This follows from
 multilinearity by expanding successively with respect to each coordinate. -/
 theorem map_sum [∀ i, Fintype (α i)] :
@@ -440,7 +440,7 @@ variable (R)
 variable {A : Type*} [Semiring A] [SMul R A] [Module A M] [Module A N] [IsScalarTower R A M]
   [IsScalarTower R A N]
 
-/-- Reinterpret a continuous `A`-alternating map as a continuous `R`-alternating map, if `A` is an
+/-- Reinterpret a continuous `A`-symmetric map as a continuous `R`-symmetric map, if `A` is an
 algebra over `R` and their actions on all involved modules agree with the action of `R` on `A`. -/
 def restrictScalars (f : M [Sym^ι]→L[A] N) : M [Sym^ι]→L[R] N :=
   { f with toContinuousMultilinearMap := f.1.restrictScalars R }
@@ -510,21 +510,21 @@ theorem map_piecewise_smul [DecidableEq ι] (c : ι → R) (m : ι → M) (s : F
     f (s.piecewise (fun i => c i • m i) m) = (∏ i ∈ s, c i) • f m :=
   f.toMultilinearMap.map_piecewise_smul _ _ _
 
-/-- Multiplicativity of a continuous alternating map along all coordinates at the same time,
+/-- Multiplicativity of a continuous symmetric map along all coordinates at the same time,
 writing `f (fun i ↦ c i • m i)` as `(∏ i, c i) • f m`. -/
 theorem map_smul_univ [Fintype ι] (c : ι → R) (m : ι → M) :
     (f fun i => c i • m i) = (∏ i, c i) • f m :=
   f.toMultilinearMap.map_smul_univ _ _
 
-/-- If two continuous `R`-alternating maps from `R` are equal on 1, then they are equal.
+/-- If two continuous `R`-symmetric maps from `R` are equal on 1, then they are equal.
 
-This is the alternating version of `ContinuousLinearMap.ext_ring`. -/
+This is the symmetric version of `ContinuousLinearMap.ext_ring`. -/
 @[ext]
 theorem ext_ring [Finite ι] [TopologicalSpace R] ⦃f g : R [Sym^ι]→L[R] M⦄
     (h : f (fun _ ↦ 1) = g (fun _ ↦ 1)) : f = g :=
   toSymmetricMap_injective <| SymmetricMap.ext_ring h
 
-/-- The only continuous `R`-alternating map from two or more copies of `R` is the zero map. -/
+/-- The only continuous `R`-symmetric map from two or more copies of `R` is the zero map. -/
 instance uniqueOfCommRing [Finite ι] [Nontrivial ι] [TopologicalSpace R] :
     Unique (R [Sym^ι]→L[R] N) where
   uniq _ := toSymmetricMap_injective <| Subsingleton.elim _ _
@@ -549,13 +549,13 @@ variable {R A M N ι : Type*} [Semiring R] [Semiring A] [AddCommMonoid M] [AddCo
   [TopologicalSpace M] [TopologicalSpace N] [ContinuousAdd N] [Module A M] [Module A N] [Module R N]
   [ContinuousConstSMul R N] [SMulCommClass A R N]
 
-/-- The space of continuous alternating maps over an algebra over `R` is a module over `R`, for the
+/-- The space of continuous symmetric maps over an algebra over `R` is a module over `R`, for the
 pointwise addition and scalar multiplication. -/
 instance : Module R (M [Sym^ι]→L[A] N) := fast_instance%
   Function.Injective.module _ toMultilinearAddHom toContinuousMultilinearMap_injective fun _ _ =>
     rfl
 
-/-- Linear map version of the map `toMultilinearMap` associating to a continuous alternating map
+/-- Linear map version of the map `toMultilinearMap` associating to a continuous symmetric map
 the corresponding multilinear map. -/
 @[simps]
 def toContinuousMultilinearMapLinear :
@@ -565,7 +565,7 @@ def toContinuousMultilinearMapLinear :
   map_smul' _ _ := rfl
 
 /-- Linear map version of the map `toSymmetricMap`
-associating to a continuous alternating map the corresponding alternating map. -/
+associating to a continuous symmetric map the corresponding symmetric map. -/
 @[simps -fullyApplied apply]
 def toSymmetricMapLinear : (M [Sym^ι]→L[A] N) →ₗ[R] (M [Sym^ι]→ₗ[A] N) where
   toFun := toSymmetricMap
@@ -590,8 +590,8 @@ variable {R M N ι : Type*} [CommSemiring R] [AddCommMonoid M] [AddCommMonoid N]
   [Module R N] [TopologicalSpace R] [TopologicalSpace M] [TopologicalSpace N] [ContinuousSMul R N]
   (f : M [Sym^ι]→L[R] R) (z : N)
 
-/-- Given a continuous `R`-alternating map `f` taking values in `R`, `f.smulRight z` is the
-continuous alternating map sending `m` to `f m • z`. -/
+/-- Given a continuous `R`-symmetric map `f` taking values in `R`, `f.smulRight z` is the
+continuous symmetric map sending `m` to `f m • z`. -/
 @[simps! toContinuousMultilinearMap apply]
 def smulRight : M [Sym^ι]→L[R] N :=
   { f.toSymmetricMap.smulRight z with toContinuousMultilinearMap := f.1.smulRight z }
