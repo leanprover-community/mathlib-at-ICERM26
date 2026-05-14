@@ -39,6 +39,10 @@ def vanishesRelativeToOrder (γ : 𝕜 → B) : Prop :=
 
 variable {γ γ' : 𝕜 → B}
 
+/-- A section `s` vanishes to order zero relative to `Ψ` and `γ` iff `s (γ 0) = 0`. -/
+--@[simp]
+lemma vanishesRelativeToOrder_zero_iff (γ : 𝕜 → B) : vanishesRelativToOrder s 0 Ψ γ ↔ s (γ 0) = 0 := by
+
 omit [∀ (x : B), IsTopologicalAddGroup (V x)]
   [∀ (x : B), ContinuousSMul 𝕜 (V x)]
   [VectorBundle 𝕜 F V] in
@@ -92,6 +96,10 @@ def vanishesToOrderAt : Prop :=
   ∀ (Ψ : Trivialization F (TotalSpace.proj : TotalSpace F V → B)), ∀ (γ : 𝕜 → B),
   MemTrivializationAtlas Ψ → x₀ ∈ Ψ.baseSet → γ 0 = x₀ → CMDiffAt n γ 0 →
   vanishesRelativeToOrder s k Ψ γ
+
+/-- A section `s` vanishes to order zero at `x₀` iff `s x₀ = 0`. -/
+--@[simp]
+lemma vanishesRelativeToOrder_zero_iff (γ : 𝕜 → B) : vanishesToOrderAt I F 0 s k x₀ ↔ s x₀ = 0 := by
 
 section Deriv
 
