@@ -56,6 +56,7 @@ lemma spec9 : (0 : ENNReal) ^ 9 = 0 := by untopify
 lemma spec9half (H : a ≤ b) : b ^ (- 5 : ℤ) ≤ a ^ (- 5 : ℤ) := by
     untopify
     all_goals
+
       try simp_all
       sorry
 

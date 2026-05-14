@@ -42,19 +42,19 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
   tsub_zero zero_tsub add_zero zero_add mul_zero zero_mul ENNReal.zero_div ENNReal.div_zero
   pow_zero zero_pow zpow_zero zero_le le_zero_iff le_rfl one_ne_zero not_true
 
-@[untopify_top] lemma top_zpow_ofNat {n : ℕ} : ∞ ^ (OfNat.ofNat (n + 1) : ℤ) = ∞ := by
+@[untopify_top] lemma top_zpow_ofNat {n : ℕ} : ∞ ^ (ofNat(n + 1) : ℤ) = ∞ := by
   rw [ENNReal.top_zpow_def]
   cases n <;> simp
 
-@[untopify_top] lemma top_rpow_ofNat {n : ℕ} : ∞ ^ (OfNat.ofNat (n + 1) : ℝ) = ∞ := by
+@[untopify_top] lemma top_rpow_ofNat {n : ℕ} : ∞ ^ (ofNat(n + 1) : ℝ) = ∞ := by
   rw [ENNReal.top_rpow_def]
   cases n <;> simp
 
-@[untopify_top] lemma top_zpow_neg {n : ℕ} : ∞ ^ (- OfNat.ofNat (n + 1) : ℤ) = 0 := by
+@[untopify_top] lemma top_zpow_neg {n : ℕ} : ∞ ^ (- ofNat(n + 1) : ℤ) = 0 := by
   rw [ENNReal.top_zpow_def]
   cases n <;> simp
 
-@[untopify_top] lemma top_rpow_neg {n : ℕ} : ∞ ^ (- OfNat.ofNat (n + 1) : ℝ) = 0 := by
+@[untopify_top] lemma top_rpow_neg {n : ℕ} : ∞ ^ (- ofNat(n + 1) : ℝ) = 0 := by
   rw [ENNReal.top_rpow_def]
   cases n <;> simp
 
@@ -84,8 +84,8 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
 @[untopify_coe] lemma coe_zpow {r : ℝ≥0} (hr : r ≠ 0) (n : ℤ) : (↑r : ℝ≥0∞) ^ n = ↑(r ^ n) :=
   (ENNReal.coe_zpow hr n).symm
 
-@[untopify_coe] lemma coe_rpow_of_ne_zero {x : ℝ≥0} (h : x ≠ 0) (y : ℝ) : (↑x : ℝ≥0∞) ^ y = ↑(x ^ y)
- := (ENNReal.coe_rpow_of_ne_zero h y).symm
+@[untopify_coe] lemma coe_rpow_of_ne_zero {x : ℝ≥0} (h : 0 < x) (y : ℝ) : (↑x : ℝ≥0∞) ^ y = ↑(x ^ y)
+ := (ENNReal.coe_rpow_of_ne_zero h.ne' y).symm
 
 @[untopify_coe] lemma coe_zero : (0 : ℝ≥0∞) = ((0 : ℝ≥0) : ℝ≥0∞) := rfl
 
