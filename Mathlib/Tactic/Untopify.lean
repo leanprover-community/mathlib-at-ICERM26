@@ -97,8 +97,11 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
 
 @[untopify_coe] lemma coe_pow (x : ℝ≥0) (n : ℕ) : (↑x : ℝ≥0∞) ^ n = ↑(x ^ n) := by simp
 
-@[untopify_coe] lemma coe_zpow {r : ℝ≥0} (hr : r ≠ 0) (n : ℤ) : (↑r : ℝ≥0∞) ^ n = ↑(r ^ n) :=
-  (ENNReal.coe_zpow hr n).symm
+@[untopify_coe] lemma coe_zpow {r : ℝ≥0} (hr : 0 < r) (n : ℤ) : (↑r : ℝ≥0∞) ^ n = ↑(r ^ n) :=
+  (ENNReal.coe_zpow hr.ne' n).symm
+
+@[untopify_coe] lemma coe_zpow_of_ne_zero {x : ℝ≥0} (h : 0 < x) (y : ℝ) : (↑x : ℝ≥0∞) ^ y = ↑(x ^ y)
+ := (ENNReal.coe_rpow_of_ne_zero h.ne' y).symm
 
 @[untopify_coe] lemma coe_rpow_of_ne_zero {x : ℝ≥0} (h : 0 < x) (y : ℝ) : (↑x : ℝ≥0∞) ^ y = ↑(x ^ y)
  := (ENNReal.coe_rpow_of_ne_zero h.ne' y).symm
