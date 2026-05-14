@@ -1640,6 +1640,11 @@ lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
     rw [← h_iso]
     exact (B.flip).le_opNorm (g (J.upper 0) - g (J.lower 0))
 
+  -- Step 2: Apply bound term-wise to sum and cancel operator norm
+  refine (Finset.sum_le_sum h_term).trans ?_
+  rw [← Finset.mul_sum]
+  gcongr
+
   sorry
 
 
