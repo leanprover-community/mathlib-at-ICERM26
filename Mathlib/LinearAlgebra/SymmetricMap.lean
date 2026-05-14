@@ -457,7 +457,8 @@ def compSymmetricMapₗ [Semiring S] [Module S N] [Module S N₂]
   map_add' := g.compSymmetricMap_add
   map_smul' := g.compSymmetricMap_smul
 
-theorem smulRight_eq_comp {R M₁ M₂ ι : Type*} [CommSemiring R] [AddCommMonoid M₁]
+theorem _root_.SymmetricMap.smulRight_eq_comp
+    {R M₁ M₂ ι : Type*} [CommSemiring R] [AddCommMonoid M₁]
     [AddCommMonoid M₂] [Module R M₁] [Module R M₂] (f : M₁ [Sym^ι]→ₗ[R] R) (z : M₂) :
     f.smulRight z = (LinearMap.id.smulRight z).compSymmetricMap f :=
   rfl
