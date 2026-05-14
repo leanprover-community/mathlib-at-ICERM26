@@ -2,23 +2,23 @@
 Copyright (c) 2026. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 
-Authors: Jaume de Dios, Bogdan Georgiev, Harald Helfgott, Terence Tao
+Authors: Steven Creech, Jaume de Dios, Bogdan Georgiev, Harald Helfgott, Ayush Khaitan, Terence Tao
 
 Thanks to ICERM for hosting the workshop "Formalization of Analysis" where most of this work
 was conducted.
 -/
 module
 
+public import Mathlib.Analysis.BoxIntegral.Box.Ioc
 public import Mathlib.Analysis.BoxIntegral.Basic
-public import Mathlib.Analysis.BoxIntegral.Partition.Basic
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.Analysis.Calculus.ContDiff.Defs
 
 /-! # Riemann–Stieltjes integral
 
-In this file we define the (one-dimensional) Riemann–Stieltjes integral on an interval `(a, b]` of a function
-`f : ℝ → E` against an integrator `g : ℝ → F`, paired by a continuous bilinear map
+In this file we define the (one-dimensional) Riemann–Stieltjes integral on an interval `(a, b]` of
+a function `f : ℝ → E` against an integrator `g : ℝ → F`, paired by a continuous bilinear map
 `B : E →L[ℝ] F →L[ℝ] G`. The integral (taking values in `G`) is realized as a
 `BoxIntegral.HasIntegral` over the half-open interval, viewed as a `Box (Fin 1)`,
 with respect to the box-additive "differential" associated to `g`.
@@ -28,15 +28,9 @@ egative of the integral
 Carrying the bilinear pairing `B` lets a single definition cover the three common variants of
 Stieltjes integration encountered in practice:
 
-* **Scalar multiplication on the left** — when `E = 𝕜` is a scalar field acting continuously on
-  `G = F`, take `B = ContinuousLinearMap.lsmul ℝ 𝕜`, i.e. `B c v = c • v`. This is the form
-  `∫ f(x) dg(x)` in which `f` is scalar-valued and `g` takes values in a normed module.
-* **Scalar multiplication on the right** — when `F = 𝕜` is a scalar field acting continuously on
-  `G = E`, take `B = (ContinuousLinearMap.lsmul ℝ 𝕜).flip`, i.e. `B v c = c • v`. This is the
-  form `∫ f(x) dg(x)` in which `g` is scalar-valued and `f` takes values in a normed module.
-* **Multiplication in an algebra** — when `E = F = G = A` is a normed `ℝ`-algebra, take
-  `B = ContinuousLinearMap.mul ℝ A`, i.e. `B u v = u * v`. This recovers the classical
-  Riemann–Stieltjes integral of two real- (or complex-) valued functions.
+* **`f` scalar, `g` vector-valued.** Here we take `B = ContinuousLinearMap.lsmul ℝ E`
+* **`f` vector-valued, `g` scalar.** Here we take `B = (ContinuousLinearMap.lsmul ℝ 𝕜).flip`.
+* **`f` and `g` are both real or both complex.** Here we take `B = ContinuousLinearMap.mul ℝ E`.
 
 The development follows the treatment of Riemann–Stieltjes integration in
 Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Appendix A.
@@ -47,30 +41,18 @@ name may be subject to change if further variants of Stieltjes integration are i
 ## Notation
 
 `∫⟨B⟩ x in a..b, f x d g` is notation for `stieltjesIntegral a b B (fun x ↦ f x) g`,
-scoped to the `Stieltjes` namespace (`open scoped Stieltjes` to make it available). It
-parallels Mathlib's `∫ x in a..b, f x ∂μ` notation for `intervalIntegral`, with the
-bilinear pairing `B` carried explicitly in angle brackets since it has no canonical default.
+scoped to the `BoxIntegral.Stieltjes` namespace (`open scoped BoxIntegral.Stieltjes` to make
+it available). It parallels Mathlib's `∫ x in a..b, f x ∂μ` notation for `intervalIntegral`, with
+the bilinear pairing `B` carried explicitly in angle brackets since it has no canonical default.
 
 ## Main theorems
 
-* `HasStieltjesIntegral.unique`: the value `L` of the Riemann–Stieltjes integral, when it
-  exists, is unique.
 * `Stieltjes.HasStieltjesIntegral_iff_lim_sum`: textbook ε-δ characterization — `L` is the
   Riemann–Stieltjes integral iff the Riemann–Stieltjes sums `∑ B (f (π.tag x)) (g(x.upper) -
   g(x.lower))` converge to `L` as the mesh size of the (Henstock) tagged partition tends to 0.
-* `HasStieltjesIntegral.symm` / `StieltjesIntegrable.symm` / `stieltjesIntegral.of_symm`:
-  reversing the endpoints negates the integral.
-* `HasStieltjesIntegral.{add,neg,sub,smul,zero}_{left,right}` and their `StieltjesIntegrable`
-  and `stieltjesIntegral_*` counterparts: linearity of the integral in `f` (left) and `g`
-  (right), together with `HasStieltjesIntegral.{const,zero}_right` for the trivial integrators.
-* `HasStieltjesIntegral.of_const` (and `StieltjesIntegrable` / `stieltjesIntegral`
-  counterparts): integrating a constant `c` against `g` yields `B c (g b) - B c (g a)`.
-* `HasStieltjesIntegral.add_adjacent` (and its `StieltjesIntegrable` / `stieltjesIntegral`
+`StieltjesIntegrable` / `stieltjesIntegral`
   counterparts): for any real `a, b, c`, the integral over `(a, c]` is the sum of the
   integrals over `(a, b]` and `(b, c]`, provided all three integrals exist.
-* `HasStieltjesIntegral.map` / `StieltjesIntegrable.map` / `stieltjesIntegral_map`:
-  naturality of the integral under continuous linear maps on the integrand, integrator, and
-  bilinear pairing.
 * `Stieltjes.exists_of_continuousOn_of_boundedVariationOn` (Theorem A.1): if `f` is continuous
   and `g` has bounded variation on `[a, b]`, then the Riemann–Stieltjes integral exists.
 * `Stieltjes.HasStieltjesIntegral.by_parts` / `StieltjesIntegrable.by_parts` /
@@ -159,188 +141,6 @@ Stieltjes integral, Riemann–Stieltjes, bounded variation
 -/
 
 @[expose] public section
-
-namespace Stieltjes
-
-/-! ## Intervals -/
-
-open BoxIntegral
-
-/-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(0, 1]` if `a ≥ b`.
-
-Instances of `Box` are required to be non-empty, so one cannot use the empty set as the junk case.
-
-This is analogous to `Set.Ioc` or `Finset.Ioc`, but is a distinct type from those two types. -/
-noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
-  if h : a < b then
-    { lower := fun _ ↦ a
-      upper := fun _ ↦ b
-      lower_lt_upper := fun _ ↦ h }
-  else
-    { lower := fun _ ↦ 0
-      upper := fun _ ↦ 1
-      lower_lt_upper := fun _ ↦ zero_lt_one }
-
-@[simp]
-lemma Ioc.upper {a b : ℝ} (h : a < b) (i : Fin 1) : (Ioc a b).upper i = b := by simp [Ioc, h]
-
-@[simp]
-lemma Ioc.lower {a b : ℝ} (h : a < b) (i : Fin 1) : (Ioc a b).lower i = a := by simp [Ioc, h]
-
-lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
-  ext
-  simp [Ioc, Box.mem_def]
-
-@[simp]
-lemma mem_Ioc {a b : ℝ} (hab : a < b) (x : Fin 1 → ℝ) : x ∈ Ioc a b ↔ a < x 0 ∧ x 0 ≤ b := by
-  simp [Box.mem_def, Ioc.upper hab, Ioc.lower hab]
-
-end Stieltjes
-
-namespace NNReal
-
-/-! ## Nonnegative real API
-
-To be upstreamed to NNReal
-
--/
-
-lemma le_iff_coe_le {x : NNReal} {R : ℝ} (hR : 0 ≤ R) :
-    x ≤ ⟨R, hR⟩ ↔ ↑x ≤ R := by rfl
-
-lemma le_subtype_mk_iff {x : NNReal} {R : ℝ} {hR : 0 ≤ R} : x ≤ Subtype.mk R hR ↔ ↑x ≤ R := by rfl
-
-@[simp]
-lemma coe_sup_le_iff_forall_le {β : Type*} {s : Finset β} {f : β → NNReal} {R : ℝ} (hR : 0 ≤ R) :
-    ↑(s.sup f) ≤ R ↔ ∀ b ∈ s, ↑(f b) ≤ R := by
-  simp [←le_iff_coe_le hR]
-
-end NNReal
-
-namespace BoxIntegral.Prepartition
-
-/-! ## Mesh size
-
-API for the mesh size of a partition.
-
--/
-
-open Finset NNReal
-
-variable {ι : Type*} [Fintype ι]
-
-/-- The mesh size of a partition is the length of the longest side of a box in the partition. -/
-noncomputable def mesh_size {I : Box ι} (π : Prepartition I) : NNReal :=
-  (π.boxes ×ˢ (univ : Finset ι)).sup
-  (fun ⟨ B, i ⟩ ↦ ⟨ B.upper i - B.lower i, by linarith [B.lower_lt_upper i]⟩ )
-
-@[simp]
-theorem mesh_size_le_iff {I : Box ι} (π : Prepartition I) {ε : ℝ} (hε : 0 ≤ ε) :
-    π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, ∀ i, B.upper i - B.lower i ≤ ε := by
-  simp only [mesh_size, coe_sup_le_iff_forall_le hε, mem_product, mem_boxes,
-    mem_univ, and_true, Prod.forall, tsub_le_iff_right]
-  refine ⟨ fun h B hB i ↦ ?_, fun h B i hB ↦ (?_ : B.upper i - B.lower i ≤ ε) ⟩
-  · have : B.upper i - B.lower i ≤ ε := h B i hB
-    linarith
-  · linarith [h B hB i]
-
-/-- In one dimension, the mesh size simplifies to the longest length of an interval
-in the partition. -/
-theorem mesh_size_of_fin_one {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_size
-    = π.boxes.sup (fun B ↦ ⟨ B.upper 0 - B.lower 0, by linarith [B.lower_lt_upper 0]⟩)
-    := by simp [mesh_size]; congr
-
-/-- This lemma does not need to be tagged @[simp] as it is already provable from `simp` -/
-theorem mesh_size_of_fin_one_le_iff {I : Box (Fin 1)} (π : Prepartition I) {ε : ℝ} (hε : 0 ≤ ε) :
-    π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, B.upper 0 - B.lower 0 ≤ ε := by
-  simp [hε]
-
-end BoxIntegral.Prepartition
-
-namespace BoxIntegral.IntegrationParams
-
-/-! ## Simplifying the BoxIntegral filters
-
-API for simplifying the filters in `BoxIntegral`, especially in the case of Riemann integration
-parameters.  We will focus here on simplifying `toFilteriUnion`, as this is the main filter used
-to define box integration.
-
--/
-
-open Prepartition TaggedPrepartition Finset NNReal
-
-variable {ι : Type*} [Fintype ι] (l : IntegrationParams) (I : Box ι) (π₀ : Prepartition I)
-
-theorem toFilteriUnion_eventually_iff (P : TaggedPrepartition I → Prop) :
-    (∀ᶠ π in l.toFilteriUnion I π₀, P π) ↔ ∃ (r : NNReal → _),
-    (∀ c, l.RCond (r c)) ∧
-    ∀ π, (∃ c, l.MemBaseSet I c (r c) π ∧ π.iUnion = π₀.iUnion) → P π
-     := by
-  simp [(l.hasBasis_toFilteriUnion I π₀).eventually_iff]
-
-@[simp]
-lemma Riemann_bRiemann_true : Riemann.bRiemann = true := rfl
-
-@[simp]
-lemma Riemann_bHenstock_true : Riemann.bHenstock = true := rfl
-
-@[simp]
-lemma Riemann_bDistortion_false : Riemann.bDistortion = false := rfl
-
-theorem Riemann_toFilteriUnion_eventually_iff (P : TaggedPrepartition I → Prop) :
-    (∀ᶠ π in Riemann.toFilteriUnion I π₀, P π) ↔ ∃ (r : Set.Ioi 0),
-    ∀ π, (π.IsSubordinate (fun _ ↦ r) ∧ π.IsHenstock ∧ π.iUnion = π₀.iUnion) → P π
-     := by
-  simp only [toFilteriUnion_eventually_iff, exists_and_right, and_imp, forall_exists_index,
-    Subtype.exists, Set.mem_Ioi]
-  refine ⟨ fun ⟨ r, hr, hr' ⟩ ↦ ⟨ r 1 0, by grind, ?_ ⟩,
-    fun ⟨ r, hpos, hr ⟩ ↦ ⟨ fun _ _ ↦ ⟨ r, hpos ⟩, fun c ↦ by simp [RCond], fun π c hmem ↦ ?_ ⟩ ⟩
-  · simp only [Subtype.coe_eta]
-    peel hr' with π h
-    refine fun hsub hhen ↦ h 1 ⟨ ?_, by simp [hhen], by simp, by simp ⟩
-    convert hsub using 2 with x
-    apply hr 1; simp
-  apply hr π hmem.isSubordinate (hmem.isHenstock (by simp))
-
-/-- A statement is eventually true under the Riemann filter if it is true for all tagged (Henstock)
-partitions with sufficiently small mesh size. -/
-theorem Riemann_toFilteriUnion_eventually_iff_mesh (P : TaggedPrepartition I → Prop) :
-    (∀ᶠ π in Riemann.toFilteriUnion I π₀, P π) ↔ ∃ ε > 0,
-    ∀ π, (↑π.mesh_size ≤ ε ∧ π.IsHenstock ∧ π.iUnion = π₀.iUnion) → P π
-     := by
-  simp only [Riemann_toFilteriUnion_eventually_iff, IsSubordinate, Box.Icc_def, IsHenstock,
-    Set.mem_Icc, and_imp, Subtype.exists, Set.mem_Ioi, exists_prop, gt_iff_lt]
-  refine ⟨ fun ⟨ r, hpos, hr ⟩ ↦ ⟨ ⟨ r, le_of_lt hpos ⟩, hpos, ?_ ⟩,
-    fun ⟨ ⟨ ε, εnon ⟩, (εpos : 0 < ε), hε ⟩ ↦ ⟨ ε/2, by positivity, ?_ ⟩ ⟩
-  · replace hpos := le_of_lt hpos
-    peel hr with π h
-    refine fun hmesh hhen hunion ↦ h ?_ hhen hunion
-    intro J hJ x hx
-    simp only [Metric.mem_closedBall, dist_pi_def, hpos, coe_sup_le_iff_forall_le,
-      mem_univ, coe_nndist, forall_const]
-    intro i
-    simp only [le_subtype_mk_iff, Set.mem_Icc, π.mesh_size_le_iff, hpos, Pi.le_def]
-      at hx hmesh hhen ⊢
-    have : J.upper i - J.lower i ≤ r := hmesh J hJ i
-    specialize hhen J (by simp [hJ])
-    grind [Real.dist_eq, abs_le, neg_le_sub_iff_le_add, tsub_le_iff_right]
-  peel hε with π h
-  refine fun hsub hhen hunion ↦ h ?_ hhen hunion
-  simp only [le_subtype_mk_iff, π.mesh_size_le_iff, εnon]
-    at hsub hhen ⊢
-  rintro J hJi i
-  simp only [mem_boxes, mem_toPrepartition, tsub_le_iff_right] at hJi ⊢
-  have hsub1 := hsub J hJi J.lower_mem_Icc
-  have hsub2 := hsub J hJi J.upper_mem_Icc
-  specialize hhen J hJi
-  simp only [Pi.le_def, Metric.mem_closedBall, dist_pi_def, nndist,
-    ← le_iff_coe_le (show 0 ≤ ε/2 by positivity), Finset.sup_le_iff, mem_univ,
-    forall_const] at hhen hsub1 hsub2
-  replace hsub1 : dist (J.lower i) (π.tag J i) ≤ ε/2 := hsub1 i
-  replace hsub2 : dist (J.upper i) (π.tag J i) ≤ ε/2 := hsub2 i
-  grind [Real.dist_eq, abs_le]
-
-end BoxIntegral.IntegrationParams
 
 namespace BoxIntegral
 
@@ -792,8 +592,7 @@ namespace mynamespace
 API for one-dimensional partitions and tagged partitions
 -/
 
-open BoxIntegral Stieltjes
-
+open BoxIntegral
 
 noncomputable def toPartition {N : ℕ} {a b : ℝ}
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
@@ -919,8 +718,6 @@ lemma sub_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f g : ι →ᵇᵃ[I₀]
     (f - g) J = f J - g J := rfl
 
 /-! ## The differential `ofDiff` of a function on `ℝ` -/
-
-open Stieltjes
 
 /-- The box-additive "differential" sending a function `g : ℝ → M` to the box-additive map on
 `Box (Fin 1)` defined by `J ↦ g (J.upper 0) - g (J.lower 0)`, bundled as an
@@ -1189,7 +986,7 @@ end BoxIntegral
 
 open BoxIntegral ContinuousLinearMap
 
-namespace Stieltjes
+namespace BoxIntegral.Stieltjes
 
 /-! ## Definition of the Riemann–Stieltjes integral -/
 
@@ -2057,4 +1854,4 @@ theorem sum_eq_integral_natSummatory_lt (hab : a < b) (f : ℝ → E) (g : ℕ �
       (fun x ↦ ∑ n ∈ Finset.Iio ⌈x⌉₊, g n)
       (∑ n ∈ Finset.Ico ⌈a⌉₊ ⌈b⌉₊, B (f n) (g n)) := by sorry
 
-end Stieltjes
+end BoxIntegral.Stieltjes
