@@ -885,4 +885,29 @@ theorem HasIntegral.mcShane_of_forall_isLittleO (B : ι →ᵇᵃ[I] ℝ) (hB0 :
       (fun ⟨_x, hx⟩ => hx.elim) fun _ _ hx => hx.2.elim) <| by
     simpa only [McShane, Bool.coe_sort_false, false_imp_iff, true_imp_iff, diff_empty] using H
 
+/-! ### Standard description of the Riemann integral
+
+Shows that the Riemann integral defined via `BoxIntegral` matches the textbook definition
+-/
+
+theorem HasIntegral_Riemann_iff (L : F) :
+    HasIntegral I Riemann f vol L ↔ ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition I,
+    π.IsHenstock → π.IsPartition → π.mesh_size ≤ δ → dist (integralSum f vol π) L < ε := by
+  simp only [HasIntegral, tendsto_iff_eventually, Riemann_toFilteriUnion_eventually_iff_mesh,
+  TaggedPrepartition.isPartition_iff_iUnion_eq]
+  refine ⟨ fun h ε εpos ↦ ?_, fun h p hp ↦ ?_ ⟩
+  · have : ∀ᶠ y in nhds L, dist y L < ε := by
+      simp only [Metric.eventually_nhds_iff, gt_iff_lt]
+      refine ⟨ ε, εpos, by simp ⟩
+    specialize h this
+    peel h with δ δpos hδ
+    peel hδ with π hπ
+    intro hhen hunion hmesh; apply hπ
+    simp [hhen, hunion, hmesh]
+  simp only [Metric.eventually_nhds_iff, gt_iff_lt] at hp
+  obtain ⟨ ε, εpos, hε ⟩ := hp
+  obtain ⟨ δ, δpos, hδ ⟩ := h ε εpos
+  exact ⟨ ⟨δ, le_of_lt δpos⟩, δpos, fun π ⟨ hmesh, hhen, hunion ⟩ ↦
+    hε (hδ π hhen (by simp [hunion]) hmesh) ⟩
+
 end BoxIntegral

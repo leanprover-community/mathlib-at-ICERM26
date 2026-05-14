@@ -539,7 +539,7 @@ theorem eventually_isPartition (l : IntegrationParams) (I : Box ι) :
 
 section Riemann
 
-/-! ## Simplifying the BoxIntegral filters
+/-! ### Simplifying the BoxIntegral filters
 
 API for simplifying the filters in `BoxIntegral`, especially in the case of Riemann integration
 parameters.  We will focus here on simplifying `toFilteriUnion`, as this is the main filter used
