@@ -39,7 +39,7 @@ is a continuous map that is
 -/
 structure ContinuousSymmetricMap (R M N ι : Type*) [Semiring R] [AddCommMonoid M] [Module R M]
     [TopologicalSpace M] [AddCommMonoid N] [Module R N] [TopologicalSpace N] extends
-    ContinuousMultilinearMap R (fun _ : ι => M) N, M [Sym^ι]→ₗ[R] N where
+    ContinuousMultilinearMap R (fun _ : ι ↦ M) N, M [Sym^ι]→ₗ[R] N where
 
 /-- Projection to `ContinuousMultilinearMap`s. -/
 add_decl_doc ContinuousSymmetricMap.toContinuousMultilinearMap
@@ -61,16 +61,16 @@ variable {R M M' N N' ι : Type*} [Semiring R] [AddCommMonoid M] [Module R M] [T
 
 theorem toContinuousMultilinearMap_injective :
     Injective (ContinuousSymmetricMap.toContinuousMultilinearMap :
-      M [Sym^ι]→L[R] N → ContinuousMultilinearMap R (fun _ : ι => M) N)
+      M [Sym^ι]→L[R] N → ContinuousMultilinearMap R (fun _ : ι ↦ M) N)
   | ⟨_, _⟩, ⟨_, _⟩, rfl => rfl
 
 theorem range_toContinuousMultilinearMap :
     Set.range
         (toContinuousMultilinearMap :
-          M [Sym^ι]→L[R] N → ContinuousMultilinearMap R (fun _ : ι => M) N) =
+          M [Sym^ι]→L[R] N → ContinuousMultilinearMap R (fun _ : ι ↦ M) N) =
       {f | ∀ (v : ι → M) (i j : ι), v i = v j → i ≠ j → f v = 0} :=
   -- TODO: this statement is wrong, fix it and the proof!
-  sorry --Set.ext fun f => ⟨fun ⟨g, hg⟩ => hg ▸ g.2, fun h => ⟨⟨f, h⟩, rfl⟩⟩
+  sorry --Set.ext fun f ↦ ⟨fun ⟨g, hg⟩ ↦ hg ▸ g.2, fun h ↦ ⟨⟨f, h⟩, rfl⟩⟩
 
 instance funLike : FunLike (M [Sym^ι]→L[R] N) (ι → M) N where
   coe f := f.toFun
@@ -89,7 +89,7 @@ theorem coe_toContinuousMultilinearMap : ⇑f.toContinuousMultilinearMap = f :=
   rfl
 
 @[simp]
-theorem coe_mk (f : ContinuousMultilinearMap R (fun _ : ι => M) N) (h) : ⇑(mk f h) = f :=
+theorem coe_mk (f : ContinuousMultilinearMap R (fun _ : ι ↦ M) N) (h) : ⇑(mk f h) = f :=
   rfl
 
 -- not a `simp` lemma because this projection is a reducible call to `mk`, so `simp` can prove
@@ -101,14 +101,14 @@ theorem ext {f g : M [Sym^ι]→L[R] N} (H : ∀ x, f x = g x) : f = g :=
   DFunLike.ext _ _ H
 
 theorem toSymmetricMap_injective :
-    Injective (toSymmetricMap : (M [Sym^ι]→L[R] N) → (M [Sym^ι]→ₗ[R] N)) := fun f g h =>
+    Injective (toSymmetricMap : (M [Sym^ι]→L[R] N) → (M [Sym^ι]→ₗ[R] N)) := fun f g h ↦
   DFunLike.ext' <| by convert DFunLike.ext'_iff.1 h
 
 @[simp]
 theorem range_toSymmetricMap :
     Set.range (toSymmetricMap : M [Sym^ι]→L[R] N → (M [Sym^ι]→ₗ[R] N)) =
       {f : M [Sym^ι]→ₗ[R] N | Continuous f} :=
-  Set.ext fun f => ⟨fun ⟨g, hg⟩ => hg ▸ g.cont, fun h => ⟨{ f with cont := h }, DFunLike.ext' rfl⟩⟩
+  Set.ext fun f ↦ ⟨fun ⟨g, hg⟩ ↦ hg ▸ g.cont, fun h ↦ ⟨{ f with cont := h }, DFunLike.ext' rfl⟩⟩
 
 @[simp]
 theorem map_update_add [DecidableEq ι] (m : ι → M) (i : ι) (x y : M) :
@@ -184,16 +184,16 @@ theorem toSymmetricMap_smul (c : R') (f : M [Sym^ι]→L[A] N) :
   rfl
 
 instance [SMulCommClass R' R'' N] : SMulCommClass R' R'' (M [Sym^ι]→L[A] N) :=
-  ⟨fun _ _ _ => ext fun _ => smul_comm _ _ _⟩
+  ⟨fun _ _ _ ↦ ext fun _ ↦ smul_comm _ _ _⟩
 
 instance [SMul R' R''] [IsScalarTower R' R'' N] : IsScalarTower R' R'' (M [Sym^ι]→L[A] N) :=
-  ⟨fun _ _ _ => ext fun _ => smul_assoc _ _ _⟩
+  ⟨fun _ _ _ ↦ ext fun _ ↦ smul_assoc _ _ _⟩
 
 instance [DistribMulAction R'ᵐᵒᵖ N] [IsCentralScalar R' N] : IsCentralScalar R' (M [Sym^ι]→L[A] N) :=
-  ⟨fun _ _ => ext fun _ => op_smul_eq_smul _ _⟩
+  ⟨fun _ _ ↦ ext fun _ ↦ op_smul_eq_smul _ _⟩
 
 instance : MulAction R' (M [Sym^ι]→L[A] N) := fast_instance%
-  toContinuousMultilinearMap_injective.mulAction toContinuousMultilinearMap fun _ _ => rfl
+  toContinuousMultilinearMap_injective.mulAction toContinuousMultilinearMap fun _ _ ↦ rfl
 
 end SMul
 
@@ -222,11 +222,11 @@ theorem toSymmetricMap_add (f g : M [Sym^ι]→L[R] N) :
   rfl
 
 instance addCommMonoid : AddCommMonoid (M [Sym^ι]→L[R] N) := fast_instance%
-  toContinuousMultilinearMap_injective.addCommMonoid _ rfl (fun _ _ => rfl) fun _ _ => rfl
+  toContinuousMultilinearMap_injective.addCommMonoid _ rfl (fun _ _ ↦ rfl) fun _ _ ↦ rfl
 
 /-- Evaluation of a `ContinuousSymmetricMap` at a vector as an `AddMonoidHom`. -/
 def applyAddHom (v : ι → M) : M [Sym^ι]→L[R] N →+ N :=
-  ⟨⟨fun f => f v, rfl⟩, fun _ _ => rfl⟩
+  ⟨⟨fun f ↦ f v, rfl⟩, fun _ _ ↦ rfl⟩
 
 @[simp]
 theorem sum_apply {α : Type*} (f : α → M [Sym^ι]→L[R] N) (m : ι → M) {s : Finset α} :
@@ -235,8 +235,8 @@ theorem sum_apply {α : Type*} (f : α → M [Sym^ι]→L[R] N) (m : ι → M) {
 
 /-- Projection to `ContinuousMultilinearMap`s as a bundled `AddMonoidHom`. -/
 @[simps]
-def toMultilinearAddHom : M [Sym^ι]→L[R] N →+ ContinuousMultilinearMap R (fun _ : ι => M) N :=
-  ⟨⟨fun f => f.1, rfl⟩, fun _ _ => rfl⟩
+def toMultilinearAddHom : M [Sym^ι]→L[R] N →+ ContinuousMultilinearMap R (fun _ : ι ↦ M) N :=
+  ⟨⟨fun f ↦ f.1, rfl⟩, fun _ _ ↦ rfl⟩
 
 end ContinuousAdd
 
@@ -256,13 +256,13 @@ def prod (f : M [Sym^ι]→L[R] N) (g : M [Sym^ι]→L[R] N') : M [Sym^ι]→L[R
 continuous symmetric map taking values in the space of functions `Π i, M' i`. -/
 def pi {ι' : Type*} {M' : ι' → Type*} [∀ i, AddCommMonoid (M' i)] [∀ i, TopologicalSpace (M' i)]
     [∀ i, Module R (M' i)] (f : ∀ i, M [Sym^ι]→L[R] M' i) : M [Sym^ι]→L[R] ∀ i, M' i :=
-  ⟨ContinuousMultilinearMap.pi fun i => (f i).1,
-    sorry⟩ -- TODO fix! (SymmetricMap.pi fun i => (f i).toSymmetricMap).map_eq_zero_of_eq⟩
+  ⟨ContinuousMultilinearMap.pi fun i ↦ (f i).1,
+    sorry⟩ -- TODO fix! (SymmetricMap.pi fun i ↦ (f i).toSymmetricMap).map_eq_zero_of_eq⟩
 
 @[simp]
 theorem coe_pi {ι' : Type*} {M' : ι' → Type*} [∀ i, AddCommMonoid (M' i)]
     [∀ i, TopologicalSpace (M' i)] [∀ i, Module R (M' i)] (f : ∀ i, M [Sym^ι]→L[R] M' i) :
-    ⇑(pi f) = fun m j => f j m :=
+    ⇑(pi f) = fun m j ↦ f j m :=
   rfl
 
 theorem pi_apply {ι' : Type*} {M' : ι' → Type*} [∀ i, AddCommMonoid (M' i)]
@@ -297,7 +297,7 @@ variable (ι) {N}
 @[simps! toContinuousMultilinearMap apply]
 def constOfIsEmpty [IsEmpty ι] (m : N) : M [Sym^ι]→L[R] N :=
   { SymmetricMap.constOfIsEmpty R M ι m with
-    toContinuousMultilinearMap := ContinuousMultilinearMap.constOfIsEmpty R (fun _ => M) m }
+    toContinuousMultilinearMap := ContinuousMultilinearMap.constOfIsEmpty R (fun _ ↦ M) m }
 
 @[simp]
 theorem constOfIsEmpty_toSymmetricMap [IsEmpty ι] (m : N) :
@@ -310,7 +310,7 @@ end
 is again a continuous symmetric map, that we call `g.compContinuousLinearMap f`. -/
 def compContinuousLinearMap (g : M [Sym^ι]→L[R] N) (f : M' →L[R] M) : M' [Sym^ι]→L[R] N :=
   { g.toSymmetricMap.compLinearMap (f : M' →ₗ[R] M) with
-    toContinuousMultilinearMap := g.1.compContinuousLinearMap fun _ => f }
+    toContinuousMultilinearMap := g.1.compContinuousLinearMap fun _ ↦ f }
 
 @[simp]
 theorem compContinuousLinearMap_apply (g : M [Sym^ι]→L[R] N) (f : M' →L[R] M) (m : ι → M') :
@@ -422,14 +422,14 @@ sum of `f (g₁ (r 1), ..., gₙ (r n))` where `r` ranges over all functions wit
 `r n ∈ Aₙ`. This follows from multilinearity by expanding successively with respect to each
 coordinate. -/
 theorem map_sum_finset :
-    (f fun i => ∑ j ∈ A i, g' i j) = ∑ r ∈ piFinset A, f fun i => g' i (r i) :=
+    (f fun i ↦ ∑ j ∈ A i, g' i j) = ∑ r ∈ piFinset A, f fun i ↦ g' i (r i) :=
   f.toMultilinearMap.map_sum_finset _ _
 
 /-- If `f` is continuous symmetric, then `f (Σ_{j₁} g₁ j₁, ..., Σ_{jₙ} gₙ jₙ)` is the sum of
 `f (g₁ (r 1), ..., gₙ (r n))` where `r` ranges over all functions `r`. This follows from
 multilinearity by expanding successively with respect to each coordinate. -/
 theorem map_sum [∀ i, Fintype (α i)] :
-    (f fun i => ∑ j, g' i j) = ∑ r : ∀ i, α i, f fun i => g' i (r i) :=
+    (f fun i ↦ ∑ j, g' i j) = ∑ r : ∀ i, α i, f fun i ↦ g' i (r i) :=
   f.toMultilinearMap.map_sum _
 
 end ApplySum
@@ -475,7 +475,7 @@ section IsTopologicalAddGroup
 variable [IsTopologicalAddGroup N]
 
 instance : Neg (M [Sym^ι]→L[R] N) :=
-  ⟨fun f => { -f.toSymmetricMap with toContinuousMultilinearMap := -f.1 }⟩
+  ⟨fun f ↦ { -f.toSymmetricMap with toContinuousMultilinearMap := -f.1 }⟩
 
 @[simp]
 theorem coe_neg : ⇑(-f) = -f :=
@@ -485,7 +485,7 @@ theorem neg_apply (m : ι → M) : (-f) m = -f m :=
   rfl
 
 instance : Sub (M [Sym^ι]→L[R] N) :=
-  ⟨fun f g =>
+  ⟨fun f g ↦
     { f.toSymmetricMap - g.toSymmetricMap with toContinuousMultilinearMap := f.1 - g.1 }⟩
 
 @[simp] theorem coe_sub : ⇑(f - g) = ⇑f - ⇑g := rfl
@@ -493,8 +493,8 @@ instance : Sub (M [Sym^ι]→L[R] N) :=
 theorem sub_apply (m : ι → M) : (f - g) m = f m - g m := rfl
 
 instance : AddCommGroup (M [Sym^ι]→L[R] N) := fast_instance%
-  toContinuousMultilinearMap_injective.addCommGroup _ rfl (fun _ _ => rfl) (fun _ => rfl)
-    (fun _ _ => rfl) (fun _ _ => rfl) fun _ _ => rfl
+  toContinuousMultilinearMap_injective.addCommGroup _ rfl (fun _ _ ↦ rfl) (fun _ ↦ rfl)
+    (fun _ _ ↦ rfl) (fun _ _ ↦ rfl) fun _ _ ↦ rfl
 
 end IsTopologicalAddGroup
 
@@ -507,13 +507,13 @@ variable {R M N ι : Type*} [CommSemiring R] [AddCommMonoid M] [Module R M]
   (f : M [Sym^ι]→L[R] N)
 
 theorem map_piecewise_smul [DecidableEq ι] (c : ι → R) (m : ι → M) (s : Finset ι) :
-    f (s.piecewise (fun i => c i • m i) m) = (∏ i ∈ s, c i) • f m :=
+    f (s.piecewise (fun i ↦ c i • m i) m) = (∏ i ∈ s, c i) • f m :=
   f.toMultilinearMap.map_piecewise_smul _ _ _
 
 /-- Multiplicativity of a continuous symmetric map along all coordinates at the same time,
 writing `f (fun i ↦ c i • m i)` as `(∏ i, c i) • f m`. -/
 theorem map_smul_univ [Fintype ι] (c : ι → R) (m : ι → M) :
-    (f fun i => c i • m i) = (∏ i, c i) • f m :=
+    (f fun i ↦ c i • m i) = (∏ i, c i) • f m :=
   f.toMultilinearMap.map_smul_univ _ _
 
 /-- If two continuous `R`-symmetric maps from `R` are equal on 1, then they are equal.
@@ -523,11 +523,6 @@ This is the symmetric version of `ContinuousLinearMap.ext_ring`. -/
 theorem ext_ring [Finite ι] [TopologicalSpace R] ⦃f g : R [Sym^ι]→L[R] M⦄
     (h : f (fun _ ↦ 1) = g (fun _ ↦ 1)) : f = g :=
   toSymmetricMap_injective <| SymmetricMap.ext_ring h
-
-/-- The only continuous `R`-symmetric map from two or more copies of `R` is the zero map. -/
-instance uniqueOfCommRing [Finite ι] [Nontrivial ι] [TopologicalSpace R] :
-    Unique (R [Sym^ι]→L[R] N) where
-  uniq _ := toSymmetricMap_injective <| Subsingleton.elim _ _
 
 end CommSemiring
 
@@ -539,7 +534,7 @@ variable {R A M N ι : Type*} [Monoid R] [Semiring A] [AddCommMonoid M] [AddComm
 
 instance [ContinuousAdd N] : DistribMulAction R (M [Sym^ι]→L[A] N) := fast_instance%
   Function.Injective.distribMulAction toMultilinearAddHom
-    toContinuousMultilinearMap_injective fun _ _ => rfl
+    toContinuousMultilinearMap_injective fun _ _ ↦ rfl
 
 end DistribMulAction
 
@@ -552,14 +547,14 @@ variable {R A M N ι : Type*} [Semiring R] [Semiring A] [AddCommMonoid M] [AddCo
 /-- The space of continuous symmetric maps over an algebra over `R` is a module over `R`, for the
 pointwise addition and scalar multiplication. -/
 instance : Module R (M [Sym^ι]→L[A] N) := fast_instance%
-  Function.Injective.module _ toMultilinearAddHom toContinuousMultilinearMap_injective fun _ _ =>
+  Function.Injective.module _ toMultilinearAddHom toContinuousMultilinearMap_injective fun _ _ ↦
     rfl
 
 /-- Linear map version of the map `toMultilinearMap` associating to a continuous symmetric map
 the corresponding multilinear map. -/
 @[simps]
 def toContinuousMultilinearMapLinear :
-    M [Sym^ι]→L[A] N →ₗ[R] ContinuousMultilinearMap A (fun _ : ι => M) N where
+    M [Sym^ι]→L[A] N →ₗ[R] ContinuousMultilinearMap A (fun _ : ι ↦ M) N where
   toFun := toContinuousMultilinearMap
   map_add' _ _ := rfl
   map_smul' _ _ := rfl
@@ -579,8 +574,8 @@ def piLinearEquiv {ι' : Type*} {M' : ι' → Type*} [∀ i, AddCommMonoid (M' i
     [∀ i, Module A (M' i)] [∀ i, SMulCommClass A R (M' i)] [∀ i, ContinuousConstSMul R (M' i)] :
     (∀ i, M [Sym^ι]→L[A] M' i) ≃ₗ[R] M [Sym^ι]→L[A] ∀ i, M' i :=
   { piEquiv with
-    map_add' := fun _ _ => rfl
-    map_smul' := fun _ _ => rfl }
+    map_add' := fun _ _ ↦ rfl
+    map_smul' := fun _ _ ↦ rfl }
 
 end Module
 
@@ -617,8 +612,8 @@ variable (R M N N')
 /-- `ContinuousLinearMap.compContinuousSymmetricMap` as a bundled bilinear map. -/
 def _root_.ContinuousLinearMap.compContinuousSymmetricMapₗ :
     (N →L[R] N') →ₗ[R] (M [Sym^ι]→L[R] N) →ₗ[R] (M [Sym^ι]→L[R] N') :=
-  LinearMap.mk₂ R ContinuousLinearMap.compContinuousSymmetricMap (fun _ _ _ => rfl)
-    (fun _ _ _ => rfl) (fun f g₁ g₂ => by ext1; apply f.map_add) fun c f g => by ext1; simp
+  LinearMap.mk₂ R ContinuousLinearMap.compContinuousSymmetricMap (fun _ _ _ ↦ rfl)
+    (fun _ _ _ ↦ rfl) (fun f g₁ g₂ ↦ by ext1; apply f.map_add) fun c f g ↦ by ext1; simp
 
 end Semiring
 
@@ -628,14 +623,14 @@ namespace ContinuousMultilinearMap
 
 variable {R M N ι : Type*} [Semiring R] [AddCommMonoid M] [Module R M] [TopologicalSpace M]
   [AddCommGroup N] [Module R N] [TopologicalSpace N] [IsTopologicalAddGroup N] [Fintype ι]
-  [DecidableEq ι] (f : ContinuousMultilinearMap R (fun _ : ι => M) N)
+  [DecidableEq ι] (f : ContinuousMultilinearMap R (fun _ : ι ↦ M) N)
 
 /-- Symmetrization of a continuous multilinear map. -/
 @[simps -isSimp apply_toContinuousMultilinearMap]
-def symmetrization : ContinuousMultilinearMap R (fun _ : ι => M) N →+ M [Sym^ι]→L[R] N where
+def symmetrization : ContinuousMultilinearMap R (fun _ : ι ↦ M) N →+ M [Sym^ι]→L[R] N where
   toFun f :=
     { toContinuousMultilinearMap := ∑ σ : Equiv.Perm ι, f.domDomCongr σ
-      --map_eq_zero_of_eq' := fun v i j hv hne => by
+      --map_eq_zero_of_eq' := fun v i j hv hne ↦ by
       --  simpa [MultilinearMap.alternatization_apply]
       --    using f.1.alternatization.map_eq_zero_of_eq' v i j hv hne
       map_eq_map_of_swap' v i j _ := sorry }
