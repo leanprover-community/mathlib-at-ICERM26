@@ -13,7 +13,9 @@ public import Mathlib.Analysis.BoxIntegral.Basic
 public import Mathlib.Analysis.BoxIntegral.Partition.Basic
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.ContDiff
 public import Mathlib.Analysis.Calculus.ContDiff.Defs
+public import Mathlib.Analysis.Calculus.ContDiff.Deriv
 
 /-! # Riemann–Stieltjes integral
 
@@ -1180,6 +1182,65 @@ theorem StieltjesIntegrable.of_const (c : E) (g : ℝ → F) :
 theorem stieltjesIntegral.of_const (c : E) (g : ℝ → F) :
     ∫⟨B⟩ _ in a..b, c d g = B c (g b) - B c (g a) :=
   (HasStieltjesIntegral.of_const a b B c g).stieltjesIntegral_eq
+
+
+/-- Lemma Subset given an interval [a,b], if c,d ∈ [a,b], then |c - d| < b -a
+-/
+lemma subset_smaller_distance {a b c d : ℝ} (hab : a < b) (hc : c ∈ Set.Icc a b) (hd : d ∈ Set.Icc a b) : |c - d| ≤ b - a := by
+  rw [abs_le]
+  exact ⟨by linarith [hc.1, hd.2], by linarith [hc.2, hd.1]⟩
+
+
+/-- Lemma for a vector valued MVT with error since MVT is false for a general
+funcion in higher dimensions, but is true up to some error for
+-/
+lemma mean_value_theorem_with_error [CompleteSpace F] {g : ℝ → F} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) :
+    ∀ ε > 0, ∃ δ > 0, b - a < δ →  ∀ c ∈ Set.Icc a b, ‖g b - g a‖ < ‖deriv g c‖ * (b - a) + ε := by
+    have hunif : UniformContinuousOn g (Set.Icc a b) :=
+      isCompact_Icc.uniformContinuousOn_of_continuous hg.continuousOn
+    have hunif' : UniformContinuousOn (derivWithin g (Set.Icc a b)) (Set.Icc a b) :=
+      isCompact_Icc.uniformContinuousOn_of_continuous
+        (ContDiffOn.continuousOn_derivWithin hg (uniqueDiffOn_Icc hab) le_rfl)
+    intro ε hε
+    rw [Metric.uniformContinuousOn_iff] at hunif'
+    obtain ⟨δ, hδ_pos, hδ_prop⟩ := hunif' ε hε
+    use δ
+    constructor
+    · exact hδ_pos
+    · intro hba
+      have hab' : a ≤ b := by linarith
+      have ftc := intervalIntegral.integral_deriv_of_contDiffOn_Icc hg hab'
+      intro c hc
+      rw[← ftc]
+      have h1: ‖∫ (x : ℝ) in a..b, deriv g x‖ = ‖∫ (x : ℝ) in a..b, deriv g c +(deriv g x - deriv g c)‖ := by simp
+      rw[h1]
+      have h2 : ‖(∫ (x : ℝ) in a..b, deriv g c) + (∫ (x : ℝ) in a..b, (deriv g x - deriv g c))‖ = ‖∫ (x : ℝ) in a..b, deriv g c +(deriv g x - deriv g c)‖ := by
+        rw[intervalIntegral.integral_add]
+
+        sorry
+      rw[← h2]
+      simp
+      have h3 : ∀ x ∈ Set.Icc a b, dist c x < |b - a| := by
+        intro x hx
+        rw [Real.dist_eq]
+
+        have h_bound2 : |c - x| ≤ b - a := by
+          rw [abs_sub_le_iff]
+          constructor
+          · linarith[hx, hc]
+          · sorry
+        linarith[h_bound2, hba]
+      have h4 : ∀ x ∈ Set.Icc a b dist deriv g x deriv g c < ε := by
+        sorry
+      sorry
+
+/-- Lemma
+-/
+lemma mean_value_theorem_with_bilinear_form_and_error {f : ℝ → E} {g : ℝ → F} (hab : a < b)
+    (hg : ContDiffOn ℝ 1 g (Set.Icc a b))
+    (hf : RiemannIntegrable a b f):
+    ∀ ε > 0, ∀ c ∈ Set.Icc a b, ‖B (f c) (g c)‖ = ‖deriv g c‖ * (b - a) + ε := by
+    sorry
 
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
