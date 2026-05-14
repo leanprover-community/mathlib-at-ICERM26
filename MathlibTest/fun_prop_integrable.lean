@@ -138,6 +138,10 @@ lemma IsCompact.isClosed' {α : Type*} [TopologicalSpace α] [T2Space α] {s : S
 example (a b c d : ℝ) : IsClosed (Icc a b ∩ Icc c d) := by
   apply IsCompact.isClosed'
 
+example (a b c d : ℝ) : IsClosed (Icc a b ∩ Icc c d)ᶜ := by
+  apply IsOpen.compl
+
+
 
 
 attribute [compactness .]  IsCompact.union IsCompact.diff
@@ -150,7 +154,7 @@ attribute [compactness .]
 attribute [compactness .] isClosed_Icc isClosed_Ici isClosed_Iic isClosed_univ IsCompact.isClosed
   IsCompact.closure IsCompact.insert
 attribute [compactness →] Set.Finite.isCompact
-
+#check closure_uIoc
 lemma isClosed_uIcc {α : Type*} [TopologicalSpace α] [Lattice α] [OrderClosedTopology α] {a b : α} :
   IsClosed (uIcc a b) := isClosed_Icc
 
@@ -213,6 +217,9 @@ set_option diagnostics true in
 example {a b c : ℝ} : IsCompact (Icc a b ∩ Ici c ∩ Iic b ∩ Ici c ∩ Icc a b ∩ Ici c ∩ Icc a b ∩
     Ici c ∩ Icc a b ∩ Ici c ∩ Icc a b ∩ Ici c ∩ Icc a b ∩ Ici c) := by
   compactness (ematch := 30) (gen := 30)
+
+example {α : Type*} [MeasurableSpace α] (μ : Measure α) (f g : α → ℝ) :
+    f =ᵐ[μ] g := by
 
 
 -- lemma Icc_inter_Ici {a b c : ℝ} : Icc a b ∩ Ici c = Icc (max a c) b := by exact? --ext; grind
