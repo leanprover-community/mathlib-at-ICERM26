@@ -378,8 +378,416 @@ theorem HasIntegral_Riemann_iff (L : F) :
     hε (hδ π hhen (by simp [hunion]) hmesh) ⟩
 
 end BoxIntegral
+open scoped BigOperators
+-- If I add a new element to a monotone map that is geq than the last one, it is still monotone
+theorem monotone_fin_snoc {n : ℕ} {f : Fin (n + 1) → ℝ} {x : ℝ}
+    (hf : Monotone f) (hx : f (Fin.last n) ≤ x) : Monotone (Fin.snoc f x) := by
+  intro i j hij
+  cases j using Fin.lastCases with
+  | last =>
+      rw [Fin.snoc_last]
+      cases i using Fin.lastCases with
+      | last => simp
+      | cast i =>
+          rw [Fin.snoc_castSucc]
+          exact (hf i.le_last).trans hx
+  | cast j =>
+      cases i using Fin.lastCases with
+      | last =>
+          exact False.elim (not_lt_of_ge (Fin.le_last _) hij)
+      | cast i =>
+          rw [Fin.snoc_castSucc, Fin.snoc_castSucc]
+          exact hf hij
 
-namespace BoxIntegral.BoundaryPoints
+-- If I add a new element to a monotone map that is ge than the last one, it is still monotone
+theorem strictMono_fin_snoc {n : ℕ} {f : Fin (n + 1) → ℝ} {x : ℝ}
+    (hf : StrictMono f) (hx : f (Fin.last n) < x) : StrictMono (Fin.snoc f x) := by
+  intro i j hij
+  cases j using Fin.lastCases with
+  | last =>
+      rw [Fin.snoc_last]
+      cases i using Fin.lastCases with
+      | last => exact False.elim (not_lt_of_ge le_rfl hij)
+      | cast i =>
+          rw [Fin.snoc_castSucc]
+          exact lt_of_le_of_lt (hf.monotone i.le_last) hx
+  | cast j =>
+      cases i using Fin.lastCases with
+      | last =>
+          exact False.elim (not_lt_of_ge (Fin.le_last _) hij)
+      | cast i =>
+          rw [Fin.snoc_castSucc, Fin.snoc_castSucc]
+          exact hf hij
+
+-- Raw finite data for a tagged division; correctness properties are added separately.
+structure OrderedDivision where
+  N : ℕ
+  x : Fin (N + 1) → ℝ
+
+structure TaggedDivision extends OrderedDivision where
+  tag : Fin N → ℝ
+
+namespace OrderedDivision
+
+def snoc (π : OrderedDivision) (c : ℝ) : OrderedDivision where
+  N := π.N + 1
+  x := Fin.snoc π.x c
+
+def toLeftTagged (π : OrderedDivision) : TaggedDivision where
+  toOrderedDivision := π
+  tag := fun i ↦ π.x i.castSucc
+
+end OrderedDivision
+
+namespace TaggedDivision
+
+def Monotone (π : TaggedDivision) : Prop :=
+  _root_.Monotone π.x
+
+def ValidTags (π : TaggedDivision) : Prop :=
+  ∀ i, π.x i.castSucc ≤ π.tag i ∧ π.tag i ≤ π.x i.succ
+
+theorem validTags_monotone (π : TaggedDivision) (hπ : π.ValidTags) : π.Monotone :=
+  Fin.monotone_iff_le_succ.2 fun i ↦ (hπ i).1.trans (hπ i).2
+
+theorem validTags_last (π : TaggedDivision) (hπ : π.ValidTags)
+    (hN : 0 < π.N := by omega) :
+    π.x ⟨π.N - 1, by omega⟩ ≤ π.tag ⟨π.N - 1, by omega⟩ ∧
+      π.tag ⟨π.N - 1, by omega⟩ ≤ π.x (Fin.last π.N) := by
+  have htag := hπ ⟨π.N - 1, by omega⟩
+  constructor
+  · simpa using htag.1
+  · have hs : (⟨π.N - 1, by omega⟩ : Fin π.N).succ = Fin.last π.N := by
+      ext
+      simp
+      omega
+    simpa [hs] using htag.2
+
+def StrictMono (π : TaggedDivision) : Prop :=
+  _root_.StrictMono π.x
+
+def snoc (π : TaggedDivision) (c t : ℝ) : TaggedDivision where
+  toOrderedDivision := π.toOrderedDivision.snoc c
+  tag := Fin.snoc π.tag t
+
+def dropLast (π : TaggedDivision) (hN : 0 < π.N := by omega) : TaggedDivision :=
+  by
+    rcases π with ⟨⟨N, x⟩, tag⟩
+    dsimp at hN ⊢
+    cases N with
+    | zero => omega
+    | succ n =>
+        exact
+          { N := n
+            x := fun i ↦ x i.castSucc
+            tag := fun i ↦ tag i.castSucc }
+
+@[simp]
+theorem dropLast_N (π : TaggedDivision) (hN : 0 < π.N := by omega) :
+    π.dropLast.N = π.N - 1 := by
+  rcases π with ⟨⟨N, x⟩, tag⟩
+  dsimp [dropLast] at hN ⊢
+  cases N with
+  | zero => omega
+  | succ n => simp
+
+theorem dropLast_last (π : TaggedDivision) (hN : 0 < π.N := by omega) :
+    π.dropLast.x (Fin.last π.dropLast.N) =
+      π.x ⟨π.N - 1, by omega⟩ := by
+  rcases π with ⟨⟨N, x⟩, tag⟩
+  dsimp [dropLast] at hN ⊢
+  cases N with
+  | zero => omega
+  | succ n => exact congrArg x (by ext; simp)
+
+theorem dropLast_monotone (π : TaggedDivision) (hπ : π.Monotone)
+    (hN : 0 < π.N := by omega) :
+    π.dropLast.Monotone := by
+  rcases π with ⟨⟨N, x⟩, tag⟩
+  dsimp [Monotone, dropLast] at hπ hN ⊢
+  cases N with
+  | zero => omega
+  | succ n => intro i j hij; exact hπ hij
+
+theorem dropLast_validTags (π : TaggedDivision) (hπ : π.ValidTags)
+    (hN : 0 < π.N := by omega) :
+    π.dropLast.ValidTags := by
+  rcases π with ⟨⟨N, x⟩, tag⟩
+  dsimp [ValidTags, dropLast] at hπ hN ⊢
+  cases N with
+  | zero => omega
+  | succ n => intro i; simpa using hπ i.castSucc
+
+noncomputable def recOnDropLast {motive : TaggedDivision → Sort _} (π : TaggedDivision)
+    (zero : ∀ π, π.N = 0 → motive π)
+    (step : ∀ π (hN : 0 < π.N), motive (π.dropLast (hN := hN)) → motive π) :
+    motive π :=
+  if h0 : π.N = 0 then
+    zero π h0
+  else
+    have hN : 0 < π.N := Nat.pos_of_ne_zero h0
+    step π hN (recOnDropLast (π.dropLast (hN := hN)) zero step)
+termination_by π.N
+decreasing_by rw [dropLast_N π]; omega
+
+
+theorem snoc_monotone (π : TaggedDivision) (hπ : π.Monotone) {c t : ℝ}
+    (hc : π.x (Fin.last π.N) ≤ c) : (π.snoc c t).Monotone :=
+  monotone_fin_snoc hπ hc
+
+theorem snoc_validTags (π : TaggedDivision) (hπ_tag : π.ValidTags)
+    {c t : ℝ} (ht : π.x (Fin.last π.N) ≤ t ∧ t ≤ c) : (π.snoc c t).ValidTags := by
+  intro i
+  cases i using Fin.lastCases with
+  | last => simp [snoc, OrderedDivision.snoc, ht]
+  | cast i => simpa [snoc, OrderedDivision.snoc, ← Fin.castSucc_succ] using hπ_tag i
+
+theorem snoc_strict (π : TaggedDivision) (hπ : π.StrictMono) {c t : ℝ}
+    (hc : π.x (Fin.last π.N) < c) : (π.snoc c t).StrictMono :=
+  strictMono_fin_snoc hπ hc
+
+noncomputable def removeDuplicates (π : TaggedDivision) : TaggedDivision :=
+  π.recOnDropLast
+    (zero := fun π _ ↦ π)
+    (step := fun π _ σ ↦
+      let y := π.x ⟨π.N - 1, by omega⟩
+      let z := π.x (Fin.last π.N)
+      if y = z then
+        σ
+      else
+        σ.snoc z (π.tag ⟨π.N - 1, by omega⟩))
+
+namespace removeDuplicates
+
+theorem of_N_eq_zero (π : TaggedDivision) (hπ : π.N = 0) : π.removeDuplicates = π := by
+  rw [TaggedDivision.removeDuplicates, TaggedDivision.recOnDropLast]
+  simp [hπ]
+
+theorem of_last_eq (π : TaggedDivision) (hN : 0 < π.N)
+    (h : π.x ⟨π.N - 1, by omega⟩ = π.x (Fin.last π.N)) :
+    π.removeDuplicates = π.dropLast.removeDuplicates := by
+  rw [TaggedDivision.removeDuplicates, TaggedDivision.recOnDropLast]
+  simp [Nat.ne_of_gt hN, h, TaggedDivision.removeDuplicates]
+
+theorem of_last_ne (π : TaggedDivision) (hN : 0 < π.N)
+    (h : ¬π.x ⟨π.N - 1, by omega⟩ = π.x (Fin.last π.N)) :
+    π.removeDuplicates =
+      π.dropLast.removeDuplicates.snoc (π.x (Fin.last π.N))
+        (π.tag ⟨π.N - 1, by omega⟩) := by
+  rw [TaggedDivision.removeDuplicates, TaggedDivision.recOnDropLast]
+  simp [Nat.ne_of_gt hN, h, TaggedDivision.removeDuplicates]
+
+theorem last (π : TaggedDivision) :
+    π.removeDuplicates.x (Fin.last π.removeDuplicates.N) = π.x (Fin.last π.N) := by
+  induction π using TaggedDivision.recOnDropLast with
+  | zero π h0 =>
+    rw [of_N_eq_zero π h0]
+  | step π hN ih =>
+    have h0 : ¬π.N = 0 := by omega
+    let y := π.x ⟨π.N - 1, by omega⟩
+    let z := π.x (Fin.last π.N)
+    let σ := π.dropLast.removeDuplicates
+    have hσ : σ.x (Fin.last σ.N) = y := by
+      dsimp [σ]
+      rw [ih]
+      exact π.dropLast_last
+    by_cases h : y = z
+    · rw [of_last_eq π hN (by simpa [y, z] using h)]
+      exact hσ.trans h
+    · rw [of_last_ne π hN (by simpa [y, z] using h)]
+      simp [snoc, OrderedDivision.snoc]
+
+theorem strict (π : TaggedDivision) (hπ : π.Monotone) :
+    π.removeDuplicates.StrictMono := by
+  revert hπ
+  induction π using TaggedDivision.recOnDropLast with
+  | zero π h0 =>
+    intro hπ
+    rw [of_N_eq_zero π h0]
+    dsimp [StrictMono]
+    intro i j hij
+    have hij' : i = j := by ext; omega
+    subst j
+    exact False.elim (not_lt_of_ge le_rfl hij)
+  | step π hN ih =>
+    intro hπ
+    have h0 : ¬π.N = 0 := by omega
+    let y := π.x ⟨π.N - 1, by omega⟩
+    let z := π.x (Fin.last π.N)
+    let σ := π.dropLast.removeDuplicates
+    have hσ_last : σ.x (Fin.last σ.N) = y := by
+      dsimp [σ]
+      rw [last π.dropLast]
+      exact π.dropLast_last
+    have hσ : σ.StrictMono := by
+      dsimp [σ]
+      exact ih (π.dropLast_monotone hπ)
+    by_cases h : y = z
+    · rw [of_last_eq π hN (by simpa [y, z] using h)]
+      exact hσ
+    · have hle : y ≤ z := by
+        simpa [y, z] using hπ (Fin.le_last (⟨π.N - 1, by omega⟩ : Fin (π.N + 1)))
+      have hlt : y < z := lt_of_le_of_ne hle h
+      have hc : σ.x (Fin.last σ.N) < z := by simpa [hσ_last] using hlt
+      rw [of_last_ne π hN (by simpa [y, z] using h)]
+      exact σ.snoc_strict hσ hc
+
+theorem validTags (π : TaggedDivision) (hπ_tag : π.ValidTags) :
+    π.removeDuplicates.ValidTags := by
+  revert hπ_tag
+  induction π using TaggedDivision.recOnDropLast with
+  | zero π h0 =>
+    intro hπ_tag
+    rw [of_N_eq_zero π h0]
+    exact hπ_tag
+  | step π hN ih =>
+    intro hπ_tag
+    have h0 : ¬π.N = 0 := by omega
+    let y := π.x ⟨π.N - 1, by omega⟩
+    let z := π.x (Fin.last π.N)
+    let σ := π.dropLast.removeDuplicates
+    have hσ_last : σ.x (Fin.last σ.N) = y := by
+      dsimp [σ]
+      rw [last π.dropLast]
+      exact π.dropLast_last
+    have hπ'_tag : π.dropLast.ValidTags := π.dropLast_validTags hπ_tag
+    have hσ_tag : σ.ValidTags := by
+      dsimp [σ]
+      exact ih hπ'_tag
+    by_cases h : y = z
+    · rw [of_last_eq π hN (by simpa [y, z] using h)]
+      exact hσ_tag
+    · have ht : σ.x (Fin.last σ.N) ≤ π.tag ⟨π.N - 1, by omega⟩ ∧
+          π.tag ⟨π.N - 1, by omega⟩ ≤ z := by
+        have htag := π.validTags_last hπ_tag
+        constructor
+        · simpa [hσ_last, y] using htag.1
+        · simpa [z] using htag.2
+      rw [of_last_ne π hN (by simpa [y, z] using h)]
+      exact σ.snoc_validTags hσ_tag ht
+
+end removeDuplicates
+
+
+
+
+
+namespace DualPartition
+
+def x (π : TaggedDivision) : Fin (π.N + 2) → ℝ :=
+  Fin.cons (π.x 0) (Fin.snoc π.tag (π.x (Fin.last π.N)))
+
+@[simp]
+theorem x_first (π : TaggedDivision) : x π 0 = π.x 0 := by
+  simp [x]
+
+@[simp]
+theorem x_last (π : TaggedDivision) : x π (Fin.last (π.N + 1)) = π.x (Fin.last π.N) := by
+  simp [x]
+
+end DualPartition
+
+def DualPartition (π : TaggedDivision) : TaggedDivision where
+  N := π.N + 1
+  tag := π.x
+  x := DualPartition.x π
+
+@[simp]
+theorem DualPartition_first (π : TaggedDivision) : π.DualPartition.x 0 = π.x 0 := by
+  exact DualPartition.x_first π
+
+@[simp]
+theorem DualPartition_last (π : TaggedDivision) :
+    π.DualPartition.x (Fin.last π.DualPartition.N) = π.x (Fin.last π.N) := by
+  exact DualPartition.x_last π
+
+def RiemannStieltjesSum (π : TaggedDivision) (f g : ℝ → ℝ) : ℝ :=
+  ∑ i : Fin π.N, f (π.tag i) * (g (π.x i.succ) - g (π.x i.castSucc))
+
+end TaggedDivision
+
+
+namespace RiemannStieltjesSum
+open TaggedDivision
+
+@[simp]
+theorem eq_zero_of_N_eq_zero (π : TaggedDivision) (hπ : π.N = 0) (f g : ℝ → ℝ) :
+    π.RiemannStieltjesSum f g = 0 := by
+  rcases π with ⟨⟨N, x⟩, tag⟩
+  dsimp at hπ ⊢
+  subst N
+  simp [TaggedDivision.RiemannStieltjesSum]
+
+theorem eq_dropLast_add
+    (π : TaggedDivision) (hN : 0 < π.N) (f g : ℝ → ℝ) :
+      π.RiemannStieltjesSum f g =
+      π.dropLast.RiemannStieltjesSum f g +
+      f (π.tag ⟨π.N - 1, by omega⟩) *
+        (g (π.x (Fin.last π.N)) - g (π.x ⟨π.N - 1, by omega⟩)) := by
+  rcases π with ⟨⟨N, x⟩, tag⟩
+  dsimp [RiemannStieltjesSum, dropLast] at hN ⊢
+  cases N with
+  | zero => omega
+  | succ n =>
+      rw [Fin.sum_univ_castSucc]
+      congr
+
+theorem snoc (π : TaggedDivision) (c t : ℝ) (f g : ℝ → ℝ) :
+    (π.snoc c t).RiemannStieltjesSum  f g =
+      π.RiemannStieltjesSum  f g + f t * (g c - g (π.x (Fin.last π.N))) := by
+  rcases π with ⟨⟨N, x⟩, tag⟩
+  dsimp [RiemannStieltjesSum, TaggedDivision.snoc, OrderedDivision.snoc]
+  rw [Fin.sum_univ_castSucc]
+  congr 1
+  · apply Finset.sum_congr rfl
+    intro i hi
+    have hs : i.castSucc.succ = i.succ.castSucc := by ext; simp
+    have hxs : @Fin.snoc (N + 1) (fun _ => ℝ) x c i.castSucc.succ = x i.succ := by
+      rw [hs, Fin.snoc_castSucc]
+    rw [hxs]
+    simp [Fin.snoc_castSucc]
+  · simp [Fin.snoc_last, Fin.snoc_castSucc]
+
+theorem removeDuplicates
+    (π : TaggedDivision) (f g : ℝ → ℝ) :
+    π.removeDuplicates.RiemannStieltjesSum f g =
+      π.RiemannStieltjesSum f g := by
+  revert f g
+  induction π using TaggedDivision.recOnDropLast with
+  | zero π h0 =>
+    intro f g
+    rw [TaggedDivision.removeDuplicates.of_N_eq_zero π h0]
+  | step π hN ih =>
+    intro f g
+    have h0 : ¬π.N = 0 := by omega
+    let y := π.x ⟨π.N - 1, by omega⟩
+    let z := π.x (Fin.last π.N)
+    let t := π.tag ⟨π.N - 1, by omega⟩
+    let σ := π.dropLast.removeDuplicates
+    have hσ_last : σ.x (Fin.last σ.N) = y := by
+      dsimp [σ]
+      rw [TaggedDivision.removeDuplicates.last π.dropLast]
+      exact π.dropLast_last
+    have hrec :
+        σ.RiemannStieltjesSum f g =
+          π.dropLast.RiemannStieltjesSum f g := by
+      dsimp [σ]
+      exact ih f g
+    have hdrop := eq_dropLast_add π hN f g
+    by_cases h : y = z
+    · rw [TaggedDivision.removeDuplicates.of_last_eq π hN (by simpa [y, z] using h)]
+      rw [hrec, hdrop]
+      simp [y, z, h]
+    · rw [TaggedDivision.removeDuplicates.of_last_ne π hN (by simpa [y, z] using h)]
+      rw [snoc σ z t f g, hrec, hdrop]
+      simp [hσ_last, y, z, t]
+
+theorem by_parts (π : TaggedDivision) (f g : ℝ → ℝ) :
+    π.RiemannStieltjesSum f g =
+      (π.DualPartition).RiemannStieltjesSum g f := by sorry
+
+end RiemannStieltjesSum
+namespace mynamespace
 
 /-! ## One-dimensional interval partitions
 
@@ -387,6 +795,7 @@ API for one-dimensional partitions and tagged partitions
 -/
 
 open BoxIntegral Stieltjes
+
 
 noncomputable def toPartition {N : ℕ} {a b : ℝ}
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
@@ -452,7 +861,7 @@ theorem taggedSum_eq_integralSum {N : ℕ} {a b : ℝ} (hab : a < b)
         (fun i: Fin N ↦ (vol (Ioc (x i.succ) (x i.castSucc))) (f (y i))) := by
   sorry
 
-end BoxIntegral.BoundaryPoints
+end mynamespace
 
 namespace BoxIntegral.BoxAdditiveMap
 
