@@ -521,10 +521,6 @@ lemma ofDiff_const (c : M) : ofDiff (fun _ : ℝ ↦ c) = 0 := by
 @[simp]
 lemma ofDiff_Ioc (g : ℝ → M) {a b : ℝ} (h : a < b) : ofDiff g (Ioc a b) = g b - g a := by simp [h]
 
-
-
-
-
 /-- `ofDiff g` vanishes iff `g` is constant. -/
 lemma ofDiff_eq_zero_iff {g : ℝ → M} : ofDiff g = 0 ↔ ∀ x y, g x = g y := by
   refine ⟨fun h x y ↦ ?_, fun h ↦ ?_⟩
@@ -821,6 +817,17 @@ lemma HasStieltjesIntegral.symm {f : ℝ → E} {g : ℝ → F} {L : G}
     (h : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral b a B f g (-L) := by
   rwa [← symm_iff]
+
+/-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition. -/
+theorem HasStieltjesIntegral_iff_lim_sum (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
+    HasStieltjesIntegral a b B f g L ↔
+    ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b),  π.IsHenstock → π.iUnion = ↑(Ioc a b)
+    → π.mesh_size ≤ δ →
+     dist (∑ x ∈ π.boxes, ((B (f (π.tag x 0))) (g (x.upper 0) - g (x.lower 0)))) L < ε := by
+  simp only [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral', Fin.isValue,
+  HasIntegral_Riemann_iff, gt_iff_lt, integralSum,
+    BoxAdditiveMap.ofDiff_apply, coe_sub', Pi.sub_apply, flip_apply, Finset.sum_sub_distrib,
+    dist_sub_eq_dist_add_left, map_sub]
 
 /-- `StieltjesIntegrable a b B f g` asserts that the Riemann–Stieltjes integral of `f` against
 `g` paired by `B` over `(a, b]` exists, i.e. some `L` satisfies `HasStieltjesIntegral a b B f g L`.
