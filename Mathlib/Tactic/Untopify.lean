@@ -58,6 +58,22 @@ attribute [untopify_top] OfNat.ofNat_ne_zero ne_eq not_false_eq_true
   rw [ENNReal.top_rpow_def]
   cases n <;> simp
 
+@[untopify_top] lemma zero_zpow_ofNat {n : ℕ} : (0 : ℝ≥0∞) ^ (ofNat(n + 1) : ℤ) = 0 := by
+  rw [ENNReal.zero_zpow_def]
+  cases n <;> simp
+
+@[untopify_top] lemma zero_rpow_ofNat {n : ℕ} : (0 : ℝ≥0∞) ^ (ofNat(n + 1) : ℝ) = 0 := by
+  rw [ENNReal.zero_rpow_def]
+  cases n <;> simp
+
+@[untopify_top] lemma zero_zpow_neg {n : ℕ} : (0 : ℝ≥0∞) ^ (- ofNat(n + 1) : ℤ) = ∞ := by
+  rw [ENNReal.zero_zpow_def]
+  cases n <;> simp
+
+@[untopify_top] lemma zero_rpow_neg {n : ℕ} : (0 : ℝ≥0∞) ^ (- ofNat(n + 1) : ℝ) = ∞ := by
+  rw [ENNReal.zero_rpow_def]
+  cases n <;> simp
+
 -- coercion lemmas: ENNReal.coe_rpow_of_ne_zero, ENNReal.coe_rpow_of_nonneg
 
 @[untopify_top] lemma not_lt_top (x : ℝ≥0∞) :

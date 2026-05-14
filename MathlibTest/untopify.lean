@@ -66,7 +66,7 @@ lemma spec10 (H : a ≤ b) : b ^ (- 5 : ℝ) ≤ a ^ (- 5 : ℝ) := by
       try simp_all
       try sorry
 
-lemma spec11 : (⊤ : ENNReal) ^ (- 5 : ℝ) = 0 := by untopify; simp
+lemma spec11 : (⊤ : ENNReal) ^ (- 5 : ℝ) = 0 := by untopify;
 
 lemma spec12 : a + ⊤ = ⊤ := by untopify
 
