@@ -293,6 +293,34 @@ theorem Riemann_toFilteriUnion_eventually_iff_mesh (P : TaggedPrepartition I →
 
 end BoxIntegral.IntegrationParams
 
+namespace BoxIntegral
+
+open IntegrationParams Filter
+
+variable {ι : Type*} [Fintype ι] (I : Box ι) {E : Type*} {F : Type*}
+variable [NormedAddCommGroup E] [NormedSpace ℝ E] [NormedAddCommGroup F] [NormedSpace ℝ F]
+variable (f : (ι → ℝ) → E) (vol : BoxAdditiveMap ι (E →L[ℝ] F) ⊤)
+
+theorem HasIntegral_Riemann_iff (L : F) :
+    HasIntegral I Riemann f vol L ↔ ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition I,
+    π.IsHenstock → π.iUnion = I.toSet → π.mesh_size ≤ δ → dist (integralSum f vol π) L < ε := by
+  simp only [HasIntegral, tendsto_iff_eventually, Riemann_toFilteriUnion_eventually_iff_mesh]
+  refine ⟨ fun h ε εpos ↦ ?_, fun h p hp ↦ ?_ ⟩
+  · have : ∀ᶠ y in nhds L, dist y L < ε := by sorry
+    specialize h this
+    peel h with δ δpos hδ
+    peel hδ with π hπ
+    intro hhen hunion hmesh; apply hπ
+    simp [hhen, hunion, hmesh]
+  simp only [Metric.eventually_nhds_iff, gt_iff_lt] at hp
+  obtain ⟨ ε, εpos, hε ⟩ := hp
+  obtain ⟨ δ, δpos, hδ ⟩ := h ε εpos
+  refine ⟨ ⟨δ, le_of_lt δpos⟩, δpos, fun π ⟨ hmesh, hhen, hunion ⟩ ↦ ?_ ⟩
+  apply hε (hδ π hhen ?_ hmesh)
+  simp [hunion]
+
+end BoxIntegral
+
 namespace BoxIntegral.BoundaryPoints
 
 open BoxIntegral Stieltjes
@@ -329,7 +357,7 @@ theorem toPartition_isPartition {N : ℕ} {a b : ℝ} (hab : a < b)
 theorem fromPartition
     {a b : ℝ} (hab : a < b)
     (π : Prepartition (Ioc a b))
-    (hπ : π.IsPartition):
+    (hπ : π.IsPartition) :
     letI N := Finset.card π.boxes
     ∃ (x : Fin (N + 1) → ℝ) (hx : StrictMono x) (ha : (x 0) = a) (hb : x (Fin.last N) = b),
      π = toPartition x hx ha hb := by
@@ -338,7 +366,7 @@ theorem fromPartition
 theorem fromTaggedPartition
     {a b : ℝ} (hab : a < b)
     (π : TaggedPrepartition (Ioc a b))
-    (hπ : π.IsPartition):
+    (hπ : π.IsPartition) :
     ∃ (N : ℕ) (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
       (ha : (x 0) = a) (hb : x (Fin.last N) = b)
       (y : Fin N → ℝ) (hy : ∀ i : Fin N, (x i.castSucc ≤ y i) ∧ (y i ≤ x i.succ)),
