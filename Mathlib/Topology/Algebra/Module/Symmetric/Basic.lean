@@ -68,9 +68,8 @@ theorem range_toContinuousMultilinearMap :
     Set.range
         (toContinuousMultilinearMap :
           M [Sym^ι]→L[R] N → ContinuousMultilinearMap R (fun _ : ι ↦ M) N) =
-      {f | ∀ (v : ι → M) (i j : ι), v i = v j → i ≠ j → f v = 0} :=
-  -- TODO: this statement is wrong, fix it and the proof!
-  sorry --Set.ext fun f ↦ ⟨fun ⟨g, hg⟩ ↦ hg ▸ g.2, fun h ↦ ⟨⟨f, h⟩, rfl⟩⟩
+      {f | ∀ (v : ι → M) (i j : ι), [DecidableEq ι] → f (v ∘ (Equiv.swap i j)) = f v} :=
+  Set.ext fun f ↦ ⟨fun ⟨g, hg⟩ ↦ hg ▸ g.2, fun h ↦ ⟨⟨f, h⟩, rfl⟩⟩
 
 instance funLike : FunLike (M [Sym^ι]→L[R] N) (ι → M) N where
   coe f := f.toFun
@@ -131,7 +130,8 @@ theorem map_update_zero [DecidableEq ι] (m : ι → M) (i : ι) : f (update m i
 theorem map_zero [Nonempty ι] : f 0 = 0 :=
   f.toMultilinearMap.map_zero
 
-theorem map_eq_map_of_swap [DecidableEq ι] (v : ι → M) {i j : ι} : f (v ∘ Equiv.swap i j) = f v :=
+@[grind =]
+theorem map_eq_map_of_swap [DecidableEq ι] (v : ι → M) (i j : ι) : f (v ∘ Equiv.swap i j) = f v :=
   f.map_eq_map_of_swap' v i j
 
 /-- Restrict the codomain of a continuous symmetric map to a submodule. -/
@@ -139,8 +139,7 @@ theorem map_eq_map_of_swap [DecidableEq ι] (v : ι → M) {i j : ι} : f (v ∘
 def codRestrict (f : M [Sym^ι]→L[R] N) (p : Submodule R N) (h : ∀ v, f v ∈ p) : M [Sym^ι]→L[R] p :=
   { f.toSymmetricMap.codRestrict p h with toContinuousMultilinearMap := f.1.codRestrict p h }
 
-instance : Zero (M [Sym^ι]→L[R] N) :=
-  ⟨⟨0, sorry⟩⟩ -- (0 : M [Sym^ι]→ₗ[R] N).map_eq_zero_of_eq⟩⟩ -- TODO fix proof, perhaps with missing API
+instance : Zero (M [Sym^ι]→L[R] N) := ⟨⟨0, by simp⟩⟩
 
 instance : Inhabited (M [Sym^ι]→L[R] N) :=
   ⟨0⟩
@@ -164,7 +163,7 @@ variable {R' R'' A : Type*} [Monoid R'] [Monoid R''] [Semiring A] [Module A M] [
   [ContinuousConstSMul R'' N] [SMulCommClass A R'' N]
 
 instance : SMul R' (M [Sym^ι]→L[A] N) :=
-  ⟨fun c f ↦ ⟨c • f.1, sorry⟩⟩ -- (c • f.toSymmetricMap).map_eq_zero_of_eq⟩⟩ -- sorry -- TODO fix!
+  ⟨fun c f ↦ ⟨c • f.1, fun v i j _ ↦ by simp [f.map_eq_map_of_swap v i j]⟩⟩
 
 @[simp]
 theorem coe_smul (f : M [Sym^ι]→L[A] N) (c : R') : ⇑(c • f) = c • ⇑f :=
@@ -189,7 +188,8 @@ instance [SMulCommClass R' R'' N] : SMulCommClass R' R'' (M [Sym^ι]→L[A] N) :
 instance [SMul R' R''] [IsScalarTower R' R'' N] : IsScalarTower R' R'' (M [Sym^ι]→L[A] N) :=
   ⟨fun _ _ _ ↦ ext fun _ ↦ smul_assoc _ _ _⟩
 
-instance [DistribMulAction R'ᵐᵒᵖ N] [IsCentralScalar R' N] : IsCentralScalar R' (M [Sym^ι]→L[A] N) :=
+instance [DistribMulAction R'ᵐᵒᵖ N] [IsCentralScalar R' N] :
+    IsCentralScalar R' (M [Sym^ι]→L[A] N) :=
   ⟨fun _ _ ↦ ext fun _ ↦ op_smul_eq_smul _ _⟩
 
 instance : MulAction R' (M [Sym^ι]→L[A] N) := fast_instance%
@@ -202,7 +202,8 @@ section ContinuousAdd
 variable [ContinuousAdd N]
 
 instance : Add (M [Sym^ι]→L[R] N) :=
-  ⟨fun f g ↦ ⟨f.1 + g.1, sorry⟩⟩ -- TODO fix! (f.toSymmetricMap + g.toSymmetricMap).map_eq_zero_of_eq⟩⟩
+  ⟨fun f g ↦ ⟨f.1 + g.1, fun v i j _ ↦ by
+    simp [f.map_eq_map_of_swap v i j, g.map_eq_map_of_swap v i j]⟩⟩
 
 @[simp]
 theorem coe_add : ⇑(f + g) = ⇑f + ⇑g :=
@@ -250,14 +251,15 @@ def toContinuousLinearMap [DecidableEq ι] (m : ι → M) (i : ι) : M →L[R] N
 /-- The Cartesian product of two continuous symmetric maps, as a continuous symmetric map. -/
 @[simps!]
 def prod (f : M [Sym^ι]→L[R] N) (g : M [Sym^ι]→L[R] N') : M [Sym^ι]→L[R] (N × N') :=
-  ⟨f.1.prod g.1, sorry⟩ -- TODO fix! (f.toSymmetricMap.prod g.toSymmetricMap).map_eq_zero_of_eq⟩
+  ⟨f.1.prod g.1, fun v i j _ ↦ by
+    simp [f.map_eq_map_of_swap v i j, g.map_eq_map_of_swap v i j]⟩
 
 /-- Combine a family of continuous symmetric maps with the same domain and codomains `M' i` into a
 continuous symmetric map taking values in the space of functions `Π i, M' i`. -/
 def pi {ι' : Type*} {M' : ι' → Type*} [∀ i, AddCommMonoid (M' i)] [∀ i, TopologicalSpace (M' i)]
     [∀ i, Module R (M' i)] (f : ∀ i, M [Sym^ι]→L[R] M' i) : M [Sym^ι]→L[R] ∀ i, M' i :=
-  ⟨ContinuousMultilinearMap.pi fun i ↦ (f i).1,
-    sorry⟩ -- TODO fix! (SymmetricMap.pi fun i ↦ (f i).toSymmetricMap).map_eq_zero_of_eq⟩
+  ⟨ContinuousMultilinearMap.pi fun i ↦ (f i).1, by
+    intro v i j _; ext j'; simp [(f j').map_eq_map_of_swap]⟩
 
 @[simp]
 theorem coe_pi {ι' : Type*} {M' : ι' → Type*} [∀ i, AddCommMonoid (M' i)]
@@ -633,7 +635,8 @@ def symmetrization : ContinuousMultilinearMap R (fun _ : ι ↦ M) N →+ M [Sym
       --map_eq_zero_of_eq' := fun v i j hv hne ↦ by
       --  simpa [MultilinearMap.alternatization_apply]
       --    using f.1.alternatization.map_eq_zero_of_eq' v i j hv hne
-      map_eq_map_of_swap' v i j _ := sorry }
+      map_eq_map_of_swap' v i j _ := by
+        sorry }
   map_zero' := by ext; simp
   map_add' _ _ := by ext; simp [Finset.sum_add_distrib]
 
