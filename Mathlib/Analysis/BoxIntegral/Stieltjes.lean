@@ -1835,26 +1835,123 @@ lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
       ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
   sorry
 
-/-- Prove that the Riemann-Stieltjes integrand is Box-Integrable.
-Use the Cauchy criterion and the uniform continuity of f on [a, b].
-We separate integrability for more modular API. -/
-lemma integrable_of_continuousOn_of_boundedVariationOn
-    (f : ℝ → E) (g : ℝ → F)
+/-- Continuous integrand and a
+bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
+lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
+   (f : ℝ → E) (g : ℝ → F) (hab : a < b) (int_mode : IntegrationParams)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
-    Integrable (Ioc a b) IntegrationParams.Riemann
-      (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by sorry
+    Integrable (Ioc a b) int_mode
+      (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by
+  -- Step 1: Reduce integrability to the Cauchy convergence criterion over fine prepartitions
+  unfold Integrable
+  refine BoxIntegral.integrable_iff_cauchy_basis.2 fun ε hε ↦ ?_
+  -- Step 2: Define global constants for total variation and bilinear scaling bounds
+  let V : ℝ := (eVariationOn g (Set.Icc a b)).toReal
+  let C : ℝ := ‖B‖ * V
+  rcases exists_pos_mul_lt hε C with ⟨η, hη, hηC⟩
+  -- Step 3: Extract the uniform continuity margin δ required to achieve our target error η
+  have huc : UniformContinuousOn f (Set.Icc a b) :=
+    isCompact_Icc.uniformContinuousOn_of_continuous hf
+  rw [Metric.uniformContinuousOn_iff] at huc
+  rcases huc η hη with ⟨δ, hδ, hδf⟩
+  -- Step 4: Define a strictly positive, constant gauge ρ = δ / 4
+  -- Forcing subboxes to have a radius ≤ δ / 4 ensures that any two tags inside overlapping
+  -- subboxes are separated by a strict total distance of less than δ.
+  let ρ : ℝ := δ / 4
+  have hρ : 0 < ρ := by positivity
+  let r : NNReal → (Fin 1 → ℝ) → Set.Ioi (0 : ℝ) := fun _ _ ↦ ⟨ρ, hρ⟩
+  refine ⟨r, ?_, ?_⟩
+  · -- Gauge consistency: r c x depends only on c, which evaluates trivially for constant functions
+    intro c hR x
+    rfl
+  · -- Evaluate the Cauchy distance between two arbitrary r-fine prepartitions π₁ and π₂
+    intro c₁ c₂ π₁ π₂ hπ₁ hpart₁ hπ₂ hpart₂
+    let vol : Fin 1 →ᵇᵃ E →L[ℝ] G := BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))
+    let π : Prepartition (Ioc a b) := π₁.toPrepartition ⊓ π₂.toPrepartition
+    let τ₁ : TaggedPrepartition (Ioc a b) := π₁.infPrepartition π₂.toPrepartition
+    let τ₂ : TaggedPrepartition (Ioc a b) := π₂.infPrepartition π₁.toPrepartition
+    have hsub₁ : τ₁.IsSubordinate (r c₁) := hπ₁.isSubordinate.infPrepartition _
+    have hsub₂ : τ₂.IsSubordinate (r c₂) := hπ₂.isSubordinate.infPrepartition _
+    -- Express the global difference of integral sums as the discrete sum of local subbox
+    -- differences.
+    have hdiff :
+        integralSum (fun x : Fin 1 → ℝ ↦ f (x 0)) vol π₁ -
+          integralSum (fun x : Fin 1 → ℝ ↦ f (x 0)) vol π₂ =
+        ∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))) := by
+      simpa [vol, π, τ₁, τ₂] using
+        integralSum_sub_partitions (fun x : Fin 1 → ℝ ↦ f (x 0)) vol hpart₁ hpart₂
+    -- Step 5: Prove that each localized subbox evaluation is bounded strictly by η * ‖vol J‖
+    have hterm : ∀ J ∈ π.boxes,
+        ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖ ≤ η * ‖vol J‖ := by
+      intro J hJ
+      have hJτ₁ : J ∈ τ₁ := by
+        change J ∈ τ₁.toPrepartition
+        simpa [π, τ₁] using hJ
+      have hJτ₂ : J ∈ τ₂ := TaggedPrepartition.mem_infPrepartition_comm.mp hJτ₁
+      -- Map local tag coordinates back inside the global ambient domain [a, b]
+      have htag₁_mem : τ₁.tag J 0 ∈ Set.Icc a b := by
+        have htag := τ₁.tag_mem_Icc J
+        exact ⟨by simpa [Ioc.lower hab] using htag.1 0,
+               by simpa [Ioc.upper hab] using htag.2 0⟩
+      have htag₂_mem : τ₂.tag J 0 ∈ Set.Icc a b := by
+        have htag := τ₂.tag_mem_Icc J
+        exact ⟨by simpa [Ioc.lower hab] using htag.1 0,
+               by simpa [Ioc.upper hab] using htag.2 0⟩
+      -- Gauge subordination forces both tags to sit within ρ of the shared upper boundary corner
+      have hτ₁_upper : dist (τ₁.tag J) J.upper ≤ ρ := by
+        simpa [Metric.mem_closedBall, r, ρ, dist_comm] using hsub₁ J hJτ₁ J.upper_mem_Icc
+      have hτ₂_upper : dist J.upper (τ₂.tag J) ≤ ρ := by
+        simpa [Metric.mem_closedBall, r, ρ] using hsub₂ J hJτ₂ J.upper_mem_Icc
+      -- Chain the tag metrics through the shared upper corner via the triangle inequality
+      have htags_dist : dist (τ₁.tag J) (τ₂.tag J) < δ := calc
+        dist (τ₁.tag J) (τ₂.tag J) ≤ dist (τ₁.tag J) J.upper + dist J.upper (τ₂.tag J) :=
+        dist_triangle _ _ _
+        _ ≤ ρ + ρ := add_le_add hτ₁_upper hτ₂_upper
+        _ = δ / 2 := by ring
+        _ < δ := half_lt_self hδ
+      have hcoord_dist : dist (τ₁.tag J 0) (τ₂.tag J 0) < δ :=
+        (dist_le_pi_dist (τ₁.tag J) (τ₂.tag J) 0).trans_lt htags_dist
+      -- Trigger the uniform continuity bound using the coordinated metric separation
+      have hf_small : dist (f (τ₁.tag J 0)) (f (τ₂.tag J 0)) < η :=
+        hδf _ htag₁_mem _ htag₂_mem hcoord_dist
+      -- Factor the bounded vector difference through the linear volume operator norm
+      calc
+        ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖
+          = ‖vol J (f (τ₁.tag J 0) - f (τ₂.tag J 0))‖ := by rw [map_sub]
+        _ ≤ ‖vol J‖ * ‖f (τ₁.tag J 0) - f (τ₂.tag J 0)‖ := (vol J).le_opNorm _
+        _ ≤ ‖vol J‖ * η := by
+            rw [← dist_eq_norm]
+            exact mul_le_mul_of_nonneg_left hf_small.le (norm_nonneg _)
+        _ = η * ‖vol J‖ := by ring
+    -- Step 6: Aggregate local bounds over the partition to confirm total metric distance < ε
+    calc
+      dist (integralSum (fun x : Fin 1 → ℝ ↦ f (x 0)) vol π₁)
+           (integralSum (fun x : Fin 1 → ℝ ↦ f (x 0)) vol π₂)
+        = ‖∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0)))‖ := by
+        rw [dist_eq_norm, ← hdiff]
+      _ ≤ ∑ J ∈ π.boxes, ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖ := norm_sum_le _ _
+      _ ≤ ∑ J ∈ π.boxes, η * ‖vol J‖ := Finset.sum_le_sum hterm
+      _ = η * ∑ J ∈ π.boxes, ‖vol J‖ := by rw [Finset.mul_sum]
+      _ ≤ η * C := mul_le_mul_of_nonneg_left (sum_norm_ofDiff_le_norm_mul_eVariationOn a b B g hg π)
+        hη.le
+      _ ≤ ε := by simpa [C, mul_comm, mul_left_comm, mul_assoc] using hηC.le
 
 /-! ## Main theorems -/
 
-/-- Theorem A.1 of Montgomery Vaughan: if `f` is continuous and `g` is bounded variation
-then the Stieltjes integral exists. -/
-theorem exists_of_continuousOn_of_boundedVariationOn
+/-- Theorem A.1 of Montgomery-Vaughan: a continuous integrand and a bounded-variation integrator
+have a Riemann-Stieltjes integral. -/
+theorem exists_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
     (f : ℝ → E) (g : ℝ → F) (hab : a < b)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
     StieltjesIntegrable a b B f g := by
-  have hint := integrable_of_continuousOn_of_boundedVariationOn a b B f g hf hg
-  rw [StieltjesIntegrable.of_lt _ _ _ _ _ hab]
-  exact ⟨_, Integrable.hasIntegral hint⟩
+  -- Extract the definitive limit vector L and its underlying BoxIntegral proof term
+  let int_mode : IntegrationParams := IntegrationParams.Riemann
+  obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn a b B f g hab int_mode hf hg
+  use L
+  -- Unfold the goal to expose the branching definition, then resolve it using a < b
+  rw [HasStieltjesIntegral]
+  rw [if_neg (ne_of_lt hab), if_pos hab]
+  exact hL
 
 /-- Theorem A.2 of Montgomery Vaughan: if ∫ₐᵇ f dg exists, then ∫ₐᵇ g df exists and
 ∫ₐᵇ g df = g(b) * f(b) - g(a) * f(a) - ∫ₐᵇ f dg. -/
