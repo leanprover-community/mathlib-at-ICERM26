@@ -293,8 +293,6 @@ theorem Riemann_toFilteriUnion_eventually_iff_mesh (P : TaggedPrepartition I →
 
 end BoxIntegral.IntegrationParams
 
-#exit
-
 namespace BoxIntegral.BoundaryPoints
 
 open BoxIntegral Stieltjes
