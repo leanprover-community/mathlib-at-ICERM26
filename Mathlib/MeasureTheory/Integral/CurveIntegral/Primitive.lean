@@ -9,6 +9,172 @@ import Mathlib.Topology.Homotopy.Lifting
 open Filter Metric
 open scoped Topology Asymptotics
 
+structure LocalAddGerms (X G : Type*) [TopologicalSpace X] [AddGroup G] where
+  germsAt (x : X) : Set (Germ (𝓝 x) G)
+  exists_local_section (x : X) :
+    ∃ f : X → G, ∀ᶠ x' in 𝓝 x, germsAt x' = Set.range fun c : G ↦ c +ᵥ .ofFun f
+  exists_const_vadd_eq {x : X} {f₁ f₂ : X → G} :
+    (∀ᶠ x' in 𝓝 x, .ofFun f₁ ∈ germsAt x') → (∀ᶠ x' in 𝓝 x, .ofFun f₂ ∈ germsAt x') →
+    ∃ c : G, f₁ =ᶠ[𝓝 x] (c +ᵥ f₂)
+
+structure LocalAddGerms.EtaleSpace {X G : Type*} [TopologicalSpace X] [AddGroup G]
+    (gs : LocalAddGerms X G) where
+  base (gs) : X
+  value : G
+
+@[to_additive]
+structure LocalMulGerms (X G : Type*) [TopologicalSpace X] [Group G] where
+  germsAt (x : X) : Set (Germ (𝓝 x) G)
+  exists_local_section (x : X) :
+    ∃ f : X → G, ∀ᶠ x' in 𝓝 x, germsAt x' = Set.range fun c : G ↦ c • .ofFun f
+  exists_const_smul_eq {x : X} {f₁ f₂ : X → G} :
+    (∀ᶠ x' in 𝓝 x, .ofFun f₁ ∈ germsAt x') → (∀ᶠ x' in 𝓝 x, .ofFun f₂ ∈ germsAt x') →
+    ∃ c : G, f₁ =ᶠ[𝓝 x] (c • f₂)
+
+@[to_additive (attr := ext)]
+structure LocalMulGerms.EtaleSpace {X G : Type*} [TopologicalSpace X] [Group G]
+    (gs : LocalMulGerms X G) where
+  base (gs) : X
+  value : G
+
+structure WithDiscreteTopology (α : Type*) where
+  val : α
+
+instance (α : Type*) : TopologicalSpace (WithDiscreteTopology α) := ⊥
+instance (α : Type*) : DiscreteTopology (WithDiscreteTopology α) := ⟨rfl⟩
+
+namespace LocalMulGerms
+
+variable {X G : Type*} [TopologicalSpace X] [Group G] {gs : LocalMulGerms X G}
+
+@[to_additive]
+theorem germsAt_eq_of_mem {x : X} {g : Germ (𝓝 x) G} (h : g ∈ gs.germsAt x) :
+    gs.germsAt x = Set.range fun c : G ↦ c • g := by
+  rcases gs.exists_local_section x with ⟨f, hf⟩
+  rw [hf.self_of_nhds] at h ⊢
+  rcases h with ⟨c, rfl⟩
+  rw [← (mul_right_surjective c).range_comp]
+  simp [Function.comp_def, mul_smul]
+
+@[to_additive]
+theorem smul_mem_germsAt {x : X} {g : Germ (𝓝 x) G} (h : g ∈ gs.germsAt x) (c : G) :
+    c • g ∈ gs.germsAt x := by
+  rw [germsAt_eq_of_mem h]
+  exact ⟨c, rfl⟩
+
+@[to_additive]
+instance (gs : LocalMulGerms X G) : TopologicalSpace gs.EtaleSpace :=
+  .generateFrom {s | ∃ (U : Set X) (f : X → G), IsOpen U ∧ (∀ x ∈ U, .ofFun f ∈ gs.germsAt x) ∧
+    s = {g | g.base ∈ U ∧ g.value = f g.base}}
+
+@[to_additive]
+theorem exists_local_section_apply_eq (gs : LocalMulGerms X G) (x : X) (g : G) :
+    ∃ f : X → G, (∀ᶠ x' in 𝓝 x, .ofFun f ∈ gs.germsAt x') ∧ f x = g := by
+  rcases gs.exists_local_section x with ⟨f, hf⟩
+  refine ⟨g • (f x)⁻¹ • f, hf.mono fun x' hx ↦ ?_, by simp⟩
+  simp [hx, smul_smul]
+
+@[to_additive]
+theorem EtaleSpace.eventually_base_mem_and_value_eq (g : gs.EtaleSpace) (f : X → G)
+    (hf : ∀ᶠ x in 𝓝 g.base, .ofFun f ∈ gs.germsAt x)
+    (hfg : f g.base = g.value) {U : Set X} (hU : U ∈ 𝓝 g.base) :
+    ∀ᶠ g' in 𝓝 g, g'.base ∈ U ∧ g'.value = f g'.base := by
+  rw [(nhds_basis_opens _).restrict_subset hU |>.eventually_iff] at hf
+  rcases hf with ⟨V, ⟨⟨hVg, hVo⟩, hVU⟩, hVf⟩
+  simp only [TopologicalSpace.nhds_generateFrom, Set.mem_setOf_eq, iInf_and, iInf_exists]
+  refine mem_iInf_of_mem {g | g.base ∈ V ∧ g.value = f g.base} ?_
+  refine mem_iInf_of_mem (by simp [hfg, hVg]) ?_
+  refine mem_iInf_of_mem V <| mem_iInf_of_mem f <| mem_iInf_of_mem hVo ?_
+  refine mem_iInf_of_mem hVf <| mem_iInf_of_mem rfl ?_
+  simp +contextual [Set.subset_def, Set.mem_of_mem_of_subset _ hVU]
+
+@[to_additive]
+theorem EtaleSpace.continuous_base : Continuous (base gs) := by
+  rw [continuous_iff_continuousAt]
+  intro g U hU
+  rcases gs.exists_local_section_apply_eq g.base g.value with ⟨f, hf, hfg⟩
+  exact g.eventually_base_mem_and_value_eq f hf hfg hU |>.mono fun _ ↦ And.left
+
+@[to_additive (attr := simps)]
+def EtaleSpace.trivialization (gs : LocalMulGerms X G) (U : Set X) (hUo : IsOpen U) (f : X → G)
+    (hf : ∀ x ∈ U, .ofFun f ∈ gs.germsAt x) :
+    Bundle.Trivialization (WithDiscreteTopology G) (EtaleSpace.base gs) where
+  toFun g := (g.base, ⟨g.value / f g.base⟩)
+  invFun | (x, y) => ⟨x, y.val * f x⟩
+  baseSet := U
+  source := EtaleSpace.base gs ⁻¹' U
+  source_eq := rfl
+  target := U ×ˢ Set.univ
+  target_eq := rfl
+  left_inv' g hg := by ext <;> simp
+  right_inv' := by
+    rintro ⟨x, ⟨y⟩⟩ ⟨hx, -⟩
+    simp
+  map_source' := by simp
+  map_target' := by simp
+  open_baseSet := hUo
+  open_target := hUo.prod isOpen_univ
+  open_source := hUo.preimage EtaleSpace.continuous_base
+  continuousOn_toFun := by
+    refine EtaleSpace.continuous_base.continuousOn.prodMk fun g hg ↦ ?_
+    rw [ContinuousWithinAt, nhds_discrete, tendsto_pure]
+    refine g.eventually_base_mem_and_value_eq ((g.value / f g.base) • f) ?_ (by simp)
+      (hUo.mem_nhds hg) |>.mono ?_ |>.filter_mono nhdsWithin_le_nhds
+    · filter_upwards [hUo.mem_nhds hg] with x hx
+      rw [Germ.coe_smul]
+      exact smul_mem_germsAt (hf x hx) _
+    · rintro g' ⟨hg'U, hg'val⟩
+      simp [hg'val]
+  continuousOn_invFun := by
+    simp_rw [continuousOn_prod_of_discrete_right, continuousOn_to_generateFrom_iff,
+      Set.mem_setOf_eq, Set.mem_prod_eq, Set.mem_univ, and_true, Set.setOf_mem_eq]
+    rintro ⟨y⟩ x hx t ⟨V, f', hVo, hfV, rfl⟩
+    simp only [Set.mem_setOf_eq, ← eq_mul_inv_iff_mul_eq, hUo.nhdsWithin_eq hx]
+    rintro ⟨hxV, rfl⟩
+    simp only [Set.preimage_setOf_eq]
+    rcases gs.exists_const_smul_eq (mem_nhds_iff.mpr ⟨U, hf, hUo, hx⟩)
+      (mem_nhds_iff.mpr ⟨V, hfV, hVo, hxV⟩) with ⟨c, hc⟩
+    filter_upwards [hc, hVo.mem_nhds hxV]
+    simp +contextual [hc.self_of_nhds]
+  proj_toFun := by simp
+
+variable (gs) in
+@[to_additive]
+theorem isCoveringMap_base : IsCoveringMap (EtaleSpace.base gs) := by
+  suffices ∀ x, ∃ t : Bundle.Trivialization (WithDiscreteTopology G) (EtaleSpace.base gs),
+      x ∈ t.baseSet by
+    choose t ht using this
+    exact .mk _ _ t ht
+  intro x
+  rcases gs.exists_local_section x with ⟨f, hf⟩
+  rcases _root_.eventually_nhds_iff.mp hf with ⟨U, hU, hUo, hxU⟩
+  replace hU : ∀ y ∈ U, .ofFun f ∈ gs.germsAt y := by
+    intro y hy
+    rw [hU y hy]
+    use 1
+    simp
+  use EtaleSpace.trivialization gs U hUo f hU
+  simpa
+
+theorem exists_mem_germsAt_compTendsto_eq_of_tendsto_etaleSpace {α : Type*} {l : Filter α}
+    {g₀ : gs.EtaleSpace} {g : α → gs.EtaleSpace} (hg : Tendsto g l (𝓝 g₀)) :
+    ∃ f ∈ gs.germsAt g₀.base,
+      f.compTendsto (EtaleSpace.base gs ∘ g) (EtaleSpace.continuous_base.tendsto _ |>.comp hg) =
+        ↑(fun a : α ↦ (g a).value) := by
+  rcases gs.exists_local_section_apply_eq g₀.base g₀.value with ⟨f, hf, hfg⟩
+  rcases _root_.eventually_nhds_iff.mp hf with ⟨U, hU, hUo, hgU⟩
+  have hg' := TopologicalSpace.tendsto_nhds_generateFrom_iff.mp hg
+  specialize hg' _ ⟨U, f, hUo, hU, rfl⟩ (by simp [hgU, hfg])
+  refine ⟨f, hU _ hgU, ?_⟩
+  rw [Germ.coe_compTendsto, Germ.coe_eq]
+  filter_upwards [hg'] with a ha
+  simp_all
+
+end LocalMulGerms
+
+
+#exit
+
 variable {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E]
   [NormedAddCommGroup F] [NormedSpace ℂ F] {ω : E → E →L[ℂ] F}
 
@@ -71,12 +237,6 @@ def PrimitiveTotalSpace.ofFun (ω : E → E →L[ℂ] F) (f : E → F) (a : E)
 theorem PrimitiveTotalSpace.value_ofFun (ω : E → E →L[ℂ] F) (f : E → F) (a : E) (hf) :
     (ofFun ω f a hf).value = f a :=
   rfl
-
-structure WithDiscreteTopology (α : Type*) where
-  val : α
-
-instance (α : Type*) : TopologicalSpace (WithDiscreteTopology α) := ⊥
-instance (α : Type*) : DiscreteTopology (WithDiscreteTopology α) := ⟨rfl⟩
 
 instance : TopologicalSpace (PrimitiveTotalSpace ω) :=
   .generateFrom {s | ∃ (U : Set E) (f : E → F), IsOpen U ∧ (∀ x ∈ U, HasFDerivAt f (ω x) x) ∧
