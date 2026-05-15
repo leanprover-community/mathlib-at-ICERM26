@@ -33,6 +33,9 @@ boxes of `π` actually cover the whole `I`. We also define some operations on pr
 We also define a `SemilatticeInf` structure on `BoxIntegral.Prepartition I` for all
 `I : BoxIntegral.Box ι`.
 
+We also define `BoxIntegral.Prepartition.mesh_size` which is the largest sidelength of a box in a
+partition; this is relevant for relating the Box integral to the Riemann integral.
+
 ## Tags
 
 rectangular box, partition
@@ -589,6 +592,33 @@ theorem sum_disj_union_boxes {M : Type*} [AddCommMonoid M] (h : Disjoint π₁.i
     (f : Box ι → M) :
     ∑ J ∈ π₁.boxes ∪ π₂.boxes, f J = (∑ J ∈ π₁.boxes, f J) + ∑ J ∈ π₂.boxes, f J :=
   sum_union <| disjoint_boxes_of_disjoint_iUnion h
+
+section Mesh
+
+variable [Fintype ι]
+
+/-- The mesh size of a partition is the length of the longest side of a box in the partition. -/
+noncomputable def mesh_size {I : Box ι} (π : Prepartition I) : NNReal :=
+  (π.boxes ×ˢ (univ : Finset ι)).sup
+  (fun ⟨ B, i ⟩ ↦ NNReal.mk (B.upper i - B.lower i) (by linarith [B.lower_lt_upper i]))
+
+@[simp]
+theorem mesh_size_le_iff {I : Box ι} (π : Prepartition I) (ε : NNReal) :
+    π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, ∀ i, B.upper i - B.lower i ≤ ε := by
+  simp only [mesh_size, Finset.sup_le_iff, mem_product, mem_boxes,
+    Prod.forall, tsub_le_iff_right, Finset.mem_univ, and_true]
+  refine ⟨ fun h B hB i ↦ ?_, fun h B i hB ↦ (?_ : B.upper i - B.lower i ≤ ε) ⟩
+  · have : B.upper i - B.lower i ≤ ε := h B i hB
+    linarith
+  · linarith [h B hB i]
+
+/-- In one dimension, the mesh size simplifies to the longest length of an interval
+in the partition. -/
+theorem mesh_size_of_fin_one {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_size
+    = π.boxes.sup (fun B ↦ NNReal.mk (B.upper 0 - B.lower 0) (by linarith [B.lower_lt_upper 0]))
+    := by simp [mesh_size]; congr
+
+end Mesh
 
 section Distortion
 

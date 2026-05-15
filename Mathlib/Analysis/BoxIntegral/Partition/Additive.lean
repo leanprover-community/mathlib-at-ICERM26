@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Partition.Split
 public import Mathlib.Analysis.Normed.Operator.Mul
+public import Mathlib.Analysis.BoxIntegral.Box.Ioc
 
 /-!
 # Box additive functions
@@ -22,6 +23,10 @@ integrable function over a box.
 
 In this file we define box-additive functions and prove that a function such that
 `f J = f (J ∩ {x | x i < y}) + f (J ∩ {x | y ≤ x i})` is box-additive.
+
+In one dimension, we associate a box additive map `ofDiff g` to a function `g : ℝ → M` by the
+formula `ofDiff g (Ioc a b) = g b - g a`.  This is used to define the Riemann–Stieltjes integral
+in `BoxIntegral.Stieltjes`.
 
 ## Tags
 
@@ -63,6 +68,8 @@ open Box Prepartition Finset
 variable {N : Type*} [AddCommMonoid M] [AddCommMonoid N] {I₀ : WithTop (Box ι)} {I : Box ι}
   {i : ι}
 
+/-! ### Coercion, extensionality, and the defining property -/
+
 instance : FunLike (ι →ᵇᵃ[I₀] M) (Box ι) M where
   coe := toFun
   coe_injective' f g h := by cases f; cases g; congr
@@ -77,9 +84,16 @@ theorem coe_injective : Injective fun (f : ι →ᵇᵃ[I₀] M) x => f x :=
 
 theorem coe_inj {f g : ι →ᵇᵃ[I₀] M} : (f : Box ι → M) = g ↔ f = g := DFunLike.coe_fn_eq
 
+@[ext]
+theorem ext_funLike {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
+    {f g : ι →ᵇᵃ[I₀] M} (h : ∀ J, f J = g J) : f = g :=
+  DFunLike.ext _ _ h
+
 theorem sum_partition_boxes (f : ι →ᵇᵃ[I₀] M) (hI : ↑I ≤ I₀) {π : Prepartition I}
     (h : π.IsPartition) : ∑ J ∈ π.boxes, f J = f I :=
   f.sum_partition_boxes' I hI π h
+
+/-! ### Additive monoid structure -/
 
 @[simps -fullyApplied]
 instance : Zero (ι →ᵇᵃ[I₀] M) :=
@@ -100,6 +114,17 @@ instance {R} [Monoid R] [DistribMulAction R M] : SMul R (ι →ᵇᵃ[I₀] M) :
 
 instance : AddCommMonoid (ι →ᵇᵃ[I₀] M) :=
   Function.Injective.addCommMonoid _ coe_injective rfl (fun _ _ => rfl) fun _ _ => rfl
+
+@[simp]
+lemma add_apply {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
+    (f g : ι →ᵇᵃ[I₀] M) (J : Box ι) : (f + g) J = f J + g J := rfl
+
+@[simp]
+lemma smul_apply {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
+    {R : Type*} [Monoid R] [DistribMulAction R M]
+    (c : R) (f : ι →ᵇᵃ[I₀] M) (J : Box ι) : (c • f) J = c • (f J) := rfl
+
+/-! ### Constructions and combinators -/
 
 @[simp]
 theorem map_split_add (f : ι →ᵇᵃ[I₀] M) (hI : ↑I ≤ I₀) (i : ι) (x : ℝ) :
@@ -163,7 +188,105 @@ theorem sum_boxes_congr [Finite ι] (f : ι →ᵇᵃ[I₀] M) (hI : ↑I ≤ I�
   exacts [(WithTop.coe_le_coe.2 <| π₁.le_of_mem hJ).trans hI,
     (WithTop.coe_le_coe.2 <| π₂.le_of_mem hJ).trans hI]
 
+section AddCommGroup
+
+/-! ### Additive group structure -/
+
+variable {M : Type*} [AddCommGroup M]
+
+instance {ι : Type*} {I₀ : WithTop (Box ι)} : Neg (ι →ᵇᵃ[I₀] M) :=
+  ⟨fun f ↦
+    ⟨-(f : Box ι → M), fun I hI π hπ ↦ by
+      simp only [Pi.neg_apply, Finset.sum_neg_distrib, sum_partition_boxes _ hI hπ]⟩⟩
+
+instance {ι : Type*} {I₀ : WithTop (Box ι)} : Sub (ι →ᵇᵃ[I₀] M) :=
+  ⟨fun f g ↦
+    ⟨(f : Box ι → M) - g, fun I hI π hπ ↦ by
+      simp only [Pi.sub_apply, Finset.sum_sub_distrib, sum_partition_boxes _ hI hπ]⟩⟩
+
+instance {ι : Type*} {I₀ : WithTop (Box ι)} : AddCommGroup (ι →ᵇᵃ[I₀] M) :=
+  Function.Injective.addCommGroup _ DFunLike.coe_injective
+    rfl (fun _ _ ↦ rfl) (fun _ ↦ rfl) (fun _ _ ↦ rfl)
+    (fun _ _ ↦ rfl) (fun _ _ ↦ rfl)
+
+@[simp]
+lemma neg_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f : ι →ᵇᵃ[I₀] M) (J : Box ι) :
+    (-f) J = -(f J) := rfl
+
+@[simp]
+lemma sub_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f g : ι →ᵇᵃ[I₀] M) (J : Box ι) :
+    (f - g) J = f J - g J := rfl
+
+/-! ## The differential `ofDiff` of a function on `ℝ` -/
+
+/-- The box-additive "differential" sending a function `g : ℝ → M` to the box-additive map on
+`Box (Fin 1)` defined by `J ↦ g (J.upper 0) - g (J.lower 0)`, bundled as an
+`AddMonoidHom`. -/
+def ofDiff : (ℝ → M) →+ ((Fin 1) →ᵇᵃ M) where
+  toFun g := ofMapSplitAdd
+    (fun J : Box (Fin 1) ↦ g (J.upper 0) - g (J.lower 0)) ⊤
+    (by
+      intro I _ i x hx
+      fin_cases i
+      rw [Box.splitLower_def hx, Box.splitUpper_def hx]
+      simp [Option.elim'])
+  map_zero' := by
+    ext J
+    change (0 : ℝ → M) (J.upper 0) - (0 : ℝ → M) (J.lower 0) = (0 : (Fin 1) →ᵇᵃ M) J
+    simp
+  map_add' g h := by
+    ext J
+    change (g + h) (J.upper 0) - (g + h) (J.lower 0) =
+      (g (J.upper 0) - g (J.lower 0)) + (h (J.upper 0) - h (J.lower 0))
+    simp [Pi.add_apply]
+    abel
+
+@[simp]
+lemma ofDiff_apply (g : ℝ → M) (J : Box (Fin 1)) :
+    ofDiff g J = g (J.upper 0) - g (J.lower 0) := rfl
+
+@[simp]
+lemma ofDiff_smul {R : Type*} [Monoid R] [DistribMulAction R M]
+    (c : R) (g : ℝ → M) : ofDiff (c • g) = c • ofDiff g := by
+  ext J
+  simp [smul_sub]
+
+/-- The Riemann–Stieltjes differential of a constant function vanishes. -/
+@[simp]
+lemma ofDiff_const (c : M) : ofDiff (fun _ : ℝ ↦ c) = 0 := by
+  ext J
+  simp
+
+@[simp]
+lemma ofDiff_Ioc (g : ℝ → M) {a b : ℝ} (h : a < b) : ofDiff g (Ioc a b) = g b - g a := by simp [h]
+
+/-- `ofDiff g` vanishes iff `g` is constant. -/
+lemma ofDiff_eq_zero_iff {g : ℝ → M} : ofDiff g = 0 ↔ ∀ x y, g x = g y := by
+  refine ⟨fun h x y ↦ ?_, fun h ↦ ?_⟩
+  · have key {a b : ℝ} (hab : a < b) : g a = g b := by
+      replace h := DFunLike.congr_fun h (Ioc a b)
+      simp [hab] at h
+      grind
+    rcases lt_trichotomy x y with hlt | rfl | hgt
+    · exact key hlt
+    · rfl
+    · exact (key hgt).symm
+  · ext J
+    simp [ofDiff_apply, h (J.upper 0) (J.lower 0), sub_self]
+
+/-- `ofDiff` commutes with `BoxAdditiveMap.map` along an `AddMonoidHom`: postcomposing the
+differential `ofDiff g` by `φ : M →+ N` is the same as taking the differential of `φ ∘ g`. -/
+@[simp]
+lemma map_ofDiff {N : Type*} [AddCommGroup N] (g : ℝ → M) (φ : M →+ N) :
+    (ofDiff g).map φ = ofDiff (φ ∘ g) := by
+  ext J
+  simp [map_sub]
+
+end AddCommGroup
+
 section ToSMul
+
+/-! ### Scalar multiplication on a normed space -/
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
 
@@ -176,6 +299,8 @@ def toSMul (f : ι →ᵇᵃ[I₀] ℝ) : ι →ᵇᵃ[I₀] E →L[ℝ] E :=
 theorem toSMul_apply (f : ι →ᵇᵃ[I₀] ℝ) (I : Box ι) (x : E) : f.toSMul I x = f I • x := rfl
 
 end ToSMul
+
+/-! ### Difference along an axis: `upper − lower` over faces -/
 
 /-- Given a box `I₀` in `ℝⁿ⁺¹`, `f x : Box (Fin n) → G` is a family of functions indexed by a real
 `x` and for `x ∈ [I₀.lower i, I₀.upper i]`, `f x` is box-additive on subboxes of the `i`-th face of
