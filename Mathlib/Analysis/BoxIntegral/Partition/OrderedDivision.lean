@@ -44,6 +44,7 @@ def snoc (π : OrderedDivision) (c : ℝ) : OrderedDivision where
 noncomputable def box (π : OrderedDivision) (i : Fin π.N) : Box (Fin 1) :=
   Ioc (π.x i.castSucc) (π.x i.succ)
 
+
 theorem box_injective (π : OrderedDivision) (hπ : π.StrictMono) :
     Function.Injective π.box := by
   intro i j hij
@@ -53,14 +54,19 @@ theorem box_injective (π : OrderedDivision) (hπ : π.StrictMono) :
     simpa [box, Ioc.lower (hπ i.castSucc_lt_succ),
       Ioc.lower (hπ j.castSucc_lt_succ)] using h
 
+noncomputable def boxMap {π : OrderedDivision} (hπ : π.StrictMono) : Finset (Box (Fin 1)) :=
+  (Finset.univ : Finset (Fin π.N)).map ⟨π.box, π.box_injective hπ⟩
+
+
 /-- The prepartition of `Ioc a b` associated to an ordered division with endpoints `a` and `b`. -/
 noncomputable def toPrepartition {a b : ℝ}
     (π : OrderedDivision) (hπ : π.StrictMono)
     (ha : π.x 0 = a) (hb : π.x (Fin.last π.N) = b) :
     Prepartition (Ioc a b) where
-  boxes := (Finset.univ : Finset (Fin π.N)).map ⟨π.box, π.box_injective hπ⟩
+  boxes := π.boxMap hπ
   le_of_mem' := by
     intro J hJ
+    unfold boxMap at hJ
     rw [Finset.mem_map] at hJ
     rcases hJ with ⟨i, _, rfl⟩
     have hsub_left : π.x 0 ≤ π.x i.castSucc := hπ.monotone (Fin.zero_le _)
@@ -81,6 +87,7 @@ noncomputable def toPrepartition {a b : ℝ}
   pairwiseDisjoint := by
     intro J hJ K hK hne
     simp only [Finset.mem_coe] at hJ hK
+    unfold boxMap at *
     rw [Finset.mem_map] at hJ hK
     rcases hJ with ⟨i, _, rfl⟩
     rcases hK with ⟨j, _, rfl⟩
@@ -137,9 +144,8 @@ theorem toPrepartition_isPartition {a b : ℝ}
   let i : Fin π.N := ⟨m - 1, by omega⟩
   refine ⟨π.box i, ?_, ?_⟩
   · change π.box i ∈ (π.toPrepartition hπ ha hb).boxes
-    dsimp [toPrepartition]
-    rw [Finset.mem_map]
-    exact ⟨i, Finset.mem_univ _, rfl⟩
+    unfold toPrepartition boxMap
+    simp
   · rw [box]
     refine (mem_Ioc (hπ i.castSucc_lt_succ) y).2 ?_
     constructor
@@ -155,6 +161,19 @@ theorem toPrepartition_isPartition {a b : ℝ}
         dsimp [i]
         omega
       simpa [hs] using hm_le
+
+noncomputable def fromPartition {a b : ℝ}
+    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition) :
+    OrderedDivision := by sorry
+
+theorem fromPartition_strictMono {a b : ℝ}
+    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition) :
+    (fromPartition hπ).StrictMono := by sorry
+
+theorem fromPartition_map {a b : ℝ}
+    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition):
+    boxMap (fromPartition_strictMono hπ)  = π.boxes := by sorry
+
 
 end OrderedDivision
 
