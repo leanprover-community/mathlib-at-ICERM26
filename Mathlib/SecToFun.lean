@@ -191,6 +191,14 @@ lemma total_secToFun_funToSeq_eventually_eq {x : B} (hx : x ∈ e.baseSet) (s : 
 lemma total_secToFun_funToSeq {x : B} (hx : x ∈ e.baseSet) (s : B → F) :
     T% (e.secToFun <| e.funToSec s) x = T% s x :=
   e.total_secToFun_funToSeq_eventually_eq hx s |>.self_of_nhds
+#where
+
+omit [TopologicalSpace F]
+variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] [NormedAddCommGroup F] [NormedSpace 𝕜 F]
+  [∀ x, AddCommGroup (E x)] [∀ x, Module 𝕜 (E x)] [∀ x, NormedAddCommGroup (E x)]
+  [FiberBundle F E] [VectorBundle 𝕜 F E]
+
+lemma secToFun_eq_zero_iff? {t : (x : B) → E x} {x : B} : e.secToFun t x = 0 ↔ t x = 0 := sorry
 
 end
 

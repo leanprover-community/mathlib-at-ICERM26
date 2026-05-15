@@ -41,7 +41,7 @@ variable {γ γ' : 𝕜 → B}
 
 private lemma vanishesRelativeToOrder_zero_iff' (γ : 𝕜 → B) : vanishesRelativeToOrder s 0 Ψ γ ↔ Ψ.secToFun s (γ 0) = 0 := by
   simp [vanishesRelativeToOrder]
-
+#where
 variable (Ψ) in
 /-- A section `s` vanishes to order zero relative to `Ψ` and `γ` iff `s (γ 0) = 0`. -/
 --@[simp]
@@ -50,6 +50,13 @@ lemma vanishesRelativeToOrder_zero_iff {γ : 𝕜 → B} (hγ : γ 0 ∈ Ψ.base
   rw [vanishesRelativeToOrder_zero_iff']
   refine ⟨fun hs ↦ ?_, fun hs ↦ ?_⟩
   · -- goal: s (γ 0) = 0
+    rw [← funToSec_secToFun Ψ hγ s]
+    --set f := Ψ.secToFun s
+    -- lemma f t = 0 => funToSec f t = 0
+    unfold funToSec secToFun
+    set x := γ 0
+    -- now back to square one!
+    -- rw [symm_apply_apply_mk _ hγ]
     sorry
   · -- missing API for secToFun, if this is even true??
     --rw [Ψ.secToFun_apply_of_eq]
@@ -63,6 +70,7 @@ lemma vanishesRelativeToOrder_zero_iff {γ : 𝕜 → B} (hγ : γ 0 ∈ Ψ.base
     --simp [Ψ.secToFun]
     sorry
 
+#exit
 omit [∀ (x : B), IsTopologicalAddGroup (V x)]
   [∀ (x : B), ContinuousSMul 𝕜 (V x)]
   [VectorBundle 𝕜 F V] in
