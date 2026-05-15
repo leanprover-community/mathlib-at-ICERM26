@@ -4,14 +4,21 @@ import Mathlib.Tactic.Untopify
 
 open scoped ENNReal NNReal
 
-example (a b : ℝ≥0∞) (h : a = b) : a - b = b - a := by untopify
-
-example (a b : ℝ≥0∞) (h : a ≤ b) : a - b < b + 1 := by
+example (a b : ℝ≥0∞) (h : a = b) : a - b = b - a := by
   untopify
-  all_goals try linarith
+
+set_option trace.profiler true in
+example (a b : ℝ≥0∞) (h : a ≤ b) : a < 1 := by
+
+  untopify
+
+  sorry
+
+  --all_goals try linarith
   -- this goal should have actually been solved by `linarith`, but there's a small missing feature
   sorry
 
+#exit
 example (a b : ℝ≥0∞) (h : a ≤ b) : a - 2 * b ≤ b + 1 := by
   untopify
   all_goals try linarith

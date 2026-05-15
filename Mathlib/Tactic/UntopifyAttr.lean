@@ -1,11 +1,11 @@
 module
 
-public import Mathlib.Tactic.Attr.Register
+public import Lean.Meta.Tactic.Grind.RegisterCommand
 
 public meta section
 
-/-- A simp set for simplifying expressions involving `⊤`. -/
-register_simp_attr untopify_top
+/-- A grind set for simplifying expressions involving `⊤`. -/
+register_grind_attr untopify_top
 
-/-- A simp set for pushing coercions from `α` to `WithTop α`, or type synonyms of that. -/
-register_simp_attr untopify_coe
+/-- A grind set for pushing coercions from `α` to `WithTop α`, or type synonyms of that. -/
+register_grind_attr untopify_coe
