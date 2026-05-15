@@ -1020,6 +1020,21 @@ lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
   rw [← Finset.mul_sum]
   gcongr
 
+  let endpts : Finset ℝ :=
+    (π.boxes.image (fun J ↦ J.lower 0)) ∪ (π.boxes.image (fun J ↦ J.upper 0))
+  let L : List ℝ := endpts.sort (· ≤ ·)
+
+  let x : ℕ → ℝ := fun i ↦ if h : i < L.length then L.get ⟨i, h⟩ else b
+  let n : ℕ := L.length - 1
+
+  have h_sum_list : ∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖ ≤
+      (L.zipWith (fun u v ↦ ‖g v - g u‖) L.tail).sum := by
+    -- The sum over disjoint box endpoints is naturally bounded by the continuous sequential
+    -- sum over all sorted endpoints.
+    sorry
+
+  -- Step 4: Feed this sorted, monotone real sequence directly into your bounding lemma!
+  -- L[0] ≤ L[1] ≤ L[2] ...
   sorry
 
 
