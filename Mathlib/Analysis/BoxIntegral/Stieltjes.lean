@@ -40,14 +40,14 @@ name may be subject to change if further variants of Stieltjes integration are i
 
 ## Notation
 
-`∫⟨B⟩ x in a..b, f x d g` is notation for `stieltjesIntegral a b B (fun x ↦ f x) g`,
+`∫⟨B⟩ x in a..b, f x ∂g` is notation for `stieltjesIntegral a b B (fun x ↦ f x) g`,
 scoped to the `BoxIntegral.Stieltjes` namespace (`open scoped BoxIntegral.Stieltjes` to make
 it available). It parallels Mathlib's `∫ x in a..b, f x ∂μ` notation for `intervalIntegral`, with
 the bilinear pairing `B` carried explicitly in angle brackets since it has no canonical default.
 
 ## Main theorems
 
-* `Stieltjes.HasStieltjesIntegral_iff_lim_sum`: textbook ε-δ characterization — `L` is the
+* `Stieltjes.hasStieltjesIntegral_iff_lim_sum`: textbook ε-δ characterization — `L` is the
   Riemann–Stieltjes integral iff the Riemann–Stieltjes sums `∑ B (f (π.tag x)) (g(x.upper) -
   g(x.lower))` converge to `L` as the mesh size of the (Henstock) tagged partition tends to 0.
 `StieltjesIntegrable` / `stieltjesIntegral`
@@ -56,14 +56,14 @@ the bilinear pairing `B` carried explicitly in angle brackets since it has no ca
 * `Stieltjes.exists_of_continuousOn_of_boundedVariationOn` (Theorem A.1): if `f` is continuous
   and `g` has bounded variation on `[a, b]`, then the Riemann–Stieltjes integral exists.
 * `Stieltjes.HasStieltjesIntegral.by_parts` / `StieltjesIntegrable.by_parts` /
-  `stieltjesIntegral.by_parts` (Theorem A.2): integration by parts — if `∫ f dg` exists, then
-  so does `∫ g df`, and the two are related by `∫ g df = B (f b) (g b) - B (f a) (g a) - ∫ f dg`.
+  `stieltjesIntegral.by_parts` (Theorem A.2): integration by parts — if `∫ f ∂g` exists, then
+  so does `∫ g ∂f`, and the two are related by `∫ g ∂f = B (f b) (g b) - B (f a) (g a) - ∫ f ∂g`.
 * `Stieltjes.variation_of_derivative` (Theorem A.3(a)) and
   `Stieltjes.integral_of_derivative` (Theorem A.3(b)): when `g` is `C¹`, the total variation
   and the Riemann–Stieltjes integral are computed from `g′`.
 * `Stieltjes.stieltjesIntegral_eq_intervalIntegral_of_contDiffOn`: function-level form of
   Theorem A.3(b) — when `g` is `C¹` and `f` is Riemann integrable, the Stieltjes integral
-  `∫⟨B⟩ x in a..b, f x d g` equals the ordinary interval integral `∫ x in a..b, B (f x) (g′ x)`.
+  `∫⟨B⟩ x in a..b, f x ∂g` equals the ordinary interval integral `∫ x in a..b, B (f x) (g′ x)`.
 * `Stieltjes.integral_le_integral_of_variation` (Theorem A.4): a norm bound on the integral
   in terms of the variation of `g`.
 * `Stieltjes.hasStieltjesIntegral_id_iff_hasIntegral_volume`: when the integrator is the
@@ -595,338 +595,14 @@ theorem taggedSum_eq_integralSum {N : ℕ} {a b : ℝ} (hab : a < b)
 
 end mynamespace
 
-namespace BoxIntegral.BoxAdditiveMap
-
-/-! ## `BoxIntegral.BoxAdditiveMap` extensions (to upstream)
-
-The declarations in this section are *not* Stieltjes-specific. They fill in gaps in the
-`BoxAdditiveMap` API in `Mathlib.Analysis.BoxIntegral.Partition.Additive`:
-
-* the `@[ext]` lemma `ext_funLike`;
-* the `_apply` simp lemmas `add_apply`, `smul_apply`, `neg_apply`, `sub_apply` (companions to
-  the existing `@[simps -fullyApplied]` `Zero` instance);
-* the `Neg` and `Sub` instances when `M : AddCommGroup`, alongside the existing
-  `Zero` / `Add` / `SMul` / `AddCommMonoid` instances;
-* the packaged `AddCommGroup (ι →ᵇᵃ[I₀] M)` instance (via `Function.Injective.addCommGroup`
-  on `DFunLike.coe`).
-
-Once these land upstream the local declarations here should be removed.
--/
-
-@[ext]
-theorem ext_funLike {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
-    {f g : ι →ᵇᵃ[I₀] M} (h : ∀ J, f J = g J) : f = g :=
-  DFunLike.ext _ _ h
-
-@[simp]
-lemma add_apply {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
-    (f g : ι →ᵇᵃ[I₀] M) (J : Box ι) : (f + g) J = f J + g J := rfl
-
-@[simp]
-lemma smul_apply {ι M : Type*} [AddCommMonoid M] {I₀ : WithTop (Box ι)}
-    {R : Type*} [Monoid R] [DistribMulAction R M]
-    (c : R) (f : ι →ᵇᵃ[I₀] M) (J : Box ι) : (c • f) J = c • (f J) := rfl
-
-variable {M : Type*} [AddCommGroup M]
-
-instance {ι : Type*} {I₀ : WithTop (Box ι)} : Neg (ι →ᵇᵃ[I₀] M) :=
-  ⟨fun f ↦
-    ⟨-(f : Box ι → M), fun I hI π hπ ↦ by
-      simp only [Pi.neg_apply, Finset.sum_neg_distrib, sum_partition_boxes _ hI hπ]⟩⟩
-
-instance {ι : Type*} {I₀ : WithTop (Box ι)} : Sub (ι →ᵇᵃ[I₀] M) :=
-  ⟨fun f g ↦
-    ⟨(f : Box ι → M) - g, fun I hI π hπ ↦ by
-      simp only [Pi.sub_apply, Finset.sum_sub_distrib, sum_partition_boxes _ hI hπ]⟩⟩
-
-instance {ι : Type*} {I₀ : WithTop (Box ι)} : AddCommGroup (ι →ᵇᵃ[I₀] M) :=
-  Function.Injective.addCommGroup _ DFunLike.coe_injective
-    rfl (fun _ _ ↦ rfl) (fun _ ↦ rfl) (fun _ _ ↦ rfl)
-    (fun _ _ ↦ rfl) (fun _ _ ↦ rfl)
-
-@[simp]
-lemma neg_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f : ι →ᵇᵃ[I₀] M) (J : Box ι) :
-    (-f) J = -(f J) := rfl
-
-@[simp]
-lemma sub_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f g : ι →ᵇᵃ[I₀] M) (J : Box ι) :
-    (f - g) J = f J - g J := rfl
-
-/-! ## The differential `ofDiff` of a function on `ℝ` -/
-
-/-- The box-additive "differential" sending a function `g : ℝ → M` to the box-additive map on
-`Box (Fin 1)` defined by `J ↦ g (J.upper 0) - g (J.lower 0)`, bundled as an
-`AddMonoidHom`. -/
-def ofDiff : (ℝ → M) →+ ((Fin 1) →ᵇᵃ M) where
-  toFun g := ofMapSplitAdd
-    (fun J : Box (Fin 1) ↦ g (J.upper 0) - g (J.lower 0)) ⊤
-    (by
-      intro I _ i x hx
-      fin_cases i
-      rw [Box.splitLower_def hx, Box.splitUpper_def hx]
-      simp [Option.elim'])
-  map_zero' := by
-    ext J
-    change (0 : ℝ → M) (J.upper 0) - (0 : ℝ → M) (J.lower 0) = (0 : (Fin 1) →ᵇᵃ M) J
-    simp
-  map_add' g h := by
-    ext J
-    change (g + h) (J.upper 0) - (g + h) (J.lower 0) =
-      (g (J.upper 0) - g (J.lower 0)) + (h (J.upper 0) - h (J.lower 0))
-    simp [Pi.add_apply]
-    abel
-
-@[simp]
-lemma ofDiff_apply (g : ℝ → M) (J : Box (Fin 1)) :
-    ofDiff g J = g (J.upper 0) - g (J.lower 0) := rfl
-
-@[simp]
-lemma ofDiff_smul {R : Type*} [Monoid R] [DistribMulAction R M]
-    (c : R) (g : ℝ → M) : ofDiff (c • g) = c • ofDiff g := by
-  ext J
-  simp [smul_sub]
-
-/-- The Riemann–Stieltjes differential of a constant function vanishes. -/
-@[simp]
-lemma ofDiff_const (c : M) : ofDiff (fun _ : ℝ ↦ c) = 0 := by
-  ext J
-  simp
-
-@[simp]
-lemma ofDiff_Ioc (g : ℝ → M) {a b : ℝ} (h : a < b) : ofDiff g (Ioc a b) = g b - g a := by simp [h]
-
-/-- `ofDiff g` vanishes iff `g` is constant. -/
-lemma ofDiff_eq_zero_iff {g : ℝ → M} : ofDiff g = 0 ↔ ∀ x y, g x = g y := by
-  refine ⟨fun h x y ↦ ?_, fun h ↦ ?_⟩
-  · have key {a b : ℝ} (hab : a < b) : g a = g b := by
-      replace h := DFunLike.congr_fun h (Ioc a b)
-      simp [hab] at h
-      grind
-    rcases lt_trichotomy x y with hlt | rfl | hgt
-    · exact key hlt
-    · rfl
-    · exact (key hgt).symm
-  · ext J
-    simp [ofDiff_apply, h (J.upper 0) (J.lower 0), sub_self]
-
-/-- `ofDiff` commutes with `BoxAdditiveMap.map` along an `AddMonoidHom`: postcomposing the
-differential `ofDiff g` by `φ : M →+ N` is the same as taking the differential of `φ ∘ g`. -/
-@[simp]
-lemma map_ofDiff {N : Type*} [AddCommGroup N] (g : ℝ → M) (φ : M →+ N) :
-    (ofDiff g).map φ = ofDiff (φ ∘ g) := by
-  ext J
-  simp [map_sub]
-
-/-- The Riemann–Stieltjes differential of `ContinuousLinearMap.lsmul ℝ ℝ : ℝ → (E →L[ℝ] E)`
-equals the Lebesgue volume box-additive map on `Box (Fin 1)`. Mathematically, this says that
-the Stieltjes integral against the identity integrator (paired with scalar multiplication)
-agrees with the ordinary Riemann integral on the real line. -/
-lemma ofDiff_lsmul_eq_volume {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] :
-    ofDiff (fun x : ℝ ↦ (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E) x) =
-      (BoxAdditiveMap.volume : (Fin 1) →ᵇᵃ E →L[ℝ] E) := by
-  ext
-  simp [volume_apply]
-  module
-
-end BoxIntegral.BoxAdditiveMap
-
-namespace BoxIntegral
-
-/-! ## Linearity of `BoxIntegral.HasIntegral` in the volume (to upstream)
-
-The lemmas in this section extend `BoxIntegral.HasIntegral`'s integrand-side linearity
-(`HasIntegral.add`, `.neg`, `.sub`, `.smul`, `hasIntegral_zero` in `BoxIntegral/Basic.lean`)
-to the volume side. They belong upstream next to their integrand-side counterparts.
--/
-
-variable {ι : Type*} {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-  [NormedAddCommGroup F] [NormedSpace ℝ F]
-variable {I : Box ι} {l : IntegrationParams}
-
-@[simp]
-theorem integralSum_zero_vol (f : (ι → ℝ) → E) (π : TaggedPrepartition I) :
-    integralSum f (0 : ι →ᵇᵃ E →L[ℝ] F) π = 0 := by
-  simp [integralSum]
-
-@[simp]
-theorem integralSum_add_vol (f : (ι → ℝ) → E) (vol₁ vol₂ : ι →ᵇᵃ E →L[ℝ] F)
-    (π : TaggedPrepartition I) :
-    integralSum f (vol₁ + vol₂) π = integralSum f vol₁ π + integralSum f vol₂ π := by
-  simp [integralSum, BoxAdditiveMap.add_apply, ContinuousLinearMap.add_apply,
-    Finset.sum_add_distrib]
-
-@[simp]
-theorem integralSum_neg_vol (f : (ι → ℝ) → E) (vol : ι →ᵇᵃ E →L[ℝ] F)
-    (π : TaggedPrepartition I) :
-    integralSum f (-vol) π = -integralSum f vol π := by
-  simp [integralSum, BoxAdditiveMap.neg_apply, ContinuousLinearMap.neg_apply,
-    Finset.sum_neg_distrib]
-
-@[simp]
-theorem integralSum_sub_vol (f : (ι → ℝ) → E) (vol₁ vol₂ : ι →ᵇᵃ E →L[ℝ] F)
-    (π : TaggedPrepartition I) :
-    integralSum f (vol₁ - vol₂) π = integralSum f vol₁ π - integralSum f vol₂ π := by
-  simp [integralSum, BoxAdditiveMap.sub_apply, ContinuousLinearMap.sub_apply,
-    Finset.sum_sub_distrib]
-
-@[simp]
-theorem integralSum_smul_vol (c : ℝ) (f : (ι → ℝ) → E) (vol : ι →ᵇᵃ E →L[ℝ] F)
-    (π : TaggedPrepartition I) :
-    integralSum f (c • vol) π = c • integralSum f vol π := by
-  simp [integralSum, BoxAdditiveMap.smul_apply, ContinuousLinearMap.smul_apply,
-    Finset.smul_sum]
-
-variable [Fintype ι] {f : (ι → ℝ) → E}
-
-theorem hasIntegral_zero_vol : HasIntegral I l f (0 : ι →ᵇᵃ E →L[ℝ] F) 0 := by
-  unfold HasIntegral
-  rw [funext (integralSum_zero_vol f) (g := (0 : TaggedPrepartition I → F))]
-  exact tendsto_const_nhds
-
-theorem HasIntegral.add_vol {vol₁ vol₂ : ι →ᵇᵃ E →L[ℝ] F} {y₁ y₂ : F}
-    (h₁ : HasIntegral I l f vol₁ y₁) (h₂ : HasIntegral I l f vol₂ y₂) :
-    HasIntegral I l f (vol₁ + vol₂) (y₁ + y₂) := by
-  unfold HasIntegral at h₁ h₂ ⊢
-  rw [funext (integralSum_add_vol f vol₁ vol₂)]
-  exact h₁.add h₂
-
-theorem HasIntegral.neg_vol {vol : ι →ᵇᵃ E →L[ℝ] F} {y : F}
-    (h : HasIntegral I l f vol y) : HasIntegral I l f (-vol) (-y) := by
-  unfold HasIntegral at h ⊢
-  rw [funext (integralSum_neg_vol f vol)]
-  exact h.neg
-
-theorem HasIntegral.sub_vol {vol₁ vol₂ : ι →ᵇᵃ E →L[ℝ] F} {y₁ y₂ : F}
-    (h₁ : HasIntegral I l f vol₁ y₁) (h₂ : HasIntegral I l f vol₂ y₂) :
-    HasIntegral I l f (vol₁ - vol₂) (y₁ - y₂) := by
-  simpa only [sub_eq_add_neg] using h₁.add_vol h₂.neg_vol
-
-theorem HasIntegral.smul_vol {vol : ι →ᵇᵃ E →L[ℝ] F} {y : F}
-    (h : HasIntegral I l f vol y) (c : ℝ) :
-    HasIntegral I l f (c • vol) (c • y) := by
-  unfold HasIntegral at h ⊢
-  rw [funext (integralSum_smul_vol c f vol)]
-  exact (tendsto_const_nhds : Filter.Tendsto _ _ (nhds c)).smul h
-
-/-! ### Intertwining `HasIntegral` by continuous linear maps -/
-
-/-- If `φ : E →L[ℝ] E'` acts on integrands and `ψ : F →L[ℝ] F'` acts on integrated values, and
-`(vol, vol')` are intertwined in the sense that the diagram
-```
-        vol J
-   E ─────────→ F
-   │            │
-   φ            ψ
-   ↓            ↓
-   E' ────────→ F'
-        vol' J
-```
-commutes for every box `J` — i.e. `ψ (vol J e) = vol' J (φ e)` for all `J, e` — then `HasIntegral`
-transports along `(φ, ψ)`: if `f` has integral `y` under `vol`, then `φ ∘ f` has integral `ψ y`
-under `vol'`. -/
-theorem HasIntegral.map {E' F' : Type*}
-    [NormedAddCommGroup E'] [NormedSpace ℝ E'] [NormedAddCommGroup F'] [NormedSpace ℝ F']
-    {vol : ι →ᵇᵃ E →L[ℝ] F} {vol' : ι →ᵇᵃ E' →L[ℝ] F'} {y : F}
-    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F')
-    (hvol : ∀ (J : Box ι) (e : E), ψ (vol J e) = vol' J (φ e))
-    (h : HasIntegral I l f vol y) :
-    HasIntegral I l (fun x ↦ φ (f x)) vol' (ψ y) := by
-  have hSum : ∀ π : TaggedPrepartition I,
-      integralSum (fun x ↦ φ (f x)) vol' π = ψ (integralSum f vol π) := fun π ↦ by
-    simp only [integralSum, map_sum]
-    exact Finset.sum_congr rfl fun J _ ↦ (hvol J (f (π.tag J))).symm
-  unfold HasIntegral at h ⊢
-  exact ((ψ.continuous.tendsto y).comp h).congr fun π ↦ (hSum π).symm
-
-/-- Existence version of `HasIntegral.map`: integrability is preserved when transporting
-along an intertwined pair of continuous linear maps. -/
-theorem Integrable.map {E' F' : Type*}
-    [NormedAddCommGroup E'] [NormedSpace ℝ E'] [NormedAddCommGroup F'] [NormedSpace ℝ F']
-    {vol : ι →ᵇᵃ E →L[ℝ] F} {vol' : ι →ᵇᵃ E' →L[ℝ] F'}
-    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F')
-    (hvol : ∀ (J : Box ι) (e : E), ψ (vol J e) = vol' J (φ e))
-    (h : Integrable I l f vol) : Integrable I l (fun x ↦ φ (f x)) vol' :=
-  (h.hasIntegral.map φ ψ hvol).integrable
-
-/-- Function-level version of `HasIntegral.map`: applying `ψ` to the integral of `f` against
-`vol` equals the integral of `φ ∘ f` against `vol'`, when `f` is integrable and the volumes
-are intertwined. -/
-theorem integral_map {E' F' : Type*}
-    [NormedAddCommGroup E'] [NormedSpace ℝ E'] [NormedAddCommGroup F'] [NormedSpace ℝ F']
-    {vol : ι →ᵇᵃ E →L[ℝ] F} {vol' : ι →ᵇᵃ E' →L[ℝ] F'}
-    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F')
-    (hvol : ∀ (J : Box ι) (e : E), ψ (vol J e) = vol' J (φ e))
-    (h : Integrable I l f vol) :
-    integral I l (fun x ↦ φ (f x)) vol' = ψ (integral I l f vol) := by
-  rw [(h.hasIntegral.map φ ψ hvol).integral_eq, h.hasIntegral.integral_eq]
-
-/-! ### Additivity along a partition -/
-
-/-- Box-integral additivity along a partition: if `π : Prepartition I` is a partition of `I`,
-`f` is integrable on `I`, and `f` has integral `y J` over each sub-box `J ∈ π.boxes` (with the
-same volume `vol` and integration parameters `l`), then `f` has integral `∑ J ∈ π.boxes, y J`
-over `I`.
-
-This is the dual of `HasIntegral.sum`: that lemma sums *different integrands* on the same box;
-this one sums the *same integrand* on the pieces of a partition. The two-box specialization
-(via `Prepartition.split I i x`) underwrites adjacent-interval splitting for Stieltjes and
-interval integrals.
-
-The integrability assumption on `I` is the price we pay for not gluing per-box gauges; in
-practice it is supplied by separate continuity / bounded-variation hypotheses on the caller's
-side. A future strengthening would derive `Integrable I` from `∀ J ∈ π.boxes, Integrable J` via
-gauge gluing. -/
-theorem HasIntegral.sum_of_isPartition [CompleteSpace F] {π : Prepartition I} (hπ : π.IsPartition)
-    {vol : ι →ᵇᵃ E →L[ℝ] F} (hI : Integrable I l f vol) {y : Box ι → F}
-    (h : ∀ J ∈ π.boxes, HasIntegral J l f vol (y J)) :
-    HasIntegral I l f vol (∑ J ∈ π.boxes, y J) := by
-  have hsum : (∑ J ∈ π.boxes, y J) = integral I l f vol := by
-    have hba := hI.toBoxAdditive.sum_partition_boxes le_rfl hπ
-    simp only [Integrable.toBoxAdditive_apply] at hba
-    rw [← hba]
-    exact Finset.sum_congr rfl fun J hJ ↦ ((h J hJ).integral_eq).symm
-  rw [hsum]
-  exact hI.hasIntegral
-
-/-- Two-box specialization of `HasIntegral.sum_of_isPartition`. If a box `I` splits at
-coordinate `i` and value `x` into sub-boxes `J_lo` (lower) and `J_hi` (upper), both non-bot,
-`f` is integrable on `I`, and `f` has integral `y_lo` on `J_lo` and `y_hi` on `J_hi`, then `f`
-has integral `y_lo + y_hi` on `I`. -/
-theorem HasIntegral.split [CompleteSpace F] (i : ι) (x : ℝ) {J_lo J_hi : Box ι}
-    (h_lower : I.splitLower i x = ↑J_lo) (h_upper : I.splitUpper i x = ↑J_hi)
-    {vol : ι →ᵇᵃ E →L[ℝ] F} (hI : Integrable I l f vol) {y_lo y_hi : F}
-    (h₁ : HasIntegral J_lo l f vol y_lo) (h₂ : HasIntegral J_hi l f vol y_hi) :
-    HasIntegral I l f vol (y_lo + y_hi) := by
-  classical
-  have : (I.splitLower i x  : Set (ι → ℝ)) ∩ (I.splitUpper i x  : Set (ι → ℝ)) = ∅ := by
-    ext p; simp; grind
-  have hne : J_hi ≠ J_lo := by
-    intro heq
-    simp [h_lower, h_upper, heq] at this
-  let y : Box ι → F := fun J ↦ if J = J_lo then y_lo else y_hi
-  have hy_lo : y J_lo = y_lo := if_pos rfl
-  have hy_hi : y J_hi = y_hi := if_neg hne
-  rw [← hy_lo, ← hy_hi]
-  have h_sum_eq : (∑ J ∈ (Prepartition.split I i x).boxes, y J) = y J_lo + y J_hi := by
-    rw [Prepartition.sum_split_boxes, h_lower, h_upper]
-    rfl
-  rw [← h_sum_eq]
-  apply HasIntegral.sum_of_isPartition (Prepartition.isPartitionSplit I i x) hI
-  intro J hJ
-  rcases Prepartition.mem_split_iff.mp hJ with hJ | hJ
-  · rw [WithBot.coe_injective (hJ.trans h_lower), hy_lo]; exact h₁
-  · rw [WithBot.coe_injective (hJ.trans h_upper), hy_hi]; exact h₂
-
-end BoxIntegral
-
 open BoxIntegral ContinuousLinearMap
 
 namespace BoxIntegral.Stieltjes
 
 /-! ## Definition of the Riemann–Stieltjes integral -/
 
-/- Our notion of Stieltjes transformation requires a choice of continuous bilinear mapping from the
-ranges of `f`, `g` to the desired output range.
+/- Our notion of Stieltjes transformation requires a choice of continuous bilinear mapping `B` from
+the ranges of `f`, `g` to the desired output range.
 Standard choices already available in Mathlib
 include:
 * `ContinuousLinearMap.mul ℝ A : A →L[ℝ] A →L[ℝ] A` for `A` a normed `ℝ`-algebra
@@ -934,7 +610,9 @@ include:
 * `ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E` for scalar multiplication when `f` is real,
   and `(ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip : E →L[ℝ] ℝ →L[ℝ] E` when `g`
   is real.
-Use `ContinuousLinearMap.flip` to swap the argument order of any of these. -/
+Use `ContinuousLinearMap.flip` to swap the argument order of any of these.
+
+One can `open ContinuousLinearMap` when using the Stieltjes integral to simplify notation. -/
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
@@ -993,7 +671,7 @@ lemma HasStieltjesIntegral.symm {f : ℝ → E} {g : ℝ → F} {L : G}
 
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
-theorem HasStieltjesIntegral_iff_lim_sum (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
+theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
     HasStieltjesIntegral a b B f g L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
@@ -1011,6 +689,12 @@ private def StieltjesIntegrable' (f : ℝ → E) (g : ℝ → F) : Prop :=
 
 def StieltjesIntegrable (f : ℝ → E) (g : ℝ → F) : Prop :=
   ∃ L, HasStieltjesIntegral a b B f g L
+
+private theorem stieltjesIntegrable'_iff_integrable {f : ℝ → E} {g : ℝ → F} :
+  StieltjesIntegrable' a b B f g ↔
+  Integrable (Ioc a b) IntegrationParams.Riemann
+    (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) :=
+  ⟨ fun ⟨ _, hL ⟩ ↦ HasIntegral.integrable hL, fun h ↦ ⟨ _, h.hasIntegral ⟩ ⟩
 
 @[simp]
 lemma StieltjesIntegrable.of_eq (f : ℝ → E) (g : ℝ → F) :
@@ -1031,18 +715,23 @@ lemma StieltjesIntegrable.symm {f : ℝ → E} {g : ℝ → F} (h : StieltjesInt
     StieltjesIntegrable b a B f g := by
   rwa [← symm_iff]
 
+lemma StieltjesIntegrable.iff_min_max {f : ℝ → E} {g : ℝ → F} :
+    StieltjesIntegrable a b B f g ↔
+    StieltjesIntegrable (min a b) (max a b) B f g := by
+  rcases le_total a b with h | h <;> simp [h, symm_iff]
+
 open Classical in
 /-- The Riemann–Stieltjes integral of `f` against `g` paired by `B` over `(a, b]`. Returns the
 junk value `0` if no such integral exists. -/
 noncomputable def stieltjesIntegral (f : ℝ → E) (g : ℝ → F) : G :=
   if h : StieltjesIntegrable a b B f g then h.choose else 0
 
-/-- Notation for the Riemann–Stieltjes integral. `∫⟨B⟩ x in a..b, f x d g` is
+/-- Notation for the Riemann–Stieltjes integral. `∫⟨B⟩ x in a..b, f x ∂g` is
 `stieltjesIntegral a b B (fun x ↦ f x) g`. The bilinear pairing `B` is written explicitly inside
 angle brackets because there is no canonical choice (e.g. `ContinuousLinearMap.mul ℝ ℝ` for
 scalar-valued `f` and `g`, `(ContinuousLinearMap.lsmul ℝ ℝ).flip` when `g` is real-valued, etc.).
 The notation parallels Mathlib's `∫ x in a..b, f x ∂μ` for `intervalIntegral`. -/
-scoped notation3 "∫⟨"B"⟩ "(...)" in "a".."b", "r:60:(scoped f => f)" d "g:70 =>
+scoped notation3 "∫⟨"B"⟩ "(...)" in "a".."b", "r:60:(scoped f => f)" ∂"g:70 =>
   stieltjesIntegral a b B r g
 
 /-! ## Basic API -/
@@ -1068,12 +757,12 @@ theorem HasStieltjesIntegral.stieltjesIntegrable {f : ℝ → E} {g : ℝ → F}
 /-- A chosen witness extracted from `StieltjesIntegrable`. -/
 theorem StieltjesIntegrable.hasStieltjesIntegral {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) :
-    HasStieltjesIntegral a b B f g (∫⟨B⟩ x in a..b, f x d g) := by
+    HasStieltjesIntegral a b B f g (∫⟨B⟩ x in a..b, f x ∂g) := by
   simp [stieltjesIntegral, h, h.choose_spec]
 
 /-- If `HasStieltjesIntegral a b B f g L`, then `stieltjesIntegral a b B f g = L`. -/
 theorem HasStieltjesIntegral.stieltjesIntegral_eq {f : ℝ → E} {g : ℝ → F} {L : G}
-    (h : HasStieltjesIntegral a b B f g L) : ∫⟨B⟩ x in a..b, f x d g = L := by
+    (h : HasStieltjesIntegral a b B f g L) : ∫⟨B⟩ x in a..b, f x ∂g = L := by
   classical
   have hI : StieltjesIntegrable a b B f g := h.stieltjesIntegrable
   simp only [stieltjesIntegral, dif_pos hI]
@@ -1081,19 +770,19 @@ theorem HasStieltjesIntegral.stieltjesIntegral_eq {f : ℝ → E} {g : ℝ → F
 
 theorem StieltjesIntegrable.hasStieltjesIntegral_iff {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (L : G) :
-   HasStieltjesIntegral a b B f g L ↔ ∫⟨B⟩ x in a..b, f x d g = L
+   HasStieltjesIntegral a b B f g L ↔ ∫⟨B⟩ x in a..b, f x ∂g = L
      := by
   grind [hasStieltjesIntegral, HasStieltjesIntegral.unique]
 
 @[simp]
 theorem stieltjesIntegral.of_eq (f : ℝ → E) (g : ℝ → F) :
-    ∫⟨B⟩ x in a..a, f x d g = 0 := by
+    ∫⟨B⟩ x in a..a, f x ∂g = 0 := by
   simp only [stieltjesIntegral, StieltjesIntegrable.of_eq, ↓reduceDIte]
   rw [← HasStieltjesIntegral.of_eq_iff_zero a B f g]
   apply Exists.choose_spec
 
 theorem stieltjesIntegral.of_symm (f : ℝ → E) (g : ℝ → F) :
-    ∫⟨B⟩ x in b..a, f x d g = -∫⟨B⟩ x in a..b, f x d g := by
+    ∫⟨B⟩ x in b..a, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
   by_cases h_integ : StieltjesIntegrable a b B f g
   · have h_integ_symm : StieltjesIntegrable b a B f g := h_integ.symm
     exact (h_integ.hasStieltjesIntegral.symm.unique _ _ _ h_integ_symm.hasStieltjesIntegral).symm
@@ -1325,7 +1014,7 @@ theorem HasStieltjesIntegral.add_adjacent [CompleteSpace G]
     (h₂ : HasStieltjesIntegral b c B f g L') :
     HasStieltjesIntegral a c B f g (L + L') := by
   have h₃ := h.hasStieltjesIntegral _ _ B
-  set L'' := ∫⟨B⟩ x in a..c, f x d g
+  set L'' := ∫⟨B⟩ x in a..c, f x ∂g
   by_cases! hab : a = b
   · simp_all
   by_cases! hbc : b = c
@@ -1358,7 +1047,7 @@ theorem stieltjesIntegral.add_adjacent [CompleteSpace G]
     (h : StieltjesIntegrable a c B f g)
     (h₁ : StieltjesIntegrable a b B f g)
     (h₂ : StieltjesIntegrable b c B f g) :
-    ∫⟨B⟩ x in a..c, f x d g = ∫⟨B⟩ x in a..b, f x d g + ∫⟨B⟩ x in b..c, f x d g := by
+    ∫⟨B⟩ x in a..c, f x ∂g = ∫⟨B⟩ x in a..b, f x ∂g + ∫⟨B⟩ x in b..c, f x ∂g := by
   have h₁' := h₁.hasStieltjesIntegral _ _ B
   have h₂' := h₂.hasStieltjesIntegral _ _ B
   have := HasStieltjesIntegral.add_adjacent _ _ _ h h₁' h₂'
@@ -1416,72 +1105,72 @@ theorem StieltjesIntegrable.smul_right {f : ℝ → E} {g : ℝ → F}
 
 /-! ### Integral linearity in the integrand -/
 
-theorem stieltjesIntegral_zero_left {g : ℝ → F} : ∫⟨B⟩ _ in a..b, 0 d g = 0 :=
+theorem stieltjesIntegral_zero_left {g : ℝ → F} : ∫⟨B⟩ _ in a..b, 0 ∂g = 0 :=
   (HasStieltjesIntegral.zero_left a b B).stieltjesIntegral_eq
 
 theorem stieltjesIntegral_add_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
-    ∫⟨B⟩ x in a..b, (f₁ + f₂) x d g
-      = ∫⟨B⟩ x in a..b, f₁ x d g + ∫⟨B⟩ x in a..b, f₂ x d g := by
+    ∫⟨B⟩ x in a..b, (f₁ + f₂) x ∂g
+      = ∫⟨B⟩ x in a..b, f₁ x ∂g + ∫⟨B⟩ x in a..b, f₂ x ∂g := by
   rw [(h₁.hasStieltjesIntegral.add_left a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
     h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
     h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 theorem stieltjesIntegral_neg_left {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) :
-    ∫⟨B⟩ x in a..b, (-f) x d g = -∫⟨B⟩ x in a..b, f x d g := by
+    ∫⟨B⟩ x in a..b, (-f) x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
   rw [(h.hasStieltjesIntegral.neg_left a b B).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 theorem stieltjesIntegral_sub_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
-    ∫⟨B⟩ x in a..b, (f₁ - f₂) x d g
-      = ∫⟨B⟩ x in a..b, f₁ x d g - ∫⟨B⟩ x in a..b, f₂ x d g := by
+    ∫⟨B⟩ x in a..b, (f₁ - f₂) x ∂g
+      = ∫⟨B⟩ x in a..b, f₁ x ∂g - ∫⟨B⟩ x in a..b, f₂ x ∂g := by
   rw [(h₁.hasStieltjesIntegral.sub_left a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
     h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
     h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 theorem stieltjesIntegral_smul_left {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
-    ∫⟨B⟩ x in a..b, (c • f) x d g = c • ∫⟨B⟩ x in a..b, f x d g := by
+    ∫⟨B⟩ x in a..b, (c • f) x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g := by
   rw [(h.hasStieltjesIntegral.smul_left a b B c).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 /-! ### Integral linearity in the integrator -/
 
 @[simp]
-theorem stieltjesIntegral_const_right {f : ℝ → E} (c : F) : ∫⟨B⟩ x in a..b, f x d (fun _ ↦ c) = 0 :=
+theorem stieltjesIntegral_const_right {f : ℝ → E} (c : F) : ∫⟨B⟩ x in a..b, f x ∂(fun _ ↦ c) = 0 :=
   (HasStieltjesIntegral.const_right a b B c).stieltjesIntegral_eq
 
 @[simp]
-theorem stieltjesIntegral_zero_right {f : ℝ → E} : ∫⟨B⟩ x in a..b, f x d 0 = 0 :=
+theorem stieltjesIntegral_zero_right {f : ℝ → E} : ∫⟨B⟩ x in a..b, f x ∂0 = 0 :=
   stieltjesIntegral_const_right a b B 0
 
 theorem stieltjesIntegral_add_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
-    ∫⟨B⟩ x in a..b, f x d (g₁ + g₂)
-      = ∫⟨B⟩ x in a..b, f x d g₁ + ∫⟨B⟩ x in a..b, f x d g₂ := by
+    ∫⟨B⟩ x in a..b, f x ∂(g₁ + g₂)
+      = ∫⟨B⟩ x in a..b, f x ∂g₁ + ∫⟨B⟩ x in a..b, f x ∂g₂ := by
   rw [(h₁.hasStieltjesIntegral.add_right a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
     h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
     h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 theorem stieltjesIntegral_neg_right {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) :
-    ∫⟨B⟩ x in a..b, f x d (-g) = -∫⟨B⟩ x in a..b, f x d g := by
+    ∫⟨B⟩ x in a..b, f x ∂(-g) = -∫⟨B⟩ x in a..b, f x ∂g := by
   rw [(h.hasStieltjesIntegral.neg_right a b B).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 theorem stieltjesIntegral_sub_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
-    ∫⟨B⟩ x in a..b, f x d (g₁ - g₂)
-      = ∫⟨B⟩ x in a..b, f x d g₁ - ∫⟨B⟩ x in a..b, f x d g₂ := by
+    ∫⟨B⟩ x in a..b, f x ∂(g₁ - g₂)
+      = ∫⟨B⟩ x in a..b, f x ∂g₁ - ∫⟨B⟩ x in a..b, f x ∂g₂ := by
   rw [(h₁.hasStieltjesIntegral.sub_right a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
     h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
     h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 theorem stieltjesIntegral_smul_right {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
-    ∫⟨B⟩ x in a..b, f x d (c • g) = c • ∫⟨B⟩ x in a..b, f x d g := by
+    ∫⟨B⟩ x in a..b, f x ∂(c • g) = c • ∫⟨B⟩ x in a..b, f x ∂g := by
   rw [(h.hasStieltjesIntegral.smul_right a b B c).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
@@ -1551,10 +1240,41 @@ theorem stieltjesIntegral_map {E' F' G' : Type*}
     (B' : E' →L[ℝ] F' →L[ℝ] G')
     (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     (h : StieltjesIntegrable a b B f g) :
-    ∫⟨B'⟩ x in a..b, φ (f x) d (fun x ↦ ψ (g x)) =
-      Ψ (∫⟨B⟩ x in a..b, f x d g) := by
+    ∫⟨B'⟩ x in a..b, φ (f x) ∂(fun x ↦ ψ (g x)) =
+      Ψ (∫⟨B⟩ x in a..b, f x ∂g) := by
   rw [(h.hasStieltjesIntegral.map a b B φ ψ Ψ B' hB).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+/-! ### Integrability on subboxes -/
+
+/-- If `f` is Stieltjes-integrable from `a` to `b` (with `a < b`) against `g`, then
+it is also Stieltjes-integrable on any sub-interval `(c, d]` with `a ≤ c < d ≤ b`. -/
+private theorem StieltjesIntegrable'.to_subbox [CompleteSpace G] {f : ℝ → E} {g : ℝ → F}
+    {c : ℝ} {d : ℝ} (hab : a < b) (hcd : c < d) (hac : a ≤ c) (hdb : d ≤ b)
+    (h : StieltjesIntegrable' a b B f g) :
+    StieltjesIntegrable' c d B f g := by
+  simp only [stieltjesIntegrable'_iff_integrable, Fin.isValue] at h ⊢
+  have hle : Ioc c d ≤ Ioc a b := by
+    simp [hab, hcd, hac, hdb]
+  exact Integrable.to_subbox h hle
+
+/-- If `f` is Stieltjes-integrable from `a` to `b` against `g`, then it is also
+Stieltjes-integrable from `c` to `d` whenever `min a b ≤ c, d ≤ max a b`. -/
+theorem StieltjesIntegrable.to_subbox [CompleteSpace G] {f : ℝ → E} {g : ℝ → F}
+    {c d : ℝ} (h : StieltjesIntegrable a b B f g)
+    (hc : c ∈ Set.Icc (min a b) (max a b)) (hd : d ∈ Set.Icc (min a b) (max a b)) :
+    StieltjesIntegrable c d B f g := by
+  rw [iff_min_max] at h ⊢
+  rcases lt_trichotomy (max c d) (min c d) with hcd | hcd | hcd
+  · grind
+  · simp [hcd]
+  rcases lt_trichotomy (max a b) (min a b) with hab | hab | hab
+  · grind
+  · simp [hab] at hc hd; grind
+  simp only [hab, of_lt, stieltjesIntegrable'_iff_integrable, Fin.isValue, hcd] at h ⊢
+  apply Integrable.to_subbox h
+  rw [Ioc_le_Ioc_iff hab hcd]
+  grind
 
 /-! ## Auxiliary lemmas -/
 
@@ -1715,7 +1435,7 @@ theorem StieltjesIntegrable.by_parts {f : ℝ → E} {g : ℝ → F}
 
 theorem stieltjesIntegral.by_parts {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) :
-    ∫⟨B.flip⟩ x in a..b, g x d f = B (f b) (g b) - B (f a) (g a) - ∫⟨B⟩ x in a..b, f x d g := by
+    ∫⟨B.flip⟩ x in a..b, g x ∂f = B (f b) (g b) - B (f a) (g a) - ∫⟨B⟩ x in a..b, f x ∂g := by
   rw [(h.hasStieltjesIntegral.by_parts a b B).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
@@ -1730,7 +1450,7 @@ theorem StieltjesIntegrable.of_const (c : E) (g : ℝ → F) :
 
 @[simp]
 theorem stieltjesIntegral.of_const (c : E) (g : ℝ → F) :
-    ∫⟨B⟩ _ in a..b, c d g = B c (g b) - B c (g a) :=
+    ∫⟨B⟩ _ in a..b, c ∂g = B c (g b) - B c (g a) :=
   (HasStieltjesIntegral.of_const a b B c g).stieltjesIntegral_eq
 
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
@@ -1781,7 +1501,7 @@ theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g :
 
 /-! ### Sums as Stieltjes integrals -/
 
-/-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f d ⌊x⌋ -/
+/-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f ∂⌊x⌋ -/
 theorem sum_eq_integral_nat_floor (hab : a < b) (f : ℝ → E) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
       (fun x ↦ ⌊x⌋₊)

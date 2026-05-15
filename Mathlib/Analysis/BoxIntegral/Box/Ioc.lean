@@ -51,4 +51,9 @@ lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
 lemma mem_Ioc {a b : ℝ} (hab : a < b) (x : Fin 1 → ℝ) : x ∈ Ioc a b ↔ a < x 0 ∧ x 0 ≤ b := by
   simp [Box.mem_def, Ioc.upper hab, Ioc.lower hab]
 
+@[simp]
+lemma Ioc_le_Ioc_iff {a b c d : ℝ} (hab : a < b) (hcd : c < d) :
+    Ioc c d ≤ Ioc a b ↔ a ≤ c ∧ d ≤ b := by
+  simp [Ioc, hab, hcd, Box.le_iff_bounds, Pi.le_def]
+
 end BoxIntegral
