@@ -1022,21 +1022,54 @@ lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
 
   let endpts : Finset ℝ :=
     (π.boxes.image (fun J ↦ J.lower 0)) ∪ (π.boxes.image (fun J ↦ J.upper 0))
-  let L : List ℝ := endpts.sort (· ≤ ·)
 
-  let x : ℕ → ℝ := fun i ↦ if h : i < L.length then L.get ⟨i, h⟩ else b
+  -- Step 3: Upgrade to ENNReal and convert vector norms cleanly to `edist`
+  have h_sum_eq : ∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖ =
+      (ENNReal.ofReal (∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖)).toReal :=
+    (ENNReal.toReal_ofReal (Finset.sum_nonneg fun _ _ ↦ norm_nonneg _)).symm
+  rw [h_sum_eq]
+
+  refine ENNReal.toReal_mono (by exact hg) ?_
+  rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _)]
+  simp_rw [← dist_eq_norm, ← edist_dist]
+
+  -- Step 4: Extract partition endpoints into a sorted, monotone sequence `u`
+  let S : Finset ℝ := (π.boxes.image (fun J ↦ J.lower 0)) ∪ (π.boxes.image (fun J ↦ J.upper 0)) ∪ {a, b}
+  let L : List ℝ := S.sort (· ≤ ·)
   let n : ℕ := L.length - 1
+  let u : ℕ → ℝ := fun i ↦ if h : i < L.length then L.get ⟨i, h⟩ else b
 
-  have h_sum_list : ∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖ ≤
-      (L.zipWith (fun u v ↦ ‖g v - g u‖) L.tail).sum := by
-    -- The sum over disjoint box endpoints is naturally bounded by the continuous sequential
-    -- sum over all sorted endpoints.
+  have hu : MonotoneOn u (Set.Icc 0 n) := by
+    unfold MonotoneOn
+    intro i _ j hj hij
+    have hL_pos : 0 < L.length := by
+      change 0 < (S.sort (· ≤ ·)).length
+      rw [Finset.length_sort]
+      apply Finset.card_pos.mpr
+      use a
+      simp [S]
+    have hj_bound := hj.2
+    change j ≤ L.length - 1 at hj_bound
+    have hj_lt : j < L.length := by omega
+    have hi_lt : i < L.length := by omega
+    dsimp [u]
+    rw [dif_pos hi_lt, dif_pos hj_lt]
+    have h_pair : List.Pairwise (· ≤ ·) L := Finset.pairwise_sort S (· ≤ ·)
+    rcases eq_or_lt_of_le hij with rfl | h_lt
+    · -- Case 1: i = j.
+      exact le_rfl
+    · -- Case 2: i < j.
+      exact List.pairwise_iff_get.mp h_pair ⟨i, hi_lt⟩ ⟨j, hj_lt⟩ h_lt
+
+  have hus : ∀ i ∈ Set.Icc 0 n, u i ∈ Set.Icc a b := by
+    intro i _
     sorry
 
-  -- Step 4: Feed this sorted, monotone real sequence directly into your bounding lemma!
-  -- L[0] ≤ L[1] ≤ L[2] ...
-  sorry
+  have h_sub_sum : ∑ J ∈ π.boxes, edist (g (J.upper 0)) (g (J.lower 0)) ≤
+      ∑ i ∈ Finset.Ico 0 n, edist (g (u (i + 1))) (g (u i)) := by
+    sorry
 
+  exact h_sub_sum.trans (eVariationOn.sum_le_of_monotoneOn_Icc hu hus)
 
 
 /-- Continuous integrand and a
