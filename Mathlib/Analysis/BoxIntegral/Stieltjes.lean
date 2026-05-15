@@ -15,9 +15,6 @@ public import Mathlib.Analysis.BoxIntegral.Partition.OrderedDivision
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.Analysis.Calculus.ContDiff.Basic
-public import Mathlib.MeasureTheory.Integral.IntervalIntegral.ContDiff
-public import Mathlib.Analysis.Calculus.ContDiff.Defs
-public import Mathlib.Analysis.Calculus.ContDiff.Deriv
 
 /-! # Riemann–Stieltjes integral
 
@@ -391,7 +388,7 @@ lemma HasStieltjesIntegral.symm {f : ℝ → E} {g : ℝ → F} {L : G}
 
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
-theorem hasStieltjesIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
+theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
     HasStieltjesIntegral a b B f g L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
@@ -985,8 +982,7 @@ private theorem StieltjesIntegrable'.to_subbox [CompleteSpace G] {f : ℝ → E}
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
     (hg : BoundedVariationOn g (Set.Icc a b))
-    (π : BoxIntegral.Prepartition (Ioc a b))
-    (hπ : π.IsPartition) :
+    (π : BoxIntegral.Prepartition (Ioc a b)) :
     ∑ J ∈ π.boxes, ‖(BoxIntegral.BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
       ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
 
@@ -1012,37 +1008,7 @@ lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
   rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _)]
   simp_rw [← dist_eq_norm, ← edist_dist]
 
-  let u := BoxIntegral.OrderedDivision.fromPartition hπ
-  let u_seq := u.x
-
-  have h_strict_mono := BoxIntegral.OrderedDivision.fromPartition_strictMono hπ
-  let u_fun : ℕ → ℝ := fun i ↦ if h : i < u.N + 1 then u_seq ⟨i, h⟩ else b
-  rw [← BoxIntegral.OrderedDivision.fromPartition_map hπ]
-
-  have h_sum_seq : ∑ J ∈ BoxIntegral.OrderedDivision.boxMap h_strict_mono, edist (g (J.upper 0)) (g (J.lower 0)) =
-      ∑ i ∈ Finset.Ico 0 u.N, edist (g (u_fun (i + 1))) (g (u_fun i)) := by
-
-    unfold BoxIntegral.OrderedDivision.boxMap
-    sorry
-
-  rw [h_sum_seq]
-
-  have hu_mono : MonotoneOn u_fun (Set.Icc 0 u.N) := by
-    intro i _ j hj hij
-    have hj_bound : j ≤ u.N := hj.2
-    dsimp [u_fun]
-    rw [dif_pos (by omega), dif_pos (by omega)]
-    exact h_strict_mono.monotone hij
-
-  have hu_mem : ∀ i ∈ Set.Icc 0 u.N, u_fun i ∈ Set.Icc a b := by
-    intro i hi
-    have hi_bound : i ≤ u.N := hi.2
-    dsimp [u_fun]
-    rw [dif_pos (by omega)]
-    sorry
-
-  -- Feed our total function straight into your variation theorem!
-  exact eVariationOn.sum_le_of_monotoneOn_Icc hu_mono hu_mem
+  sorry
 
 
 /-- Continuous integrand and a
@@ -1113,44 +1079,6 @@ lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
       exact sum_norm_ofDiff_le_norm_mul_eVariationOn a b B g hg π
     _ ≤ ε := by grind
 
-/-! ## The Riemann integral -/
-
-def HasRiemannIntegral (f : ℝ → E) (L : E) :=
-    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L
-
-def RiemannIntegrable (f : ℝ → E) :=
-  StieltjesIntegrable a b (lsmul ℝ ℝ).flip f id
-
-noncomputable def riemannIntegral (f : ℝ → E) : E :=
-  ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id
-
-theorem HasRiemannIntegral.iff_hasIntegral {a b : ℝ} (hab : a < b) (f : ℝ → E) (L : E) :
-    HasRiemannIntegral a b f L ↔
-      HasIntegral (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0))
-        BoxAdditiveMap.volume L := by
-    simp [HasRiemannIntegral, hab, HasStieltjesIntegral', BoxAdditiveMap.ofDiff_lsmul_eq_volume]
-
-lemma RiemannIntegrable.def (f : ℝ → E) :
-    RiemannIntegrable a b f ↔ ∃ L, HasRiemannIntegral a b f L := by rfl
-
-lemma RiemannIntegrable.symm (f : ℝ → E) (h : RiemannIntegrable a b f) : RiemannIntegrable b a f :=
-  StieltjesIntegrable.symm _ _ _ h
-
-theorem RiemannIntegrable.iff_integrable {a b : ℝ} (hab : a < b) (f : ℝ → E) :
-    RiemannIntegrable a b f ↔
-      Integrable (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0)) BoxAdditiveMap.volume := by
-    simp [RiemannIntegrable.def, Integrable, HasRiemannIntegral.iff_hasIntegral, hab]
-
-theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (L : E) :
-    HasRiemannIntegral a b f L ↔
-    ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
-    → π.mesh_size ≤ δ →
-     dist (∑ x ∈ π.boxes, ((x.upper 0) - (x.lower 0)) • (f (π.tag x 0))) L < ε := by
-  rw [HasRiemannIntegral]
-  exact hasStieltjesIntegral_iff_lim_sum _ hab _ _ L
-
--- TODO: add more Riemann integral API.  (Maybe in a separate file?)
-
 /-! ## Main theorems -/
 
 /-- Theorem A.1 of Montgomery-Vaughan: a continuous integrand and a bounded-variation integrator
@@ -1159,11 +1087,9 @@ theorem exists_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
     (f : ℝ → E) (g : ℝ → F) (hab : a < b)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
     StieltjesIntegrable a b B f g := by
-  -- Extract the definitive limit vector L and its underlying BoxIntegral proof term
   obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn a b B f g
     hab IntegrationParams.Riemann hf hg
   use L
-  -- Unfold the goal to expose the branching definition, then resolve it using a < b
   rw [HasStieltjesIntegral, if_neg (ne_of_lt hab), if_pos hab]
   exact hL
 
@@ -1204,205 +1130,18 @@ Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 theorem variation_of_derivative {g : ℝ → F} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) :
     (eVariationOn g (Set.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
 
-
-/-- Lemma Subset given an interval [a,b], if c,d ∈ [a,b], then |c - d| < b -a
--/
-lemma subset_smaller_distance {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
-  (hn : n ∈ Set.Icc a b) : |m - n| ≤ b - a := by
-  rcases hm with ⟨ham, hmb⟩
-  rcases hn with ⟨han, hnb⟩
-  rw [abs_sub_le_iff]
-  exact ⟨by linarith, by linarith⟩
-
+/-- Placeholder abbreviation; there may be a better spelling for this. TODO: make this definition
+symmetric in a, b -/
 abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
   Integrable (Ioc a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) BoxAdditiveMap.volume
 
-/-- Lemma MVT version using a bilinear form, this theorem is used in the proof of Theorem A3 (b)
-Since the MVT is false in general (for higher dimensions), we prove a version where it is true up
-to some error term.
-
-For g : ℝ → F and f : ℝ → E, and B a bounded blinear from from E × F → G where E, F, and G are
-normed. Then if g is C^1[a,b], and f is bounded on [a,b], then for any ε > 0, there is a δ > 0 such
-that for all a',b' with a ≤ a' < b' ≤ b, we have for all c ∈ [a',b'] that
-‖B(f(c),g(b') - g(a'))‖ ≤ ‖B(f(c),g'(c))‖ (b' - a') + ε (b' - a')
-We remark that the theorem is most powerful when we take a' = a and b' = b. Since this is used to
-say that if the mesh is fine enough (of size < δ), then we have this MVT with small error.
-
-Remark: In the use of MV theorem A3, they assume that f is Riemann integrable on [a,b], and use the
-fact that this will imply that f is bounded. However, for the MVT statement, we need only that f is
-bounded. Furthermore, there is no statement in Mathlib that states that Riemann integrable functions
-are bounded.
--/
-lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : ℝ → F} {ε : ℝ}
-  {B : E →L[ℝ] F →L[ℝ] G} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
-  (hB : B ≠ 0) (f_bounded : ∃ M > 0, ∀ x ∈ (Set.Icc a b), ‖f x‖ < M) : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b,
-  a' < b' → b' - a' < δ → ∀ c ∈ Set.Icc a' b', ‖B (f c) (g b' -g a')‖
-    ≤ ‖B (f c) (derivWithin g (Set.Icc a' b') c)‖ * (b' - a') + ε * (b' - a') := by
-  have hba_pos : 0 < b - a := by linarith
-  have hderiv_ucont : UniformContinuousOn (derivWithin g (Set.Icc a b)) (Set.Icc a b) :=
-    isCompact_Icc.uniformContinuousOn_of_continuous
-      (ContDiffOn.continuousOn_derivWithin hg (uniqueDiffOn_Icc hab) le_rfl)
-  have hB_norm_pos : 0 < ‖B‖ := norm_pos_iff.mpr hB
-  have huIcc_eq_Icc : Set.uIcc a b = Set.Icc a b := Set.uIcc_of_le hab.le
-  have hB_opNorm_bound : ∀ (y : F) (x : ℝ), ‖B (f x) y‖ ≤ ‖B‖ * ‖f x‖ * ‖y‖ :=
-    fun y x => B.le_opNorm₂ (f x) y
-  rw [Metric.uniformContinuousOn_iff] at hderiv_ucont
-  obtain ⟨M, hM_pos, hM_bound⟩ := f_bounded
-  let ε₂ := ε / (‖B‖ * M)
-  have hε₂_pos : 0 < ε₂ := div_pos hε (by positivity)
-  obtain ⟨δ, hδ_pos, hδ_prop⟩ := hderiv_ucont ε₂ hε₂_pos
-  refine ⟨δ, hδ_pos, fun a' ha' b' hb' h_a'_lt_b' h_b'_sub_a'_lt_δ c hc => ?_⟩
-  have hc_mem_big_Icc : c ∈ Set.Icc a b := by grind
-  have h_sub_len_le : b' - a' ≤ b - a := by linarith
-  have h_abs_sub_eq : |b' - a'| = b' - a' := by grind
-  have huIoc_eq_Ioc : Set.uIoc a' b' = Set.Ioc a' b' := by grind
-  have huIcc_eq_Icc' : Set.uIcc a' b' = Set.Icc a' b' := Set.uIcc_of_le h_a'_lt_b'.le
-  have hIcc_subset : (Set.Icc a' b') ⊆ (Set.Icc a b) := by grind
-  have hg_restricted : ContDiffOn ℝ 1 g (Set.Icc a' b') := hg.mono hIcc_subset
-  have hderiv_ucont_sub : UniformContinuousOn (derivWithin g (Set.Icc a' b')) (Set.Icc a' b') :=
-    isCompact_Icc.uniformContinuousOn_of_continuous
-      (ContDiffOn.continuousOn_derivWithin hg_restricted (uniqueDiffOn_Icc h_a'_lt_b') le_rfl)
-  have hderiv_integrable :
-      IntervalIntegrable (derivWithin g (Set.uIcc a' b')) MeasureTheory.volume a' b' := by
-    have : ContinuousOn (derivWithin g (Set.uIcc a' b')) (Set.uIcc a' b') := by
-      rw [huIcc_eq_Icc']
-      exact hderiv_ucont_sub.continuousOn
-    exact this.intervalIntegrable
-  have hg_ftc := intervalIntegral.integral_deriv_of_contDiffOn_Icc hg_restricted h_a'_lt_b'.le
-  have hderiv_eq_on_interior : ∀ x ∈ Set.Ioo (min a' b') (max a' b'),
-      derivWithin g (Set.uIcc a' b') x = deriv g x := by
-    intro x hx
-    rw [Set.uIcc_of_le h_a'_lt_b'.le]
-    have hx_open : x ∈ Set.Ioo a' b' := by grind
-    exact derivWithin_of_mem_nhds
-      (Filter.mem_of_superset (IsOpen.mem_nhds isOpen_Ioo hx_open) Set.Ioo_subset_Icc_self)
-  have hintegral_deriv_congr : ∫ x in a'..b', deriv g x = ∫ x in a'..b',
-      derivWithin g (Set.Icc a' b') x := by
-    apply intervalIntegral.integral_congr_ae
-    filter_upwards [MeasureTheory.compl_mem_ae_iff.mpr (MeasureTheory.measure_singleton b')]
-    with x hxb hx
-    grind
-  rw [← hg_ftc, hintegral_deriv_congr]
-  have hintegrand_split_eq : ‖B (f c) (∫ x in a'..b', derivWithin g (Set.Icc a' b') x)‖ =
-      ‖B (f c) (∫ x in a'..b', derivWithin g (Set.Icc a' b') c +
-      (derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c))‖ := by grind
-  rw [hintegrand_split_eq]
-  have hintegral_add_split : (∫ x in a'..b', derivWithin g (Set.Icc a' b') c) +
-      (∫ x in a'..b', (derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c))
-      = ∫ x in a'..b', derivWithin g (Set.Icc a' b') c
-        + (derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c) := by
-    rw [intervalIntegral.integral_add]
-    · exact intervalIntegrable_const
-    · refine IntervalIntegrable.sub ?_ intervalIntegrable_const
-      apply IntervalIntegrable.congr_ae hderiv_integrable
-      rw [huIcc_eq_Icc']
-  rw [← hintegral_add_split]
-  have hderiv_diff_lt_ε₂ : ∀ x ∈ Set.Icc a' b',
-      ‖derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c‖ < ε₂ := by
-    intro x hx
-    have hx_mem_big_Icc : x ∈ Set.Icc a b := by grind
-    have hdist_lt_delta : dist x c < δ :=
-      Std.lt_of_le_of_lt (subset_smaller_distance hx hc) h_b'_sub_a'_lt_δ
-    specialize hδ_prop x hx_mem_big_Icc c hc_mem_big_Icc hdist_lt_delta
-    rw [← dist_eq_norm]
-    have hderiv_x_congr : derivWithin g (Set.Icc a' b') x = derivWithin g (Set.Icc a b) x :=
-      derivWithin_subset hIcc_subset (uniqueDiffOn_Icc h_a'_lt_b' x hx)
-        (hg.differentiableOn one_ne_zero x hx_mem_big_Icc)
-    have hderiv_c_congr : derivWithin g (Set.Icc a' b') c = derivWithin g (Set.Icc a b) c :=
-      derivWithin_subset hIcc_subset (uniqueDiffOn_Icc h_a'_lt_b' c hc)
-        (hg.differentiableOn one_ne_zero c hc_mem_big_Icc)
-    rw [hderiv_x_congr, hderiv_c_congr]
-    exact hδ_prop
-  have herror_norm_bound : ‖∫ x in a'..b',
-        derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c‖ ≤ ε₂ * |b' - a'| := by
-    apply intervalIntegral.norm_integral_le_of_norm_le_const
-    intro x hx
-    rw [huIoc_eq_Ioc] at hx
-    exact (hderiv_diff_lt_ε₂ x ⟨hx.1.le, hx.2⟩).le
-  rw [map_add]
-  apply le_trans (norm_add_le _ _)
-  apply add_le_add
-  · rw [intervalIntegral.integral_const, map_smul, norm_smul, Real.norm_eq_abs, h_abs_sub_eq]
-    ring_nf
-    linarith
-  · refine (hB_opNorm_bound _ c).trans ?_
-    rw [h_abs_sub_eq] at herror_norm_bound
-    field_simp at herror_norm_bound
-    have hB_fc_times_error : ‖B‖ * ‖f c‖ * ‖∫ (x : ℝ) in a'..b', derivWithin g (Set.Icc a' b') x
-        - derivWithin g (Set.Icc a' b') c‖ ≤ ‖B‖ * ‖f c‖ * (ε₂ * (b' - a')) :=
-      mul_le_mul_of_nonneg_left herror_norm_bound (mul_nonneg (norm_nonneg _) (norm_nonneg _))
-    refine hB_fc_times_error.trans ?_
-    unfold ε₂
-    specialize hM_bound c hc_mem_big_Icc
-    have hBM_pos : 0 < ‖B‖ * M := mul_pos hB_norm_pos hM_pos
-    have hfc_lt_bound : ‖B‖ * ‖f c‖ * (ε / (‖B‖ * M) * (b' - a')) <
-        ‖B‖ * M * (ε / (‖B‖ * M) * (b' - a')) := by
-      apply mul_lt_mul_of_pos_right
-      · exact mul_lt_mul_of_pos_left hM_bound hB_norm_pos
-      · exact mul_pos (div_pos hε hBM_pos) (sub_pos.mpr h_a'_lt_b')
-    refine hfc_lt_bound.le.trans ?_
-    field_simp
-    linarith
-
-/-- Lemma for a vector valued MVT with error since MVT is false for a general
-funcion in higher dimensions, but is true up to some error for higher dimensions.
-This lemma is used in the proof of Theorem A3 (a). We prove it by specializing the
-bilinear form version of the statement. However, we must break into cases on whether
-or not F is the trivial space.
-
-For g C^1[a,b] and ε > 0, there is a δ > 0 such that for all a ≤ a' < b' ≤ b with
-b' - a' < δ, we have that for all c ∈ [a',b'] that
-‖g(b')-g(a')‖ ≤ ‖g'(c)‖ * (b' - a') + ε * (b' - a')
--/
-lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {ε : ℝ} (hab : a < b)
-    (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
-    : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b, a' < b' → b' - a' < δ → ∀ c ∈ Set.Icc a' b',
-    ‖g b' - g a'‖ ≤ ‖derivWithin g (Set.Icc a' b') c‖ * (b' - a') + ε * (b' - a') := by
-  let f : ℝ → ℝ := fun _ => 1
-  have f_bounded : ∃ M > 0, ∀ x ∈ (Set.Icc a b), ‖f x‖ < M := by
-    use 2
-    constructor
-    · linarith
-    · intro x hx
-      unfold f
-      simp
-  let B := (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] F →L[ℝ] F)
-  rcases subsingleton_or_nontrivial F with hF | hf
-  · use 1, zero_lt_one
-    intro a' ha' b' hb' hab' hdist c hc
-    have : g b' - g a' = 0 := Subsingleton.elim _ _
-    simp only [this, norm_zero]
-    apply add_nonneg
-    · exact mul_nonneg (norm_nonneg _) (sub_nonneg.mpr hab'.le)
-    · exact mul_nonneg hε.le (sub_nonneg.mpr hab'.le)
-  · have hB : B ≠ 0 := by
-      -- Since F is nontrivial, there is some v ≠ 0. B(1, v) = v ≠ 0.
-      intro h
-      obtain ⟨v, hv⟩ := exists_ne (0 : F)
-      have h_one_v := DFunLike.congr_fun (DFunLike.congr_fun h 1) v
-      simp only [B, ContinuousLinearMap.lsmul_apply, one_smul] at h_one_v
-      exact hv h_one_v
-    obtain ⟨δ, hδ_pos, hδ⟩ := MVT_with_bilinear_form_and_error a b hab hg hε hB f_bounded
-    use δ, hδ_pos
-    intro a' ha' b' hb' hab' hdist c hc
-    specialize hδ a' ha' b' hb' hab' hdist c hc
-    simpa [B, f] using hδ
-
-/--Theorem A.3 (a). If g' is C^1[a,b], then Var_[a,b] g = ∫_a^b |g'(x)|dx
--/
-theorem variation_of_derivative {g : ℝ → F} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) :
-    (eVariationOn g (Set.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by
-    sorry
-
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
-
 theorem integral_of_derivative {f : ℝ → E} {g : ℝ → F} (hab : a < b)
     (hg : ContDiffOn ℝ 1 g (Set.Icc a b))
     (hf : RiemannIntegrable a b f) :
-    HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := byx
-    sorry
+    HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
 
 /-- Theorem A.4. Suppose that g has bounded variation, and put g∗(x) = Varₐˣ g. Then
 ‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dg∗(x),
@@ -1415,6 +1154,15 @@ theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G
     ‖L‖ ≤ ‖B‖ * L' := by sorry
 
 /-! ### Connection to standard integrals -/
+
+/-- When the integrator is the identity, the Stieltjes integral with the scalar-multiplication
+pairing `(lsmul ℝ ℝ).flip` reduces to the ordinary `BoxIntegral.HasIntegral` against the
+Lebesgue volume on `(a, b]`. -/
+theorem hasStieltjesIntegral_id_iff_hasIntegral_volume (hab : a < b) (f : ℝ → E) (L : E) :
+    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L ↔
+      HasIntegral (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0))
+        BoxAdditiveMap.volume L := by
+    simp [hab, HasStieltjesIntegral', BoxAdditiveMap.ofDiff_lsmul_eq_volume]
 
 /-- Function-level form of Theorem A.3(b) (`integral_of_derivative`): when `g` is `C¹` on
 `[a, b]` and `f` is Riemann integrable, the Stieltjes integral of `f` against `g` equals the
