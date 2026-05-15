@@ -163,16 +163,16 @@ theorem toPrepartition_isPartition {a b : ℝ}
       simpa [hs] using hm_le
 
 noncomputable def fromPartition {a b : ℝ}
-    (π : Prepartition (Ioc a b)) (hπ : π.IsPartition) :
+    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition) :
     OrderedDivision := by sorry
 
 theorem fromPartition_strictMono {a b : ℝ}
-    (π : Prepartition (Ioc a b)) (hπ : π.IsPartition) :
-    (fromPartition π hπ).StrictMono := by sorry
+    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition) :
+    (fromPartition hπ).StrictMono := by sorry
 
 theorem fromPartition_map {a b : ℝ}
-    (π : Prepartition (Ioc a b)) (hπ : π.IsPartition):
-    boxMap (fromPartition_strictMono π hπ)  = π.boxes := by sorry
+    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition):
+    boxMap (fromPartition_strictMono hπ)  = π.boxes := by sorry
 
 
 end OrderedDivision
