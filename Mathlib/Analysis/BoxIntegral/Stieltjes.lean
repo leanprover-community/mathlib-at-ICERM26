@@ -1307,103 +1307,71 @@ lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
 /-- Continuous integrand and a
 bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
 lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
-   (f : ℝ → E) (g : ℝ → F) (hab : a < b) (int_mode : IntegrationParams)
+   (f : ℝ → E) (g : ℝ → F) (hab : a < b) (l : IntegrationParams)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
-    Integrable (Ioc a b) int_mode
+    Integrable (Ioc a b) l
       (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by
   -- Step 1: Reduce integrability to the Cauchy convergence criterion over fine prepartitions
-  unfold Integrable
+  let f' := fun x : Fin 1 → ℝ ↦ f (x 0)
   refine BoxIntegral.integrable_iff_cauchy_basis.2 fun ε hε ↦ ?_
   -- Step 2: Define global constants for total variation and bilinear scaling bounds
   let V : ℝ := (eVariationOn g (Set.Icc a b)).toReal
-  let C : ℝ := ‖B‖ * V
-  rcases exists_pos_mul_lt hε C with ⟨η, hη, hηC⟩
+  rcases exists_pos_mul_lt hε (‖B‖ * V) with ⟨η, hη, hηC⟩
   -- Step 3: Extract the uniform continuity margin δ required to achieve our target error η
-  have huc : UniformContinuousOn f (Set.Icc a b) :=
-    isCompact_Icc.uniformContinuousOn_of_continuous hf
-  rw [Metric.uniformContinuousOn_iff] at huc
-  rcases huc η hη with ⟨δ, hδ, hδf⟩
+  rcases Metric.uniformContinuousOn_iff.mp (isCompact_Icc.uniformContinuousOn_of_continuous hf) η hη with ⟨δ, hδ, hδf⟩
   -- Step 4: Define a strictly positive, constant gauge ρ = δ / 4
   -- Forcing subboxes to have a radius ≤ δ / 4 ensures that any two tags inside overlapping
   -- subboxes are separated by a strict total distance of less than δ.
   let ρ : ℝ := δ / 4
-  have hρ : 0 < ρ := by positivity
-  let r : NNReal → (Fin 1 → ℝ) → Set.Ioi (0 : ℝ) := fun _ _ ↦ ⟨ρ, hρ⟩
-  refine ⟨r, ?_, ?_⟩
-  · -- Gauge consistency: r c x depends only on c, which evaluates trivially for constant functions
-    intro c hR x
-    rfl
-  · -- Evaluate the Cauchy distance between two arbitrary r-fine prepartitions π₁ and π₂
-    intro c₁ c₂ π₁ π₂ hπ₁ hpart₁ hπ₂ hpart₂
-    let vol : Fin 1 →ᵇᵃ E →L[ℝ] G := BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))
-    let π : Prepartition (Ioc a b) := π₁.toPrepartition ⊓ π₂.toPrepartition
-    let τ₁ : TaggedPrepartition (Ioc a b) := π₁.infPrepartition π₂.toPrepartition
-    let τ₂ : TaggedPrepartition (Ioc a b) := π₂.infPrepartition π₁.toPrepartition
-    have hsub₁ : τ₁.IsSubordinate (r c₁) := hπ₁.isSubordinate.infPrepartition _
-    have hsub₂ : τ₂.IsSubordinate (r c₂) := hπ₂.isSubordinate.infPrepartition _
-    -- Express the global difference of integral sums as the discrete sum of local subbox
-    -- differences.
-    have hdiff :
-        integralSum (fun x : Fin 1 → ℝ ↦ f (x 0)) vol π₁ -
-          integralSum (fun x : Fin 1 → ℝ ↦ f (x 0)) vol π₂ =
-        ∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))) := by
-      simpa [vol, π, τ₁, τ₂] using
-        integralSum_sub_partitions (fun x : Fin 1 → ℝ ↦ f (x 0)) vol hpart₁ hpart₂
-    -- Step 5: Prove that each localized subbox evaluation is bounded strictly by η * ‖vol J‖
-    have hterm : ∀ J ∈ π.boxes,
-        ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖ ≤ η * ‖vol J‖ := by
-      intro J hJ
-      have hJτ₁ : J ∈ τ₁ := by
-        change J ∈ τ₁.toPrepartition
-        simpa [π, τ₁] using hJ
-      have hJτ₂ : J ∈ τ₂ := TaggedPrepartition.mem_infPrepartition_comm.mp hJτ₁
-      -- Map local tag coordinates back inside the global ambient domain [a, b]
-      have htag₁_mem : τ₁.tag J 0 ∈ Set.Icc a b := by
-        have htag := τ₁.tag_mem_Icc J
-        exact ⟨by simpa [Ioc.lower hab] using htag.1 0,
-               by simpa [Ioc.upper hab] using htag.2 0⟩
-      have htag₂_mem : τ₂.tag J 0 ∈ Set.Icc a b := by
-        have htag := τ₂.tag_mem_Icc J
-        exact ⟨by simpa [Ioc.lower hab] using htag.1 0,
-               by simpa [Ioc.upper hab] using htag.2 0⟩
-      -- Gauge subordination forces both tags to sit within ρ of the shared upper boundary corner
-      have hτ₁_upper : dist (τ₁.tag J) J.upper ≤ ρ := by
-        simpa [Metric.mem_closedBall, r, ρ, dist_comm] using hsub₁ J hJτ₁ J.upper_mem_Icc
-      have hτ₂_upper : dist J.upper (τ₂.tag J) ≤ ρ := by
-        simpa [Metric.mem_closedBall, r, ρ] using hsub₂ J hJτ₂ J.upper_mem_Icc
-      -- Chain the tag metrics through the shared upper corner via the triangle inequality
-      have htags_dist : dist (τ₁.tag J) (τ₂.tag J) < δ := calc
-        dist (τ₁.tag J) (τ₂.tag J) ≤ dist (τ₁.tag J) J.upper + dist J.upper (τ₂.tag J) :=
-        dist_triangle _ _ _
-        _ ≤ ρ + ρ := add_le_add hτ₁_upper hτ₂_upper
-        _ = δ / 2 := by ring
-        _ < δ := half_lt_self hδ
-      have hcoord_dist : dist (τ₁.tag J 0) (τ₂.tag J 0) < δ :=
-        (dist_le_pi_dist (τ₁.tag J) (τ₂.tag J) 0).trans_lt htags_dist
-      -- Trigger the uniform continuity bound using the coordinated metric separation
-      have hf_small : dist (f (τ₁.tag J 0)) (f (τ₂.tag J 0)) < η :=
-        hδf _ htag₁_mem _ htag₂_mem hcoord_dist
-      -- Factor the bounded vector difference through the linear volume operator norm
-      calc
-        ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖
-          = ‖vol J (f (τ₁.tag J 0) - f (τ₂.tag J 0))‖ := by rw [map_sub]
-        _ ≤ ‖vol J‖ * ‖f (τ₁.tag J 0) - f (τ₂.tag J 0)‖ := (vol J).le_opNorm _
-        _ ≤ ‖vol J‖ * η := by
-            rw [← dist_eq_norm]
-            exact mul_le_mul_of_nonneg_left hf_small.le (norm_nonneg _)
-        _ = η * ‖vol J‖ := by ring
-    -- Step 6: Aggregate local bounds over the partition to confirm total metric distance < ε
-    calc
-      dist (integralSum (fun x : Fin 1 → ℝ ↦ f (x 0)) vol π₁)
-           (integralSum (fun x : Fin 1 → ℝ ↦ f (x 0)) vol π₂)
-        = ‖∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0)))‖ := by
-        rw [dist_eq_norm, ← hdiff]
-      _ ≤ ∑ J ∈ π.boxes, ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖ := norm_sum_le _ _
-      _ ≤ ∑ J ∈ π.boxes, η * ‖vol J‖ := Finset.sum_le_sum hterm
-      _ = η * ∑ J ∈ π.boxes, ‖vol J‖ := by rw [Finset.mul_sum]
-      _ ≤ η * C := mul_le_mul_of_nonneg_left (sum_norm_ofDiff_le_norm_mul_eVariationOn a b B g hg π)
-        hη.le
-      _ ≤ ε := by simpa [C, mul_comm, mul_left_comm, mul_assoc] using hηC.le
+  let r : NNReal → (Fin 1 → ℝ) → Set.Ioi (0 : ℝ) := fun _ _ ↦ ⟨ρ, by grind⟩
+  refine ⟨r, fun _ _ _ ↦ by rfl, fun c₁ c₂ π₁ π₂ hπ₁ hpart₁ hπ₂ hpart₂ ↦ ?_⟩
+  -- Evaluate the Cauchy distance between two arbitrary r-fine prepartitions π₁ and π₂
+  let vol := BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))
+  let π := π₁.toPrepartition ⊓ π₂.toPrepartition
+  let τ₁ := π₁.infPrepartition π₂.toPrepartition
+  let τ₂ := π₂.infPrepartition π₁.toPrepartition
+  have hsub₁ : τ₁.IsSubordinate (r c₁) := hπ₁.isSubordinate.infPrepartition _
+  have hsub₂ : τ₂.IsSubordinate (r c₂) := hπ₂.isSubordinate.infPrepartition _
+  -- Express the global difference of integral sums as the discrete sum of local subbox
+  -- differences.
+  have hdiff : integralSum f' vol π₁ - integralSum f' vol π₂ =
+      ∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))) := by
+    simpa [vol, π, τ₁, τ₂] using
+      integralSum_sub_partitions f' vol hpart₁ hpart₂
+  -- Step 5: Prove that each localized subbox evaluation is bounded strictly by η * ‖vol J‖
+  have hterm : ∀ J ∈ π.boxes,
+      ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖ ≤ ‖vol J‖ * η := by
+    intro J hJ
+    have hJτ₁ : J ∈ τ₁ := by
+      change J ∈ τ₁.toPrepartition
+      simpa [π, τ₁] using hJ
+    have hJτ₂ : J ∈ τ₂ := TaggedPrepartition.mem_infPrepartition_comm.mp hJτ₁
+    -- Map local tag coordinates back inside the global ambient domain [a, b]
+    have := τ₁.tag_mem_Icc J
+    have := τ₂.tag_mem_Icc J
+    -- Gauge subordination forces both tags to sit within ρ of the shared upper boundary corner
+    have hτ₁_upper : dist (τ₁.tag J) J.upper ≤ ρ := by
+      simpa [Metric.mem_closedBall, r, ρ, dist_comm] using hsub₁ J hJτ₁ J.upper_mem_Icc
+    have hτ₂_upper : dist J.upper (τ₂.tag J) ≤ ρ := by
+      simpa [Metric.mem_closedBall, r, ρ] using hsub₂ J hJτ₂ J.upper_mem_Icc
+    -- Chain the tag metrics through the shared upper corner via the triangle inequality
+    -- Trigger the uniform continuity bound using the coordinated metric separation
+    -- Factor the bounded vector difference through the linear volume operator norm
+    grw [← map_sub, (vol J).le_opNorm, ← dist_eq_norm]
+    gcongr
+    apply le_of_lt (hδf _ (by simp_all) _ (by simp_all) _)
+    grw [dist_le_pi_dist, dist_triangle _ J.upper _]
+    unfold ρ at *; linarith
+  -- Step 6: Aggregate local bounds over the partition to confirm total metric distance < ε
+  calc
+    dist (integralSum f' vol π₁) (integralSum f' vol π₂)
+      = ‖∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0)))‖ := by
+      simp only [dist_eq_norm, hdiff]
+    _ ≤ (‖B‖ * V) * η := by
+      grw [norm_sum_le, Finset.sum_le_sum hterm, ← Finset.sum_mul]
+      gcongr
+      exact sum_norm_ofDiff_le_norm_mul_eVariationOn a b B g hg π
+    _ ≤ ε := by grind
 
 /-! ## Main theorems -/
 

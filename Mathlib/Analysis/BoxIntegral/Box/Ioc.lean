@@ -56,4 +56,9 @@ lemma Ioc_le_Ioc_iff {a b c d : ℝ} (hab : a < b) (hcd : c < d) :
     Ioc c d ≤ Ioc a b ↔ a ≤ c ∧ d ≤ b := by
   simp [Ioc, hab, hcd, Box.le_iff_bounds, Pi.le_def]
 
+@[simp]
+lemma Icc_of_Ioc {a b : ℝ} (hab : a < b) : Box.Icc (Ioc a b) = { x | x 0 ∈ Set.Icc a b } := by
+  simp only [Box.Icc_def, Fin.isValue, Set.mem_Icc]; ext x
+  simp [Pi.le_def, Ioc.lower hab, Ioc.upper hab]
+  
 end BoxIntegral
