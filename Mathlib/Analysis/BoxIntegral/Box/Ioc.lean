@@ -38,15 +38,16 @@ noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
       upper := fun _ ↦ max a b
       lower_lt_upper := fun _ ↦ by grind }
 
-@[simp]
 lemma Ioc.of_lt {a b : ℝ} (h : a < b) : Ioc a b = ⟨ fun _ ↦ a, fun _ ↦ b, fun _ ↦ h ⟩ := by
   simp [Ioc, h.ne, h.le]
 
+@[simp]
 lemma Ioc.upper {a b : ℝ} (h : a < b) (i : Fin 1) : (Ioc a b).upper i = b := by
-  simp [h]
+  simp [h, of_lt]
 
+@[simp]
 lemma Ioc.lower {a b : ℝ} (h : a < b) (i : Fin 1) : (Ioc a b).lower i = a := by
-  simp [h]
+  simp [h, of_lt]
 
 lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
   ext
@@ -55,7 +56,7 @@ lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
 
 @[simp]
 lemma mem_Ioc {a b : ℝ} (hab : a < b) (x : Fin 1 → ℝ) : x ∈ Ioc a b ↔ a < x 0 ∧ x 0 ≤ b := by
-  simp [Box.mem_def, hab]
+  simp [Box.mem_def, hab, Ioc.of_lt]
 
 @[simp]
 lemma Ioc_le_Ioc_iff {a b c d : ℝ} (hab : a < b) (hcd : c < d) :

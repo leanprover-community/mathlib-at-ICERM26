@@ -14,7 +14,7 @@ public import Mathlib.Analysis.BoxIntegral.Basic
 public import Mathlib.Analysis.BoxIntegral.Partition.OrderedDivision
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
-public import Mathlib.Analysis.Calculus.ContDiff.Defs
+public import Mathlib.Analysis.Calculus.ContDiff.Basic
 
 /-! # Riemann–Stieltjes integral
 
@@ -109,6 +109,7 @@ or by further conversation with the AI agent).
 * Interpretation of `ofDiff` as a signed measure (assuming bounded variation).  This requires
 the development of signed measures in Mathlib
 * Example: decay of Fourier transforms of total variation functions
+* Make some `a`, `b` variables implicit
 
 ## Tags
 
@@ -1097,12 +1098,11 @@ theorem exists_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
     StieltjesIntegrable a b B f g := by
   -- Extract the definitive limit vector L and its underlying BoxIntegral proof term
-  let int_mode : IntegrationParams := IntegrationParams.Riemann
-  obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn a b B f g hab int_mode hf hg
+  obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn a b B f g
+    hab IntegrationParams.Riemann hf hg
   use L
   -- Unfold the goal to expose the branching definition, then resolve it using a < b
-  rw [HasStieltjesIntegral]
-  rw [if_neg (ne_of_lt hab), if_pos hab]
+  rw [HasStieltjesIntegral, if_neg (ne_of_lt hab), if_pos hab]
   exact hL
 
 /-- Theorem A.2 of Montgomery Vaughan: if ∫ₐᵇ f dg exists, then ∫ₐᵇ g df exists and
@@ -1171,19 +1171,20 @@ theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G
 pairing `(lsmul ℝ ℝ).flip` reduces to the ordinary `BoxIntegral.HasIntegral` against the
 Lebesgue volume on `(a, b]`. -/
 theorem hasStieltjesIntegral_id_iff_hasIntegral_volume (hab : a < b) (f : ℝ → E) (L : E) :
-    HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f id L ↔
+    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L ↔
       HasIntegral (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0))
-        BoxAdditiveMap.volume L := by sorry
+        BoxAdditiveMap.volume L := by
+    simp [hab, HasStieltjesIntegral', BoxAdditiveMap.ofDiff_lsmul_eq_volume]
 
 /-- Function-level form of Theorem A.3(b) (`integral_of_derivative`): when `g` is `C¹` on
 `[a, b]` and `f` is Riemann integrable, the Stieltjes integral of `f` against `g` equals the
 Riemann integral of `B (f x) (g' x)`. -/
-theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' {f : ℝ → E} {g : ℝ → F}
-    {a b : ℝ} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hf : RiemannIntegrable a b f) :
+theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' {f : ℝ → E} {g : ℝ → F} {a b : ℝ}
+    (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hf : RiemannIntegrable a b f) :
     ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) :=
   (integral_of_derivative a b B hab hg hf).stieltjesIntegral_eq
 
-theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g : ℝ → F}
+theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g : ℝ → F} {a b : ℝ}
     (hg : ContDiffOn ℝ 1 g (Set.Icc (min a b) (max a b)))
     (hf : RiemannIntegrable (min a b) (max a b) f) :
     ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) := by
@@ -1197,9 +1198,11 @@ theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g :
 
 /-- Special case of previous when `g x = x`. -/
 theorem stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable
-{f : ℝ → E} (hf : RiemannIntegrable (min a b) (max a b) f) :
+{f : ℝ → E} {a b : ℝ} (hf : RiemannIntegrable (min a b) (max a b) f) :
   ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id = ∫ x in a..b, f x := by
-  sorry
+  convert stieltjesIntegral_eq_intervalIntegral_of_contDiffOn _
+    (ContDiff.contDiffOn contDiff_id) hf using 3 with x
+  simp
 
 /-! ### Sums as Stieltjes integrals -/
 
