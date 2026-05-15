@@ -17,58 +17,64 @@ public import Mathlib.Analysis.Calculus.ContDiff.Defs
 
 /-! # Riemann–Stieltjes integral
 
-In this file we define the (one-dimensional) Riemann–Stieltjes integral on an interval `(a, b]` of
-a function `f : ℝ → E` against an integrator `g : ℝ → F`, paired by a continuous bilinear map
-`B : E →L[ℝ] F →L[ℝ] G`. The integral (taking values in `G`) is realized as a
-`BoxIntegral.HasIntegral` over the half-open interval, viewed as a `Box (Fin 1)`,
-with respect to the box-additive "differential" associated to `g`.
+In this file we define the (one-dimensional) Riemann–Stieltjes integral `∫⟨B⟩ x in a..b, f x ∂g`
+from `a` to `b` of a function `f : ℝ → E` against an integrator `g : ℝ → F`, paired
+by a continuous bilinear map `B : E →L[ℝ] F →L[ℝ] G`.
 
-If `a = b`, the integral is defined to vanish, and if `a > b`, the integral is defined to be the
-egative of the integral
-Carrying the bilinear pairing `B` lets a single definition cover the three common variants of
-Stieltjes integration encountered in practice:
+The notation here is deliberately chosen to mimic the notation `∫ x in a..b, f x ∂μ` for
+`IntervalIntegral`.
 
-* **`f` scalar, `g` vector-valued.** Here we take `B = ContinuousLinearMap.lsmul ℝ E`
-* **`f` vector-valued, `g` scalar.** Here we take `B = (ContinuousLinearMap.lsmul ℝ 𝕜).flip`.
+The bilinear pairing `B` covers the three main variants of
+Stieltjes integration that appear in practice:
+* **`f` scalar, `g` vector-valued.** Here we take `B = ContinuousLinearMap.lsmul ℝ ℝ`
+* **`f` vector-valued, `g` scalar.** Here we take `B = (ContinuousLinearMap.lsmul ℝ ℝ).flip`.
 * **`f` and `g` are both real or both complex.** Here we take `B = ContinuousLinearMap.mul ℝ E`.
 
 The development follows the treatment of Riemann–Stieltjes integration in
 Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Appendix A.
 
-Currently we are using `Stieltjes` to refer to the one-dimensional Riemann–Stieltjes integral; the
-name may be subject to change if further variants of Stieltjes integration are introduced.
+## Key definitions
 
-## Notation
+All methods are in the namespace `BoxIntegral`.
 
-`∫⟨B⟩ x in a..b, f x ∂g` is notation for `stieltjesIntegral a b B (fun x ↦ f x) g`,
-scoped to the `BoxIntegral.Stieltjes` namespace (`open scoped BoxIntegral.Stieltjes` to make
-it available). It parallels Mathlib's `∫ x in a..b, f x ∂μ` notation for `intervalIntegral`, with
-the bilinear pairing `B` carried explicitly in angle brackets since it has no canonical default.
+* `Stieltjes.StieltjesIntegrable a b B f g`: the predicate that the integral
+`∫⟨B⟩ x in a..b, f x ∂g` exists.
+* `Stieltjes.HasIntegral a b B f g L`: the predicate that the integral `∫⟨B⟩ x in a..b, f x ∂g`
+exists and equals `L`.
+* `Stieltjes.stieltjesIntegral a b B f g`: the value of `∫⟨B⟩ x in a..b, f x ∂g` if it exists, or
+the junk value of `0` otherwise.
+
+## Implementation notes
+
+Mathematically, one can define `∫⟨B⟩ x in a..b, f x ∂g` for `a < b` as the limit of
+Riemann-Stieltjes sums `∑ B (f (π.tag x)) (g(x.upper) - g(x.lower))` as the mesh size of the
+tagged partition `π` of `(a, b]` tends to `0`.  We implement this via the
+`BoxIntegral.HasIntegral` predicate on `Box (Fin 1)`, relying in particular on the differential
+`ofDiff g` of `g`, which is implemented as a `BoxAdditiveMap`.
+
+The Riemann--Stieltjes integral is also extended to the `a = b` and `a > b` cases by antisymmetry.
+In all cases, we denote the integral by `∫⟨B⟩ x in a..b, f x ∂g`.
 
 ## Main theorems
 
-* `Stieltjes.hasStieltjesIntegral_iff_lim_sum`: textbook ε-δ characterization — `L` is the
-  Riemann–Stieltjes integral iff the Riemann–Stieltjes sums `∑ B (f (π.tag x)) (g(x.upper) -
-  g(x.lower))` converge to `L` as the mesh size of the (Henstock) tagged partition tends to 0.
-`StieltjesIntegrable` / `stieltjesIntegral`
-  counterparts): for any real `a, b, c`, the integral over `(a, c]` is the sum of the
-  integrals over `(a, b]` and `(b, c]`, provided all three integrals exist.
+* `Stieltjes.hasStieltjesIntegral_iff_lim_sum`: gives the textbook ε-δ characterization of the
+Riemann--Stieltjes integral.
+* `Stieltjes.stieltjesIntegral.add_adjacent`: gives the splitting identity
+  `∫⟨B⟩ x in a..c, f x ∂g = ∫⟨B⟩ x in a..b, f x ∂g + ∫⟨B⟩ x in b..c, f x ∂g`, regardless of
+  the ordering of `a`, `b`, `c`.
 * `Stieltjes.exists_of_continuousOn_of_boundedVariationOn` (Theorem A.1): if `f` is continuous
   and `g` has bounded variation on `[a, b]`, then the Riemann–Stieltjes integral exists.
-* `Stieltjes.HasStieltjesIntegral.by_parts` / `StieltjesIntegrable.by_parts` /
-  `stieltjesIntegral.by_parts` (Theorem A.2): integration by parts — if `∫ f ∂g` exists, then
-  so does `∫ g ∂f`, and the two are related by `∫ g ∂f = B (f b) (g b) - B (f a) (g a) - ∫ f ∂g`.
+* `Stieltjes.stieltjesIntegral.by_parts` (Theorem A.2): if `∫⟨B⟩ x in a..b, f x ∂g` exists, then
+  so does `∫⟨B⟩ x in a..b, g x ∂f`, and the two are related by the integration by parts identity
+  `∫⟨B⟩ x in a..b, g x ∂f = B (f b) (g b) - B (f a) (g a) - ∫⟨B⟩ x in a..b, f x ∂g`.
 * `Stieltjes.variation_of_derivative` (Theorem A.3(a)) and
   `Stieltjes.integral_of_derivative` (Theorem A.3(b)): when `g` is `C¹`, the total variation
-  and the Riemann–Stieltjes integral are computed from `g′`.
-* `Stieltjes.stieltjesIntegral_eq_intervalIntegral_of_contDiffOn`: function-level form of
-  Theorem A.3(b) — when `g` is `C¹` and `f` is Riemann integrable, the Stieltjes integral
-  `∫⟨B⟩ x in a..b, f x ∂g` equals the ordinary interval integral `∫ x in a..b, B (f x) (g′ x)`.
+  and the Riemann–Stieltjes integral can be computed by `g′`.
 * `Stieltjes.integral_le_integral_of_variation` (Theorem A.4): a norm bound on the integral
   in terms of the variation of `g`.
-* `Stieltjes.hasStieltjesIntegral_id_iff_hasIntegral_volume`: when the integrator is the
-  identity, the Stieltjes integral with the scalar-multiplication pairing reduces to the
-  ordinary `BoxIntegral.HasIntegral` against the Lebesgue volume on `(a, b]`.
+* `Stieltjes.stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable`: the Riemann-Stieltjes
+integral `∫⟨lsmul ℝ ℝ⟩ x in a..b, f x ∂id` agrees with the interval integral
+`∫ x in a..b, f x` when `f` is Riemann integrable.
 * `Stieltjes.sum_eq_integral_nat_floor` and `Stieltjes.sum_eq_integral_int_floor`: relate
   sums `∑ f n` to Riemann–Stieltjes integrals against the floor function.
 * `Stieltjes.sum_eq_integral_natSummatory_le` / `_lt` : relate sums `∑ B (f n) (g n)` to
@@ -77,17 +83,15 @@ the bilinear pairing `B` carried explicitly in angle brackets since it has no ca
 
 ## AI usage
 
-* Much of the boilerplate API was generated by AI, which was prompted to follow existing Mathlib
-examples and style guides.  They were reviewed by human authors, but in many cases no substantive
-improvement to the AI-generated code was found.
+* Much of the boilerplate API and docstrings was generated by AI, which was prompted to follow
+existing Mathlib examples and style guides.  They were reviewed by human authors, but in
+several cases no substantive improvement to the AI-generated code was found.
 
 * More mathematically complex theorems were largely proved by hand, though in some cases AI tools
 were used to generate an initial proof structure (which was then often revised either by hand,
 or by further conversation with the AI agent).
 
 * AI was also used to generate initial text for docstrings.
-
-* All AI-generated code was reviewed by the human authors, and in many
 
 ## References
 
@@ -98,6 +102,7 @@ or by further conversation with the AI agent).
 
 * Develop a higher-dimensional Stieltjes integral (exists in the literature, but is rarely used)
 * Develop a Stieltjes integral based around `Ico` intervals rather than `Ioc` intervals
+* Other variants of Stieltjes integration, such as the Henstock-Stieltjes integral
 * Change of variables formula wrt monotone substitutions
 * Interpretation of `ofDiff` as a measure (assuming monotonicity)
 * Interpretation of `ofDiff` as a signed measure (assuming bounded variation).  This requires
@@ -781,7 +786,7 @@ theorem stieltjesIntegral.of_eq (f : ℝ → E) (g : ℝ → F) :
   rw [← HasStieltjesIntegral.of_eq_iff_zero a B f g]
   apply Exists.choose_spec
 
-theorem stieltjesIntegral.of_symm (f : ℝ → E) (g : ℝ → F) :
+theorem stieltjesIntegral.integral_symm (f : ℝ → E) (g : ℝ → F) :
     ∫⟨B⟩ x in b..a, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
   by_cases h_integ : StieltjesIntegrable a b B f g
   · have h_integ_symm : StieltjesIntegrable b a B f g := h_integ.symm
@@ -1313,12 +1318,13 @@ lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
       (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by
   -- Step 1: Reduce integrability to the Cauchy convergence criterion over fine prepartitions
   let f' := fun x : Fin 1 → ℝ ↦ f (x 0)
-  refine BoxIntegral.integrable_iff_cauchy_basis.2 fun ε hε ↦ ?_
+  refine integrable_iff_cauchy_basis.2 fun ε hε ↦ ?_
   -- Step 2: Define global constants for total variation and bilinear scaling bounds
   let V : ℝ := (eVariationOn g (Set.Icc a b)).toReal
   rcases exists_pos_mul_lt hε (‖B‖ * V) with ⟨η, hη, hηC⟩
   -- Step 3: Extract the uniform continuity margin δ required to achieve our target error η
-  rcases Metric.uniformContinuousOn_iff.mp (isCompact_Icc.uniformContinuousOn_of_continuous hf) η hη with ⟨δ, hδ, hδf⟩
+  rcases Metric.uniformContinuousOn_iff.mp (isCompact_Icc.uniformContinuousOn_of_continuous hf) η hη
+    with ⟨δ, hδ, hδf⟩
   -- Step 4: Define a strictly positive, constant gauge ρ = δ / 4
   -- Forcing subboxes to have a radius ≤ δ / 4 ensures that any two tags inside overlapping
   -- subboxes are separated by a strict total distance of less than δ.
@@ -1342,9 +1348,7 @@ lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
   have hterm : ∀ J ∈ π.boxes,
       ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖ ≤ ‖vol J‖ * η := by
     intro J hJ
-    have hJτ₁ : J ∈ τ₁ := by
-      change J ∈ τ₁.toPrepartition
-      simpa [π, τ₁] using hJ
+    have hJτ₁ : J ∈ τ₁ := by change J ∈ τ₁.toPrepartition; simpa [π, τ₁] using hJ
     have hJτ₂ : J ∈ τ₂ := TaggedPrepartition.mem_infPrepartition_comm.mp hJτ₁
     -- Map local tag coordinates back inside the global ambient domain [a, b]
     have := τ₁.tag_mem_Icc J
@@ -1427,7 +1431,8 @@ Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 theorem variation_of_derivative {g : ℝ → F} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) :
     (eVariationOn g (Set.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
 
-/-- Placeholder abbreviation; there may be a better spelling for this. -/
+/-- Placeholder abbreviation; there may be a better spelling for this. TODO: make this definition
+symmetric in a, b -/
 abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
   Integrable (Ioc a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) BoxAdditiveMap.volume
@@ -1462,10 +1467,28 @@ theorem hasStieltjesIntegral_id_iff_hasIntegral_volume (hab : a < b) (f : ℝ �
 /-- Function-level form of Theorem A.3(b) (`integral_of_derivative`): when `g` is `C¹` on
 `[a, b]` and `f` is Riemann integrable, the Stieltjes integral of `f` against `g` equals the
 Riemann integral of `B (f x) (g' x)`. -/
-theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g : ℝ → F} (hab : a < b)
-    (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hf : RiemannIntegrable a b f) :
-    stieltjesIntegral a b B f g = ∫ x in a..b, B (f x) (deriv g x) :=
+theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' {f : ℝ → E} {g : ℝ → F}
+    {a b : ℝ} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hf : RiemannIntegrable a b f) :
+    ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) :=
   (integral_of_derivative a b B hab hg hf).stieltjesIntegral_eq
+
+theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g : ℝ → F}
+    (hg : ContDiffOn ℝ 1 g (Set.Icc (min a b) (max a b)))
+    (hf : RiemannIntegrable (min a b) (max a b) f) :
+    ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) := by
+  rcases lt_trichotomy a b with hab | rfl | hba
+  · simp only [le_of_lt hab, inf_of_le_left, sup_of_le_right] at hg hf
+    exact stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' B hab hg hf
+  · simp
+  simp only [le_of_lt hba, inf_of_le_right, sup_of_le_left] at hg hf
+  rw [stieltjesIntegral.integral_symm, intervalIntegral.integral_symm,
+    stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' B hba hg hf]
+
+/-- Special case of previous when `g x = x`. -/
+theorem stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable
+{f : ℝ → E} (hf : RiemannIntegrable (min a b) (max a b) f) :
+  ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id = ∫ x in a..b, f x := by
+  sorry
 
 /-! ### Sums as Stieltjes integrals -/
 
