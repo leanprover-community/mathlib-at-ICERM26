@@ -223,10 +223,10 @@ lemma Set.image_comp_isBigO {l' : Filter γ} {g : α → E} {f : γ → α} (hg 
 end comp
 
 -- same as exp_at_one' but deduced directly from exp_at_one
-lemma exp_at_one'' {l : Filter ℝ} {f : ℝ → ℝ} (hf : Filter.Tendsto f l (𝓝 0)) :
+lemma exp_at_one'' {l : Filter α} {f : α → ℝ} (hf : Filter.Tendsto f l (𝓝 0)) :
     map {fun _ ↦ exp} {f} ⊆ map (map {fun _ ↦ HAdd.hAdd} {fun _ ↦ 1}) (bigO l {f}) := by
   have h := exp_at_one
-  let : Set (ℝ → ℝ) → Set (ℝ → ℝ) := (Set.image (· ∘ f))
+  let : Set (ℝ → ℝ) → Set (α → ℝ) := (Set.image (· ∘ f))
   -- Take `h` and compose on the right with `f`, then push into expressions until you
   -- reach bigO.
   rw [← Set.le_iff_subset] at h
@@ -261,31 +261,6 @@ macro "magic_tac" loc:(Lean.Parser.Tactic.location)? : tactic => `(tactic|
   simp only [map_eq, mem_pure, Set.mem_singleton_iff, Set.iUnion_iUnion_eq_left,
     Set.mem_iUnion, exists_prop, Set.iUnion_exists, Set.biUnion_and'] $[$loc]?)
 
-lemma mul_bigO {s₁ s₂ : Set (α → ℝ)} :
-    map (map ({fun _ ↦ HMul.hMul}) s₁) (bigO l s₂) ⊆
-      bigO l (map (map ({fun _ ↦ HMul.hMul}) s₁) s₂) := by
-  magic_tac
-  intro x
-  push _ ∈ _
-  rw [mem_bigO] at *
-  rintro ⟨p, hp, f, ⟨ι, instι, g, hg, hf⟩, rfl⟩
-  use ι, instι
-  use fun i x ↦ p x * g i x
-  constructor
-  · intro i
-    push _ ∈ _
-    use p, hp, g i, hg i
-  · simp_rw [norm_mul, ← Finset.mul_sum]
-    apply IsBigO.mul (IsBigO.norm_right (by rfl)) hf
-
-lemma bigO_mul {s₁ s₂ : Set (α → ℝ)} :
-    map (map ({fun _ ↦ HMul.hMul}) (bigO l s₁)) s₂ ⊆
-      bigO l (map (map ({fun _ ↦ HMul.hMul}) s₁) s₂) := by
-  have := mul_bigO (s₁ := s₂) (s₂ := s₁) (l := l)
-  magic_tac at *
-  convert this using 1 <;>
-  · rw [Set.iUnion₂_comm]
-    simp_rw [mul_comm]
 
 lemma asymp_mul_add {E' : Type*} [NormedCommRing E'] {s₁ s₂ s₃ : Set (α → E')} :
     map (map {fun _ ↦ HMul.hMul} s₁) (map (map {fun _ ↦ HAdd.hAdd} s₂) s₃) ⊆
@@ -461,6 +436,37 @@ lemma RightSerial.bigO_mono {s₁ s₂ : Set (α → ℝ)} (h : s₁ RS[(· =O[l
     bigO l s₁ RS[Eq] bigO l s₂ := by
   rw [rightSerial_eq]
   exact bigO_subset_bigO' l h
+
+lemma mul_bigO {s₁ s₂ : Set (α → ℝ)} :
+    map (map ({fun _ ↦ HMul.hMul}) s₁) (bigO l s₂) ⊆
+      bigO l (map (map ({fun _ ↦ HMul.hMul}) s₁) s₂) := by
+  magic_tac
+  intro x
+  push _ ∈ _
+  rw [mem_bigO] at *
+  rintro ⟨p, hp, f, ⟨ι, instι, g, hg, hf⟩, rfl⟩
+  use ι, instι
+  use fun i x ↦ p x * g i x
+  constructor
+  · intro i
+    push _ ∈ _
+    use p, hp, g i, hg i
+  · simp_rw [norm_mul, ← Finset.mul_sum]
+    apply IsBigO.mul (IsBigO.norm_right (by rfl)) hf
+
+lemma bigO_mul {s₁ s₂ : Set (α → ℝ)} :
+    map (map ({fun _ ↦ HMul.hMul}) (bigO l s₁)) s₂ ⊆
+      bigO l (map (map ({fun _ ↦ HMul.hMul}) s₁) s₂) := by
+  have := mul_bigO (s₁ := s₂) (s₂ := s₁) (l := l)
+  magic_tac at *
+  convert this using 1 <;>
+  · rw [Set.iUnion₂_comm]
+    simp_rw [mul_comm]
+
+lemma bigO_mul_bigO {s₁ s₂ : Set (α → ℝ)} :
+  map (map {fun _ ↦ HMul.hMul} (bigO l s₁)) (bigO l s₂) ⊆
+    bigO l (map (map {fun _ ↦ HMul.hMul} s₁) s₂) := by
+  grw [bigO_mul, mul_bigO, bigO_bigO]
 
 end RightSerial
 
@@ -659,6 +665,11 @@ lemma Real.log_add_one_isBigO_atTop : asymp% x : ℝ => log (x + 1) = log x + O[
   use (fun x ↦ log (x + 1) - log x), Real.log_add_sub_log_isBigO_inv
   ring_nf
 
+-- lemma exp_at_one''' {l : Filter α} {f : α → ℝ} (hf : Filter.Tendsto f l (𝓝 0)) :
+--     asymp% x : α => exp (f x) = 1 + O[l](f x) := by
+--   sorry
+--     -- map {fun _ ↦ exp} {f} ⊆ map (map {fun _ ↦ HAdd.hAdd} {fun _ ↦ 1}) (bigO l {f}) := by
+
 /-
   (n+1)^(e^(1/n))
   = (n+1)^(1 + O(1/n)) := _
@@ -690,8 +701,8 @@ theorem terry :
     asymp% x : ℝ => _ = exp (log x + O[atTop](log x / x)) := by
       -- Pain point: I have to do more rewriting thatn I'd like, and I had to
       -- manually translate some existing lemmas into the language of asymptotics.
-      grw [asymp_mul_add, asymp_add_mul, asymp_add_mul, mul_bigO, bigO_mul, bigO_mul,
-        mul_bigO, bigO_bigO, bigO_add_bigO_eq_left, asymp_add_assoc, bigO_add_bigO_eq_right]
+      grw [asymp_mul_add, asymp_add_mul, asymp_add_mul, mul_bigO, bigO_mul_bigO, bigO_mul,
+        bigO_add_bigO_eq_left, asymp_add_assoc, bigO_add_bigO_eq_right]
       · magic_tac
         ring_nf
         rfl
