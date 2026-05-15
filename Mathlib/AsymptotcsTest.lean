@@ -11,12 +11,17 @@ Additional things we need to support:
 
 - Other relations rather than just =, for example ≤, =ᶠ[l], ≪. That is,
   `f x ≤ g x + O(1)`
-  `n ! =ᶠ[𝓟 {n | n ≠ 0}] (1 + o(n)) * f n` i.e. the equation holds on some subset.
-  `f x =ᶠ[atTop] (1 + o(n)) * g n` i.e. `f` and `g` are equivalent
+  `n ! =ᶠ[𝓟 {n | n ≠ 0}] (n + O(1)) * f n` i.e. the equation holds on some subset.
+  `f x =ᶠ[atTop] (1 + o(1)) * g n` i.e. `f` and `g` are equivalent
   `f x ≪ g x + O(x)`
 
 - Constants that are allowed to depend on some specific subset of the variables, i.e.
   $O_{A, ε}(f(x))$
+
+- Functions in multiple variables.
+
+- Favoured filters in each variable, so we don't have to repeat the filter for each O.
+
 -/
 
 public section
@@ -88,6 +93,18 @@ lemma mem_bigO_singleton (f g : α → E) :
     exact Set.mem_singleton _
 
 @[simp]
+lemma bigO_singleton_subset_bigO_singleton (f g : α → E) :
+    bigO l {f} ⊆ bigO l {g} ↔ f =O[l] g := by
+  constructor
+  · intro h
+    have := @h f
+    simpa [mem_bigO_singleton, isBigO_refl, forall_const] using this
+  · intro h x
+    simp only [mem_bigO_singleton]
+    intro h'
+    exact h'.trans h
+
+@[simp]
 lemma bigO_bigO (s : Set (α → ℝ)) : bigO l (bigO l s) = bigO l s := by
   ext f
   constructor
@@ -120,6 +137,12 @@ lemma map_subset_map {s₁ s₁' : Set (α → β → γ)} {s₂ s₂' : Set (α
     (h₁ : s₁ ⊆ s₁') (h₂ : s₂ ⊆ s₂') : map s₁ s₂ ⊆ map s₁' s₂' := by
   rintro g ⟨f₁, hf₁, f₂, hf₂, rfl⟩
   exact ⟨f₁, h₁ hf₁, f₂, h₂ hf₂, rfl⟩
+
+@[push]
+lemma singleton_eq_map_singletons (f₁ : α → β → γ) (f₂ : α → β) :
+    {fun x ↦ f₁ x (f₂ x)} = map {f₁}  {f₂} := by
+  ext g
+  simp
 
 /- Written by Claude -/
 @[simp, push]
@@ -263,6 +286,35 @@ lemma bigO_mul {s₁ s₂ : Set (α → ℝ)} :
   convert this using 1 <;>
   · rw [Set.iUnion₂_comm]
     simp_rw [mul_comm]
+
+lemma asymp_mul_add {E' : Type*} [NormedCommRing E'] {s₁ s₂ s₃ : Set (α → E')} :
+    map (map {fun _ ↦ HMul.hMul} s₁) (map (map {fun _ ↦ HAdd.hAdd} s₂) s₃) ⊆
+      map (map {fun _ ↦ HAdd.hAdd} (map (map {fun _ ↦ HMul.hMul} s₁) s₂))
+        (map (map {fun _ ↦ HMul.hMul} s₁) s₃) := by
+  magic_tac
+  simp only [Set.iUnion_subset_iff, Set.singleton_subset_iff, Set.mem_iUnion, Set.mem_singleton_iff,
+    exists_prop]
+  intro f₁ hf₁ f₂ hf₂ f₃ hf₃
+  use f₁, hf₁, f₂, hf₂, f₁, hf₁, f₃, hf₃
+  ring_nf
+
+lemma asymp_add_assoc {E' : Type*} [SeminormedAddCommGroup E'] {s₁ s₂ s₃ : Set (α → E')} :
+    map (map {fun _ ↦ HAdd.hAdd} (map (map {fun _ ↦ HAdd.hAdd} s₁) s₂)) s₃ =
+      map (map {fun _ ↦ HAdd.hAdd} s₁) (map (map {fun _ ↦ HAdd.hAdd} s₂) s₃) := by
+  magic_tac
+  abel_nf
+
+lemma asymp_add_mul {E' : Type*} [NormedCommRing E'] {s₁ s₂ s₃ : Set (α → E')} :
+    map (map {fun _ ↦ HMul.hMul} (map (map {fun _ ↦ HAdd.hAdd} s₁) s₂)) s₃ ⊆
+      map (map {fun _ ↦ HAdd.hAdd} (map (map {fun _ ↦ HMul.hMul} s₁) s₃))
+        (map (map {fun _ ↦ HMul.hMul} s₂) s₃) := by
+  magic_tac
+  simp only [Set.iUnion_subset_iff, Set.singleton_subset_iff, Set.mem_iUnion, Set.mem_singleton_iff,
+    exists_prop]
+  intro f₁ hf₁ f₂ hf₂ f₃ hf₃
+  use f₁, hf₁, f₃, hf₃, f₂, hf₂, f₃, hf₃
+  ext x
+  ring
 
 lemma bigO_add_bigO (s₁ s₂ : Set (α → E)) :
     map (map ({fun _ ↦ HAdd.hAdd}) (bigO l s₁)) (bigO l s₂) = bigO l (s₁ ∪ s₂) := by
@@ -549,6 +601,64 @@ meta def dummyBigOUnexpander : Lean.PrettyPrinter.Unexpander
 
 end Meta
 
+section StandardAsymptotics
+
+-- Isn't this in Mathlib somewhere?
+theorem const_isBigO_log_atTop (c : ℝ) : (fun _ ↦ c) =O[atTop] Real.log := by
+  rw [IsBigO_def]
+  use 1
+  simp only [IsBigOWith_def, norm_eq_abs, one_mul, eventually_atTop, ge_iff_le]
+  use exp |c|
+  intro x hx
+  have := Real.log_le_log (by positivity) hx
+  grw [← this, Real.log_exp, abs_abs]
+  · apply Real.log_nonneg
+    conv_lhs => rw [← Real.exp_zero]
+    gcongr
+    norm_num
+
+-- There doesn't seem to be anything that quite implies this in mathlib.
+-- Should be a statement about x^a =O[atTop] x^b.
+theorem Real.inv_isBigO_one_atTop : (fun x : ℝ ↦ x⁻¹) =O[atTop] (fun _ ↦ (1 : ℝ)) := by
+  rw [IsBigO_def]
+  use 1
+  simp only [IsBigOWith_def, norm_inv, norm_eq_abs, norm_one, mul_one, eventually_atTop, ge_iff_le]
+  use 1
+  intro x h
+  field_simp
+  rw [abs_of_nonneg]
+  · exact h
+  · linarith
+
+theorem Real.log_add_sub_log_isBigO_inv : (fun x ↦ log (x+1) - log x) =O[atTop] fun x ↦ x⁻¹ := by
+  have := Real.tendsto_mul_log_one_add_of_tendsto (g := fun x ↦ x⁻¹) (t := 1) ?A
+  case A =>
+    apply Tendsto.congr' (f₁ := fun _ ↦ 1)
+    · filter_upwards [eventually_gt_atTop 0] with x hx
+      field_simp
+    · simp
+  have := (this.isBigO_one ℝ).mul (isBigO_refl (fun x : ℝ ↦ x⁻¹) _)
+  simp only [one_mul] at this
+  grw [← this]
+  apply EventuallyEq.isBigO
+  filter_upwards [eventually_gt_atTop 0, eventually_gt_atTop 10] with x hx hx'
+  field_simp
+  rw [log_div]
+  · linarith
+  · positivity
+
+end StandardAsymptotics
+
+
+-- see: Real.tendsto_mul_log_one_add_of_tendsto with g x = x⁻¹
+
+lemma Real.log_add_one_isBigO_atTop : asymp% x : ℝ => log (x + 1) = log x + O[atTop](x⁻¹) := by
+  magic_tac
+  simp only [mem_bigO_singleton, rightSerial_eq, Set.singleton_subset_iff, Set.mem_iUnion,
+    Set.mem_singleton_iff, exists_prop]
+  use (fun x ↦ log (x + 1) - log x), Real.log_add_sub_log_isBigO_inv
+  ring_nf
+
 /-
   (n+1)^(e^(1/n))
   = (n+1)^(1 + O(1/n)) := _
@@ -562,15 +672,36 @@ theorem terry :
   calc
     -- asymp% n => (n+1)^(exp(1/n)) =ᶠ[atTop] (n+1)^(1 + O(1/n))
     asymp% x : ℝ => (x + 1) ^ (exp x⁻¹) = (x + 1) ^ (1 + O[atTop](x⁻¹)) := by
-      sorry
+      -- Can't use exp_at_one_set'' - {f} doesn't match map {fun _ ↦ Inv.inv} {fun x ↦ x}
+      grw [exp_at_one_set]
+      -- The state here is ugly; I think it's a consequene of how we chose to state exp_at_one_set
+      simp only [mem_map, Set.mem_singleton_iff, exists_eq_left, forall_eq]
+      exact tendsto_inv_atTop_zero
+    asymp% x : ℝ => _ =ᶠ[atTop] exp (Real.log (x + 1) * (1 + O[atTop](x⁻¹))) := by
+      magic_tac
+      gcongr with f hf
+      filter_upwards [eventually_gt_atTop 0] with x hx
+      rw [exp_mul, exp_log]
+      linarith
     -- (n+1)^(1 + O(1/n)) ⊆ exp ( (log n + O(1/n)) * (1 + O(1/n)) )
     asymp% x : ℝ => _ = exp ((log x + O[atTop](x⁻¹)) * (1 + O[atTop](x⁻¹))) := by
-      sorry
+      grw [Real.log_add_one_isBigO_atTop]
     -- exp ( (log n + O(1/n)) * (1 + O(1/n)) ) ⊆ exp (log n + O(log n / n))
-    -- Interseting choice: It's using the map language inside the big-O
-    -- It's correct, but not what I would have written by hand.
     asymp% x : ℝ => _ = exp (log x + O[atTop](log x / x)) := by
-      sorry
+      -- Pain point: I have to do more rewriting thatn I'd like, and I had to
+      -- manually translate some existing lemmas into the language of asymptotics.
+      grw [asymp_mul_add, asymp_add_mul, asymp_add_mul, mul_bigO, bigO_mul, bigO_mul,
+        mul_bigO, bigO_bigO, bigO_add_bigO_eq_left, asymp_add_assoc, bigO_add_bigO_eq_right]
+      · magic_tac
+        ring_nf
+        rfl
+      · magic_tac
+        simp only [mul_one, bigO_singleton_subset_bigO_singleton]
+        have := (const_isBigO_log_atTop 1).mul (isBigO_refl (fun x ↦ x⁻¹) _)
+        simpa using this
+      · magic_tac
+        simp only [bigO_singleton_subset_bigO_singleton]
+        exact (Real.inv_isBigO_one_atTop.trans (const_isBigO_log_atTop 1)).mul (isBigO_refl _ _)
     -- exp (log n + O(log n / n)) ⊆ n * (1 + O(log n / n))
     asymp% x : ℝ =>_ =ᶠ[atTop] x * exp O[atTop](log x / x) := by
       magic_tac
@@ -579,10 +710,9 @@ theorem terry :
       intro x hx
       rw [exp_add, exp_log hx]
     asymp% x : ℝ => _ =  x * (1 + O[atTop](log x / x)) := by
-      rw [rightSerial_eq]
-      -- magic_tac
       grw [exp_at_one_set (l := atTop), bigO_bigO]
-      · simp
+      · pull singleton
+        simp only [mem_bigO_singleton]
         intro f hf
         apply hf.trans_tendsto
         have := tendsto_pow_log_div_mul_add_atTop 1 0 1
@@ -595,10 +725,12 @@ theorem terry :
     asymp% x : ℝ => _ = x + O[atTop](log x) := by
       grw [mul_bigO]
       gcongr
-      simp [RightSerial]
+      simp only [RightSerial, mem_map, Set.mem_singleton_iff, exists_eq_left, forall_eq]
       apply Filter.EventuallyEq.isBigO
       filter_upwards [Filter.eventually_ne_atTop 0]
       intros
       field_simp
+
+#print axioms terry
 
 end Asymptotics
