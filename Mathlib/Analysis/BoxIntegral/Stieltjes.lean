@@ -388,7 +388,7 @@ lemma HasStieltjesIntegral.symm {f : ℝ → E} {g : ℝ → F} {L : G}
 
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
-theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
+theorem hasStieltjesIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
     HasStieltjesIntegral a b B f g L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
@@ -1089,6 +1089,44 @@ lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
       exact sum_norm_ofDiff_le_norm_mul_eVariationOn a b B g hg π
     _ ≤ ε := by grind
 
+/-! ## The Riemann integral -/
+
+def HasRiemannIntegral (f : ℝ → E) (L : E) :=
+    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L
+
+def RiemannIntegrable (f : ℝ → E) :=
+  StieltjesIntegrable a b (lsmul ℝ ℝ).flip f id
+
+noncomputable def riemannIntegral (f : ℝ → E) : E :=
+  ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id
+
+theorem HasRiemannIntegral.iff_hasIntegral {a b : ℝ} (hab : a < b) (f : ℝ → E) (L : E) :
+    HasRiemannIntegral a b f L ↔
+      HasIntegral (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0))
+        BoxAdditiveMap.volume L := by
+    simp [HasRiemannIntegral, hab, HasStieltjesIntegral', BoxAdditiveMap.ofDiff_lsmul_eq_volume]
+
+lemma RiemannIntegrable.def (f : ℝ → E) :
+    RiemannIntegrable a b f ↔ ∃ L, HasRiemannIntegral a b f L := by rfl
+
+lemma RiemannIntegrable.symm (f : ℝ → E) (h : RiemannIntegrable a b f) : RiemannIntegrable b a f :=
+  StieltjesIntegrable.symm _ _ _ h
+
+theorem RiemannIntegrable.iff_integrable {a b : ℝ} (hab : a < b) (f : ℝ → E) :
+    RiemannIntegrable a b f ↔
+      Integrable (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0)) BoxAdditiveMap.volume := by
+    simp [RiemannIntegrable.def, Integrable, HasRiemannIntegral.iff_hasIntegral, hab]
+
+theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (L : E) :
+    HasRiemannIntegral a b f L ↔
+    ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
+    → π.mesh_size ≤ δ →
+     dist (∑ x ∈ π.boxes, ((x.upper 0) - (x.lower 0)) • (f (π.tag x 0))) L < ε := by
+  rw [HasRiemannIntegral]
+  exact hasStieltjesIntegral_iff_lim_sum _ hab _ _ L
+
+-- TODO: add more Riemann integral API.  (Maybe in a separate file?)
+
 /-! ## Main theorems -/
 
 /-- Theorem A.1 of Montgomery-Vaughan: a continuous integrand and a bounded-variation integrator
@@ -1142,12 +1180,6 @@ Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 theorem variation_of_derivative {g : ℝ → F} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) :
     (eVariationOn g (Set.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
 
-/-- Placeholder abbreviation; there may be a better spelling for this. TODO: make this definition
-symmetric in a, b -/
-abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
-  Integrable (Ioc a b) IntegrationParams.Riemann
-    (fun x ↦ f (x 0)) BoxAdditiveMap.volume
-
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
 theorem integral_of_derivative {f : ℝ → E} {g : ℝ → F} (hab : a < b)
@@ -1166,15 +1198,6 @@ theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G
     ‖L‖ ≤ ‖B‖ * L' := by sorry
 
 /-! ### Connection to standard integrals -/
-
-/-- When the integrator is the identity, the Stieltjes integral with the scalar-multiplication
-pairing `(lsmul ℝ ℝ).flip` reduces to the ordinary `BoxIntegral.HasIntegral` against the
-Lebesgue volume on `(a, b]`. -/
-theorem hasStieltjesIntegral_id_iff_hasIntegral_volume (hab : a < b) (f : ℝ → E) (L : E) :
-    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L ↔
-      HasIntegral (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0))
-        BoxAdditiveMap.volume L := by
-    simp [hab, HasStieltjesIntegral', BoxAdditiveMap.ofDiff_lsmul_eq_volume]
 
 /-- Function-level form of Theorem A.3(b) (`integral_of_derivative`): when `g` is `C¹` on
 `[a, b]` and `f` is Riemann integrable, the Stieltjes integral of `f` against `g` equals the
