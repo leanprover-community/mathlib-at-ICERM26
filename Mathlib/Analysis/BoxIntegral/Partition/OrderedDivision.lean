@@ -8,6 +8,7 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Box.Ioc
 public import Mathlib.Analysis.BoxIntegral.Partition.Basic
+public import Mathlib.Data.Finset.Sort
 
 /-! # Ordered divisions of intervals
 
@@ -115,65 +116,70 @@ theorem toPrepartition_isPartition {a b : ℝ}
     (π.toPrepartition hπ ha hb).IsPartition := by
   classical
   intro y hy
-  have h0last : (0 : Fin (π.N + 1)) < Fin.last π.N := by
-    rw [Fin.lt_def]
-    simpa using hN
   have hab : a < b := by
     rw [← ha, ← hb]
-    exact hπ h0last
-  have hy' := (mem_Ioc hab y).1 hy
-  let P : ℕ → Prop := fun k ↦ ∃ hk : k < π.N + 1, y 0 ≤ π.x ⟨k, hk⟩
-  have hP : ∃ k, P k := by
-    refine ⟨π.N, ?_, ?_⟩
-    · omega
-    · have hlast : (⟨π.N, by omega⟩ : Fin (π.N + 1)) = Fin.last π.N := by
-        ext
-        simp
-      simpa [hb, hlast] using hy'.2
-  let m := Nat.find hP
-  have hmP : P m := Nat.find_spec hP
-  rcases hmP with ⟨hm_lt, hm_le⟩
-  have hm_pos : 0 < m := by
-    by_contra hm
-    have hm0 : m = 0 := Nat.eq_zero_of_not_pos hm
-    have hidx : (⟨m, hm_lt⟩ : Fin (π.N + 1)) = 0 := by
-      ext
-      exact hm0
-    have : y 0 ≤ a := by simpa [ha, hidx] using hm_le
-    exact not_lt_of_ge this hy'.1
-  let i : Fin π.N := ⟨m - 1, by omega⟩
+    exact hπ (by simpa [Fin.lt_def] using hN)
+  obtain ⟨hya, hyb⟩ := (mem_Ioc hab y).1 hy
+  -- `M` is the (nonempty) set of indices `k` with `y 0 ≤ π.x k`; take its minimum.
+  let M : Finset (Fin (π.N + 1)) := Finset.univ.filter fun k ↦ y 0 ≤ π.x k
+  have hM_ne : M.Nonempty :=
+    ⟨Fin.last π.N, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hb ▸ hyb⟩⟩
+  set m := M.min' hM_ne
+  have hm_le : y 0 ≤ π.x m := (Finset.mem_filter.mp (M.min'_mem hM_ne)).2
+  have hm_pos : 0 < (m : ℕ) := by
+    rcases Nat.eq_zero_or_pos (m : ℕ) with h | h
+    · refine absurd (?_ : y 0 ≤ a) (not_le.mpr hya)
+      simpa [show m = 0 from Fin.ext h, ha] using hm_le
+    · exact h
+  let i : Fin π.N := ⟨(m : ℕ) - 1, by have := m.2; omega⟩
+  have h_succ : i.succ = m := Fin.ext (by change (m : ℕ) - 1 + 1 = (m : ℕ); omega)
   refine ⟨π.box i, ?_, ?_⟩
   · change π.box i ∈ (π.toPrepartition hπ ha hb).boxes
-    unfold toPrepartition boxMap
-    simp
-  · rw [box]
-    refine (mem_Ioc (hπ i.castSucc_lt_succ) y).2 ?_
-    constructor
-    · have hprev_not : ¬ y 0 ≤ π.x i.castSucc := by
-        intro hprev
-        have hlt : (i : ℕ) < m := by
-          dsimp [i]
-          omega
-        exact Nat.find_min hP hlt ⟨i.2.trans (by omega), hprev⟩
-      exact lt_of_not_ge hprev_not
-    · have hs : i.succ = (⟨m, hm_lt⟩ : Fin (π.N + 1)) := by
-        ext
-        dsimp [i]
-        omega
-      simpa [hs] using hm_le
+    simp [toPrepartition, boxMap]
+  · refine (mem_Ioc (hπ i.castSucc_lt_succ) y).2 ⟨?_, h_succ ▸ hm_le⟩
+    by_contra hge
+    have hle : m ≤ i.castSucc :=
+      M.min'_le _ (Finset.mem_filter.mpr ⟨Finset.mem_univ _, not_lt.mp hge⟩)
+    exact absurd hle (not_le.mpr (by change (m : ℕ) - 1 < (m : ℕ); omega))
 
-noncomputable def fromPartition {a b : ℝ}
-    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition) :
-    OrderedDivision := by sorry
+noncomputable def boundaries (a b : ℝ)
+    (π : Prepartition (Ioc a b)) : Finset ℝ :=
+  π.boxes.image (fun J ↦ J.lower 0) ∪ π.boxes.image (fun J ↦ J.upper 0)
 
-theorem fromPartition_strictMono {a b : ℝ}
-    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition) :
-    (fromPartition hπ).StrictMono := by sorry
+/-- Build an `OrderedDivision` from a nonempty finset of reals: the division points are the
+elements of `S` enumerated in increasing order. -/
+noncomputable def ofFinset (S : Finset ℝ) (hS : S.Nonempty) : OrderedDivision where
+  N := S.card - 1
+  x := S.orderEmbOfFin (Nat.sub_add_cancel (Finset.card_pos.mpr hS)).symm
+
+/-- Build an `OrderedDivision` from a prepartition. The result is meaningful when
+`boundaries a b π` is nonempty (e.g. when `π` is a partition of a nondegenerate interval);
+otherwise we return the trivial single-point division. -/
+noncomputable def fromPartition {a b : ℝ} (π : Prepartition (Ioc a b)) :
+    OrderedDivision :=
+  open Classical in
+  if hS : (boundaries a b π).Nonempty then ofFinset _ hS
+  else { N := 0, x := fun _ ↦ a }
+
+theorem fromPartition_of_nonempty {a b : ℝ} {π : Prepartition (Ioc a b)}
+    (hS : (boundaries a b π).Nonempty) :
+    fromPartition π = ofFinset (boundaries a b π) hS := by
+  simp [fromPartition, hS]
+
+theorem fromPartition_strictMono {a b : ℝ} (π : Prepartition (Ioc a b)) :
+    (fromPartition π).StrictMono := by
+  unfold fromPartition
+  split_ifs with hS
+  · exact ((boundaries a b π).orderEmbOfFin _).strictMono
+  · intro i j hij
+    have hi : (i : ℕ) < 1 := i.isLt
+    have hj : (j : ℕ) < 1 := j.isLt
+    have : (i : ℕ) < (j : ℕ) := hij
+    omega
 
 theorem fromPartition_map {a b : ℝ}
-    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition):
-    boxMap (fromPartition_strictMono hπ)  = π.boxes := by sorry
-
+    {π : Prepartition (Ioc a b)} (hπ : π.IsPartition) :
+    boxMap (fromPartition_strictMono π) = π.boxes := by sorry
 
 end OrderedDivision
 
@@ -233,6 +239,10 @@ def toLeftTagged (π : OrderedDivision) : TaggedDivision where
   tag := fun i ↦ π.x i.castSucc
 
 end OrderedDivision
+
+
+
+
 
 namespace TaggedDivision
 
