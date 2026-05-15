@@ -978,41 +978,24 @@ private theorem StieltjesIntegrable'.to_subbox [CompleteSpace G] {f : ℝ → E}
     simp [hab, hcd, hac, hdb]
   exact Integrable.to_subbox h hle
 
-/-- If `f` is Stieltjes-integrable from `a` to `b` against `g`, then it is also
-Stieltjes-integrable from `c` to `d` whenever `min a b ≤ c, d ≤ max a b`. -/
-theorem StieltjesIntegrable.to_subbox [CompleteSpace G] {f : ℝ → E} {g : ℝ → F}
-    {c d : ℝ} (h : StieltjesIntegrable a b B f g)
-    (hc : c ∈ Set.Icc (min a b) (max a b)) (hd : d ∈ Set.Icc (min a b) (max a b)) :
-    StieltjesIntegrable c d B f g := by
-  rw [iff_min_max] at h ⊢
-  rcases lt_trichotomy (max c d) (min c d) with hcd | hcd | hcd
-  · grind
-  · simp [hcd]
-  rcases lt_trichotomy (max a b) (min a b) with hab | hab | hab
-  · grind
-  · simp [hab] at hc hd; grind
-  simp only [hab, of_lt, stieltjesIntegrable'_iff_integrable, Fin.isValue, hcd] at h ⊢
-  apply Integrable.to_subbox h
-  rw [Ioc_le_Ioc_iff hab hcd]
-  grind
-
-/-! ## Auxiliary lemmas -/
+-- Ensure you have the correct import at the top of your file:
+-- import BoxIntegral.Partition.OrderedDivision
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
     (hg : BoundedVariationOn g (Set.Icc a b))
-    (π : BoxIntegral.Prepartition (Ioc a b)) :
+    (π : BoxIntegral.Prepartition (Ioc a b))
+    (hπ : π.IsPartition) :
     ∑ J ∈ π.boxes, ‖(BoxIntegral.BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
       ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
+
   -- Step 1: Bound each local subbox evaluation by the operator norm of B.flip
   have h_term : ∀ J ∈ π.boxes, ‖(BoxIntegral.BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
       ‖B‖ * ‖g (J.upper 0) - g (J.lower 0)‖ := by
     intro J hJ
     change ‖B.flip (g (J.upper 0)) - B.flip (g (J.lower 0))‖ ≤ _
-    rw [← map_sub]
-    have h_iso : ‖B.flip‖ = ‖B‖ := ContinuousLinearMap.opNorm_flip B
-    rw [← h_iso]
+    rw [← map_sub, ← ContinuousLinearMap.opNorm_flip B]
     exact (B.flip).le_opNorm (g (J.upper 0) - g (J.lower 0))
 
   -- Step 2: Apply bound term-wise to sum and cancel operator norm
@@ -1020,56 +1003,46 @@ lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
   rw [← Finset.mul_sum]
   gcongr
 
-  let endpts : Finset ℝ :=
-    (π.boxes.image (fun J ↦ J.lower 0)) ∪ (π.boxes.image (fun J ↦ J.upper 0))
-
   -- Step 3: Upgrade to ENNReal and convert vector norms cleanly to `edist`
   have h_sum_eq : ∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖ =
       (ENNReal.ofReal (∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖)).toReal :=
     (ENNReal.toReal_ofReal (Finset.sum_nonneg fun _ _ ↦ norm_nonneg _)).symm
   rw [h_sum_eq]
-
   refine ENNReal.toReal_mono (by exact hg) ?_
   rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _)]
   simp_rw [← dist_eq_norm, ← edist_dist]
 
-  -- Step 4: Extract partition endpoints into a sorted, monotone sequence `u`
-  let S : Finset ℝ := (π.boxes.image (fun J ↦ J.lower 0)) ∪ (π.boxes.image (fun J ↦ J.upper 0)) ∪ {a, b}
-  let L : List ℝ := S.sort (· ≤ ·)
-  let n : ℕ := L.length - 1
-  let u : ℕ → ℝ := fun i ↦ if h : i < L.length then L.get ⟨i, h⟩ else b
+  let u := BoxIntegral.OrderedDivision.fromPartition hπ
+  let u_seq := u.x
 
-  have hu : MonotoneOn u (Set.Icc 0 n) := by
-    unfold MonotoneOn
+  have h_strict_mono := BoxIntegral.OrderedDivision.fromPartition_strictMono hπ
+  let u_fun : ℕ → ℝ := fun i ↦ if h : i < u.N + 1 then u_seq ⟨i, h⟩ else b
+  rw [← BoxIntegral.OrderedDivision.fromPartition_map hπ]
+
+  have h_sum_seq : ∑ J ∈ BoxIntegral.OrderedDivision.boxMap h_strict_mono, edist (g (J.upper 0)) (g (J.lower 0)) =
+      ∑ i ∈ Finset.Ico 0 u.N, edist (g (u_fun (i + 1))) (g (u_fun i)) := by
+
+    unfold BoxIntegral.OrderedDivision.boxMap
+    sorry
+
+  rw [h_sum_seq]
+
+  have hu_mono : MonotoneOn u_fun (Set.Icc 0 u.N) := by
     intro i _ j hj hij
-    have hL_pos : 0 < L.length := by
-      change 0 < (S.sort (· ≤ ·)).length
-      rw [Finset.length_sort]
-      apply Finset.card_pos.mpr
-      use a
-      simp [S]
-    have hj_bound := hj.2
-    change j ≤ L.length - 1 at hj_bound
-    have hj_lt : j < L.length := by omega
-    have hi_lt : i < L.length := by omega
-    dsimp [u]
-    rw [dif_pos hi_lt, dif_pos hj_lt]
-    have h_pair : List.Pairwise (· ≤ ·) L := Finset.pairwise_sort S (· ≤ ·)
-    rcases eq_or_lt_of_le hij with rfl | h_lt
-    · -- Case 1: i = j.
-      exact le_rfl
-    · -- Case 2: i < j.
-      exact List.pairwise_iff_get.mp h_pair ⟨i, hi_lt⟩ ⟨j, hj_lt⟩ h_lt
+    have hj_bound : j ≤ u.N := hj.2
+    dsimp [u_fun]
+    rw [dif_pos (by omega), dif_pos (by omega)]
+    exact h_strict_mono.monotone hij
 
-  have hus : ∀ i ∈ Set.Icc 0 n, u i ∈ Set.Icc a b := by
-    intro i _
+  have hu_mem : ∀ i ∈ Set.Icc 0 u.N, u_fun i ∈ Set.Icc a b := by
+    intro i hi
+    have hi_bound : i ≤ u.N := hi.2
+    dsimp [u_fun]
+    rw [dif_pos (by omega)]
     sorry
 
-  have h_sub_sum : ∑ J ∈ π.boxes, edist (g (J.upper 0)) (g (J.lower 0)) ≤
-      ∑ i ∈ Finset.Ico 0 n, edist (g (u (i + 1))) (g (u i)) := by
-    sorry
-
-  exact h_sub_sum.trans (eVariationOn.sum_le_of_monotoneOn_Icc hu hus)
+  -- Feed our total function straight into your variation theorem!
+  exact eVariationOn.sum_le_of_monotoneOn_Icc hu_mono hu_mem
 
 
 /-- Continuous integrand and a
