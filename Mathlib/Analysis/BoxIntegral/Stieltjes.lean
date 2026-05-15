@@ -11,6 +11,7 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Box.Ioc
 public import Mathlib.Analysis.BoxIntegral.Basic
+public import Mathlib.Analysis.BoxIntegral.Partition.OrderedDivision
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.Analysis.Calculus.ContDiff.Defs
@@ -157,21 +158,12 @@ theorem strictMono_fin_snoc {n : ℕ} {f : Fin (n + 1) → ℝ} {x : ℝ}
           rw [Fin.snoc_castSucc, Fin.snoc_castSucc]
           exact hf hij
 
--- Raw finite data for a tagged division; correctness properties are added separately.
-structure OrderedDivision where
-  N : ℕ
-  x : Fin (N + 1) → ℝ
-
-structure TaggedDivision extends OrderedDivision where
+structure TaggedDivision extends BoxIntegral.OrderedDivision where
   tag : Fin N → ℝ
 
 namespace OrderedDivision
 
-def snoc (π : OrderedDivision) (c : ℝ) : OrderedDivision where
-  N := π.N + 1
-  x := Fin.snoc π.x c
-
-def toLeftTagged (π : OrderedDivision) : TaggedDivision where
+def toLeftTagged (π : BoxIntegral.OrderedDivision) : TaggedDivision where
   toOrderedDivision := π
   tag := fun i ↦ π.x i.castSucc
 
@@ -277,8 +269,8 @@ theorem snoc_validTags (π : TaggedDivision) (hπ_tag : π.ValidTags)
     {c t : ℝ} (ht : π.x (Fin.last π.N) ≤ t ∧ t ≤ c) : (π.snoc c t).ValidTags := by
   intro i
   cases i using Fin.lastCases with
-  | last => simp [snoc, OrderedDivision.snoc, ht]
-  | cast i => simpa [snoc, OrderedDivision.snoc, ← Fin.castSucc_succ] using hπ_tag i
+  | last => simp [snoc, BoxIntegral.OrderedDivision.snoc, ht]
+  | cast i => simpa [snoc, BoxIntegral.OrderedDivision.snoc, ← Fin.castSucc_succ] using hπ_tag i
 
 theorem snoc_strict (π : TaggedDivision) (hπ : π.StrictMono) {c t : ℝ}
     (hc : π.x (Fin.last π.N) < c) : (π.snoc c t).StrictMono :=
@@ -333,7 +325,7 @@ theorem last (π : TaggedDivision) :
     · rw [of_last_eq π hN (by simpa [y, z] using h)]
       exact hσ.trans h
     · rw [of_last_ne π hN (by simpa [y, z] using h)]
-      simp [snoc, OrderedDivision.snoc]
+      simp [snoc, BoxIntegral.OrderedDivision.snoc]
 
 theorem strict (π : TaggedDivision) (hπ : π.Monotone) :
     π.removeDuplicates.StrictMono := by
@@ -474,7 +466,7 @@ theorem snoc (π : TaggedDivision) (c t : ℝ) (f g : ℝ → ℝ) :
     (π.snoc c t).RiemannStieltjesSum  f g =
       π.RiemannStieltjesSum  f g + f t * (g c - g (π.x (Fin.last π.N))) := by
   rcases π with ⟨⟨N, x⟩, tag⟩
-  dsimp [RiemannStieltjesSum, TaggedDivision.snoc, OrderedDivision.snoc]
+  dsimp [RiemannStieltjesSum, TaggedDivision.snoc, BoxIntegral.OrderedDivision.snoc]
   rw [Fin.sum_univ_castSucc]
   congr 1
   · apply Finset.sum_congr rfl
