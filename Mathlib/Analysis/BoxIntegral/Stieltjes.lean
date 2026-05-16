@@ -36,13 +36,11 @@ Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Append
 
 ## Key definitions
 
-All methods are in the namespace `BoxIntegral`.
-
-* `Stieltjes.StieltjesIntegrable a b B f g`: the predicate that the integral
+* `BoxIntegral.StieltjesIntegrable a b B f g`: the predicate that the integral
 `∫⟨B⟩ x in a..b, f x ∂g` exists.
-* `Stieltjes.HasIntegral a b B f g L`: the predicate that the integral `∫⟨B⟩ x in a..b, f x ∂g`
+* `BoxIntegral.HasIntegral a b B f g L`: the predicate that the integral `∫⟨B⟩ x in a..b, f x ∂g`
 exists and equals `L`.
-* `Stieltjes.stieltjesIntegral a b B f g`: the value of `∫⟨B⟩ x in a..b, f x ∂g` if it exists, or
+* `BoxIntegral.stieltjesIntegral a b B f g`: the value of `∫⟨B⟩ x in a..b, f x ∂g` if it exists, or
 the junk value of `0` otherwise.
 
 ## Implementation notes
@@ -58,27 +56,27 @@ In all cases, we denote the integral by `∫⟨B⟩ x in a..b, f x ∂g`.
 
 ## Main theorems
 
-* `Stieltjes.hasStieltjesIntegral_iff_lim_sum`: gives the textbook ε-δ characterization of the
-Riemann--Stieltjes integral.
-* `Stieltjes.stieltjesIntegral.add_adjacent`: gives the splitting identity
+* `BoxIntegral.Stieltjes.hasStieltjesIntegral_iff_lim_sum`: gives the textbook ε-δ characterization
+of the Riemann--Stieltjes integral.
+* `BoxIntegral.stieltjesIntegral.add_adjacent`: gives the splitting identity
   `∫⟨B⟩ x in a..c, f x ∂g = ∫⟨B⟩ x in a..b, f x ∂g + ∫⟨B⟩ x in b..c, f x ∂g`, regardless of
   the ordering of `a`, `b`, `c`.
-* `Stieltjes.exists_of_continuousOn_of_boundedVariationOn` (Theorem A.1): if `f` is continuous
+* `BoxIntegral.exists_of_continuousOn_of_boundedVariationOn` (Theorem A.1): if `f` is continuous
   and `g` has bounded variation on `[a, b]`, then the Riemann–Stieltjes integral exists.
-* `Stieltjes.stieltjesIntegral.by_parts` (Theorem A.2): if `∫⟨B⟩ x in a..b, f x ∂g` exists, then
+* `BoxIntegral.stieltjesIntegral.by_parts` (Theorem A.2): if `∫⟨B⟩ x in a..b, f x ∂g` exists, then
   so does `∫⟨B⟩ x in a..b, g x ∂f`, and the two are related by the integration by parts identity
   `∫⟨B⟩ x in a..b, g x ∂f = B (f b) (g b) - B (f a) (g a) - ∫⟨B⟩ x in a..b, f x ∂g`.
-* `Stieltjes.variation_of_derivative` (Theorem A.3(a)) and
-  `Stieltjes.integral_of_derivative` (Theorem A.3(b)): when `g` is `C¹`, the total variation
+* `BoxIntegral.variation_of_derivative` (Theorem A.3(a)) and
+  `BoxIntegral.integral_of_derivative` (Theorem A.3(b)): when `g` is `C¹`, the total variation
   and the Riemann–Stieltjes integral can be computed by `g′`.
-* `Stieltjes.integral_le_integral_of_variation` (Theorem A.4): a norm bound on the integral
+* `BoxIntegral.integral_le_integral_of_variation` (Theorem A.4): a norm bound on the integral
   in terms of the variation of `g`.
-* `Stieltjes.stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable`: the Riemann-Stieltjes
+* `BoxIntegral.stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable`: the Riemann-Stieltjes
 integral `∫⟨lsmul ℝ ℝ⟩ x in a..b, f x ∂id` agrees with the interval integral
 `∫ x in a..b, f x` when `f` is Riemann integrable.
-* `Stieltjes.sum_eq_integral_nat_floor` and `Stieltjes.sum_eq_integral_int_floor`: relate
+* `BoxIntegral.sum_eq_integral_nat_floor` and `BoxIntegral.sum_eq_integral_int_floor`: relate
   sums `∑ f n` to Riemann–Stieltjes integrals against the floor function.
-* `Stieltjes.sum_eq_integral_natSummatory_le` / `_lt` : relate sums `∑ B (f n) (g n)` to
+* `BoxIntegral.sum_eq_integral_natSummatory_le` / `_lt` : relate sums `∑ B (f n) (g n)` to
   Riemann–Stieltjes integrals against the right- or left-continuous summatory function
   `x ↦ ∑ n ≤ x, g n` (resp. `x ↦ ∑ n < x, g n`).
 
@@ -314,7 +312,7 @@ end mynamespace
 
 open BoxIntegral ContinuousLinearMap
 
-namespace BoxIntegral.Stieltjes
+namespace BoxIntegral
 
 /-! ## Definition of the Riemann–Stieltjes integral -/
 
@@ -731,7 +729,6 @@ theorem HasStieltjesIntegral.add_adjacent [CompleteSpace G]
     (h₂ : HasStieltjesIntegral b c B f g L') :
     HasStieltjesIntegral a c B f g (L + L') := by
   have h₃ := h.hasStieltjesIntegral _ _ B
-  set L'' := ∫⟨B⟩ x in a..c, f x ∂g
   by_cases! hab : a = b
   · simp_all
   by_cases! hbc : b = c
@@ -1219,4 +1216,4 @@ theorem sum_eq_integral_natSummatory_lt (hab : a < b) (f : ℝ → E) (g : ℕ �
       (fun x ↦ ∑ n ∈ Finset.Iio ⌈x⌉₊, g n)
       (∑ n ∈ Finset.Ico ⌈a⌉₊ ⌈b⌉₊, B (f n) (g n)) := by sorry
 
-end BoxIntegral.Stieltjes
+end BoxIntegral
