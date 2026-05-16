@@ -107,7 +107,6 @@ or by further conversation with the AI agent).
 * Interpretation of `ofDiff` as a signed measure (assuming bounded variation).  This requires
 the development of signed measures in Mathlib
 * Example: decay of Fourier transforms of total variation functions
-* Make some `a`, `b` variables implicit
 
 ## Tags
 
@@ -362,12 +361,12 @@ lemma HasStieltjesIntegral.of_eq_iff_zero (f : ℝ → E) (g : ℝ → F) (L : G
   simp [HasStieltjesIntegral]
 
 @[simp]
-lemma HasStieltjesIntegral.of_lt (f : ℝ → E) (g : ℝ → F) (L : G) (hab : a < b) :
+lemma HasStieltjesIntegral.of_lt {a b : ℝ} (f : ℝ → E) (g : ℝ → F) (L : G) (hab : a < b) :
     HasStieltjesIntegral a b B f g L ↔ HasStieltjesIntegral' a b B f g L := by
   simp [HasStieltjesIntegral, hab, hab.ne]
 
 @[simp]
-lemma HasStieltjesIntegral.of_gt (f : ℝ → E) (g : ℝ → F) (L : G) (hba : b < a) :
+lemma HasStieltjesIntegral.of_gt {a b : ℝ} (f : ℝ → E) (g : ℝ → F) (L : G) (hba : b < a) :
     HasStieltjesIntegral a b B f g L ↔ HasStieltjesIntegral' b a B f g (-L) := by
   simp [HasStieltjesIntegral, Std.not_gt_of_lt hba, hba.ne.symm]
 
@@ -379,14 +378,14 @@ lemma HasStieltjesIntegral.symm_iff (f : ℝ → E) (g : ℝ → F) (L : G) :
   simp [HasStieltjesIntegral, h, Std.not_gt_of_lt h, h.ne, h.ne.symm]
 
 @[symm]
-lemma HasStieltjesIntegral.symm {f : ℝ → E} {g : ℝ → F} {L : G}
+lemma HasStieltjesIntegral.symm {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L : G}
     (h : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral b a B f g (-L) := by
   rwa [← symm_iff]
 
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
-theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
+theorem hasStieltjesIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
     HasStieltjesIntegral a b B f g L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
@@ -416,7 +415,7 @@ lemma StieltjesIntegrable.of_eq (f : ℝ → E) (g : ℝ → F) :
   StieltjesIntegrable a a B f g := by
   simp [StieltjesIntegrable, HasStieltjesIntegral]
 
-private lemma StieltjesIntegrable.of_lt (f : ℝ → E) (g : ℝ → F) (hab : a < b) :
+private lemma StieltjesIntegrable.of_lt {a b : ℝ} (f : ℝ → E) (g : ℝ → F) (hab : a < b) :
     StieltjesIntegrable a b B f g ↔ StieltjesIntegrable' a b B f g := by
   simp [StieltjesIntegrable, StieltjesIntegrable', hab]
 
@@ -426,8 +425,8 @@ lemma StieltjesIntegrable.symm_iff (f : ℝ → E) (g : ℝ → F) :
   constructor <;> rintro ⟨ L, h ⟩ <;> use -L <;> apply h.symm
 
 @[symm]
-lemma StieltjesIntegrable.symm {f : ℝ → E} {g : ℝ → F} (h : StieltjesIntegrable a b B f g) :
-    StieltjesIntegrable b a B f g := by
+lemma StieltjesIntegrable.symm {a b : ℝ} {f : ℝ → E} {g : ℝ → F}
+  (h : StieltjesIntegrable a b B f g) :  StieltjesIntegrable b a B f g := by
   rwa [← symm_iff]
 
 lemma StieltjesIntegrable.iff_min_max {f : ℝ → E} {g : ℝ → F} :
@@ -442,9 +441,7 @@ noncomputable def stieltjesIntegral (f : ℝ → E) (g : ℝ → F) : G :=
   if h : StieltjesIntegrable a b B f g then h.choose else 0
 
 /-- Notation for the Riemann–Stieltjes integral. `∫⟨B⟩ x in a..b, f x ∂g` is
-`stieltjesIntegral a b B (fun x ↦ f x) g`. The bilinear pairing `B` is written explicitly inside
-angle brackets because there is no canonical choice (e.g. `ContinuousLinearMap.mul ℝ ℝ` for
-scalar-valued `f` and `g`, `(ContinuousLinearMap.lsmul ℝ ℝ).flip` when `g` is real-valued, etc.).
+`stieltjesIntegral a b B (fun x ↦ f x) g`.
 The notation parallels Mathlib's `∫ x in a..b, f x ∂μ` for `intervalIntegral`. -/
 scoped notation3 "∫⟨"B"⟩ "(...)" in "a".."b", "r:60:(scoped f => f)" ∂"g:70 =>
   stieltjesIntegral a b B r g
@@ -452,7 +449,8 @@ scoped notation3 "∫⟨"B"⟩ "(...)" in "a".."b", "r:60:(scoped f => f)" ∂"g
 /-! ## Basic API -/
 
 /-- Uniqueness: the Riemann–Stieltjes integral, when it exists, is unique. -/
-theorem HasStieltjesIntegral.unique {f : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
+theorem HasStieltjesIntegral.unique {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral a b B f g L₁) (h₂ : HasStieltjesIntegral a b B f g L₂) :
     L₁ = L₂ := by
   rcases lt_trichotomy a b with h | rfl | h
@@ -465,25 +463,27 @@ theorem HasStieltjesIntegral.unique {f : ℝ → E} {g : ℝ → F} {L₁ L₂ :
   grind
 
 /-- The existence of a Riemann–Stieltjes integral implies `StieltjesIntegrable`. -/
-theorem HasStieltjesIntegral.stieltjesIntegrable {f : ℝ → E} {g : ℝ → F} {L : G}
+theorem HasStieltjesIntegral.stieltjesIntegrable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G}
     (h : HasStieltjesIntegral a b B f g L) : StieltjesIntegrable a b B f g :=
   ⟨L, h⟩
 
 /-- A chosen witness extracted from `StieltjesIntegrable`. -/
-theorem StieltjesIntegrable.hasStieltjesIntegral {f : ℝ → E} {g : ℝ → F}
-    (h : StieltjesIntegrable a b B f g) :
+theorem StieltjesIntegrable.hasStieltjesIntegral {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} (h : StieltjesIntegrable a b B f g) :
     HasStieltjesIntegral a b B f g (∫⟨B⟩ x in a..b, f x ∂g) := by
   simp [stieltjesIntegral, h, h.choose_spec]
 
 /-- If `HasStieltjesIntegral a b B f g L`, then `stieltjesIntegral a b B f g = L`. -/
-theorem HasStieltjesIntegral.stieltjesIntegral_eq {f : ℝ → E} {g : ℝ → F} {L : G}
+theorem HasStieltjesIntegral.stieltjesIntegral_eq {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G}
     (h : HasStieltjesIntegral a b B f g L) : ∫⟨B⟩ x in a..b, f x ∂g = L := by
   classical
   have hI : StieltjesIntegrable a b B f g := h.stieltjesIntegrable
   simp only [stieltjesIntegral, dif_pos hI]
-  exact hI.choose_spec.unique a b B h
+  exact hI.choose_spec.unique h
 
-theorem StieltjesIntegrable.hasStieltjesIntegral_iff {f : ℝ → E} {g : ℝ → F}
+theorem StieltjesIntegrable.hasStieltjesIntegral_iff {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (L : G) :
    HasStieltjesIntegral a b B f g L ↔ ∫⟨B⟩ x in a..b, f x ∂g = L
      := by
@@ -499,8 +499,7 @@ theorem stieltjesIntegral.of_eq (f : ℝ → E) (g : ℝ → F) :
 theorem stieltjesIntegral.integral_symm (f : ℝ → E) (g : ℝ → F) :
     ∫⟨B⟩ x in b..a, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
   by_cases h_integ : StieltjesIntegrable a b B f g
-  · have h_integ_symm : StieltjesIntegrable b a B f g := h_integ.symm
-    exact (h_integ.hasStieltjesIntegral.symm.unique _ _ _ h_integ_symm.hasStieltjesIntegral).symm
+  · exact (h_integ.hasStieltjesIntegral.symm.unique h_integ.symm.hasStieltjesIntegral).symm
   have h_integ_symm : ¬ StieltjesIntegrable b a B f g := by contrapose! h_integ; exact h_integ.symm
   simp [stieltjesIntegral, h_integ, h_integ_symm]
 
@@ -518,29 +517,31 @@ theorem HasStieltjesIntegral.zero_left {g : ℝ → F} : HasStieltjesIntegral a 
   rw [symm_iff]
   simp only [neg_zero, h, of_lt, HasStieltjesIntegral'.zero_left]
 
-private theorem HasStieltjesIntegral'.add_left {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
+private theorem HasStieltjesIntegral'.add_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral' a b B f₁ g L₁) (h₂ : HasStieltjesIntegral' a b B f₂ g L₂) :
     HasStieltjesIntegral' a b B (f₁ + f₂) g (L₁ + L₂) :=
   HasIntegral.add h₁ h₂
 
-theorem HasStieltjesIntegral.add_left {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
+theorem HasStieltjesIntegral.add_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral a b B f₁ g L₁) (h₂ : HasStieltjesIntegral a b B f₂ g L₂) :
     HasStieltjesIntegral a b B (f₁ + f₂) g (L₁ + L₂) := by
   rcases lt_trichotomy a b with h | rfl | h
   · simp only [of_lt, h] at h₁ h₂ ⊢
-    exact h₁.add_left _ _ _ h₂
+    exact h₁.add_left h₂
   · simp_all
   rw [symm_iff] at h₁ h₂ ⊢
   simp only [h, of_lt, neg_add] at h₁ h₂ ⊢
-  exact h₁.add_left _ _ _ h₂
+  exact h₁.add_left h₂
 
-private theorem HasStieltjesIntegral'.neg_left {f : ℝ → E} {g : ℝ → F} {L : G}
-    (h : HasStieltjesIntegral' a b B f g L) :
+private theorem HasStieltjesIntegral'.neg_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral' a b B f g L) :
     HasStieltjesIntegral' a b B (-f) g (-L) :=
   HasIntegral.neg h
 
-theorem HasStieltjesIntegral.neg_left {f : ℝ → E} {g : ℝ → F} {L : G}
-    (h : HasStieltjesIntegral a b B f g L) :
+theorem HasStieltjesIntegral.neg_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b B (-f) g (-L) := by
   rcases lt_trichotomy a b with hab | rfl | hab
   · simp only [of_lt, hab] at h ⊢
@@ -550,30 +551,32 @@ theorem HasStieltjesIntegral.neg_left {f : ℝ → E} {g : ℝ → F} {L : G}
   simp only [hab, of_lt] at h ⊢
   apply h.neg_left
 
-private theorem HasStieltjesIntegral'.sub_left {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
+private theorem HasStieltjesIntegral'.sub_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral' a b B f₁ g L₁) (h₂ : HasStieltjesIntegral' a b B f₂ g L₂) :
     HasStieltjesIntegral' a b B (f₁ - f₂) g (L₁ - L₂) :=
   HasIntegral.sub h₁ h₂
 
-theorem HasStieltjesIntegral.sub_left {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
+theorem HasStieltjesIntegral.sub_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f₁ f₂ : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral a b B f₁ g L₁) (h₂ : HasStieltjesIntegral a b B f₂ g L₂) :
     HasStieltjesIntegral a b B (f₁ - f₂) g (L₁ - L₂) := by
   rcases lt_trichotomy a b with h | rfl | h
   · simp only [of_lt, h] at h₁ h₂ ⊢
-    exact h₁.sub_left _ _ _ h₂
+    exact h₁.sub_left h₂
   · simp_all
   rw [symm_iff] at h₁ h₂ ⊢
   simp only [h, of_lt] at h₁ h₂ ⊢
-  convert h₁.sub_left _ _ _ h₂ using 1
+  convert h₁.sub_left h₂ using 1
   abel
 
-private theorem HasStieltjesIntegral'.smul_left {f : ℝ → E} {g : ℝ → F} {L : G}
-    (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
+private theorem HasStieltjesIntegral'.smul_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
     HasStieltjesIntegral' a b B (c • f) g (c • L) :=
   HasIntegral.smul h c
 
-theorem HasStieltjesIntegral.smul_left {f : ℝ → E} {g : ℝ → F} {L : G}
-    (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
+theorem HasStieltjesIntegral.smul_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
     HasStieltjesIntegral a b B (c • f) g (c • L) := by
   rcases lt_trichotomy a b with hab | rfl | hab
   · simp only [of_lt, hab] at h ⊢
@@ -581,7 +584,7 @@ theorem HasStieltjesIntegral.smul_left {f : ℝ → E} {g : ℝ → F} {L : G}
   · simp_all
   rw [symm_iff] at h ⊢
   simp only [hab, of_lt] at h ⊢
-  convert h.smul_left _ _ _ _ using 1
+  convert h.smul_left _ using 1
   norm_num
 
 /-! ### In the integrator -/
@@ -603,7 +606,8 @@ theorem HasStieltjesIntegral.const_right {f : ℝ → E} (c : F) :
 theorem HasStieltjesIntegral.zero_right {f : ℝ → E} : HasStieltjesIntegral a b B f 0 0 :=
   const_right a b B 0
 
-private theorem HasStieltjesIntegral'.add_right {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
+private theorem HasStieltjesIntegral'.add_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral' a b B f g₁ L₁) (h₂ : HasStieltjesIntegral' a b B f g₂ L₂) :
     HasStieltjesIntegral' a b B f (g₁ + g₂) (L₁ + L₂) := by
   unfold HasStieltjesIntegral' at h₁ h₂ ⊢
@@ -612,28 +616,29 @@ private theorem HasStieltjesIntegral'.add_right {f : ℝ → E} {g₁ g₂ : ℝ
   rw [h, map_add]
   exact h₁.add_vol h₂
 
-theorem HasStieltjesIntegral.add_right {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
+theorem HasStieltjesIntegral.add_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral a b B f g₁ L₁) (h₂ : HasStieltjesIntegral a b B f g₂ L₂) :
     HasStieltjesIntegral a b B f (g₁ + g₂) (L₁ + L₂) := by
   rcases lt_trichotomy a b with hab | rfl | hab
   · simp only [of_lt, hab] at h₁ h₂ ⊢
-    exact h₁.add_right _ _ _ h₂
+    exact h₁.add_right h₂
   · simp_all
   rw [symm_iff] at h₁ h₂ ⊢
   simp only [hab, of_lt] at h₁ h₂ ⊢
-  convert h₁.add_right _ _ _ h₂ using 1
+  convert h₁.add_right h₂ using 1
   abel
 
-private theorem HasStieltjesIntegral'.neg_right {f : ℝ → E} {g : ℝ → F} {L : G}
-    (h : HasStieltjesIntegral' a b B f g L) :
+private theorem HasStieltjesIntegral'.neg_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral' a b B f g L) :
     HasStieltjesIntegral' a b B f (-g) (-L) := by
   unfold HasStieltjesIntegral' at h ⊢
   have heq : (fun x : ℝ ↦ B.flip ((-g) x)) = -(fun x ↦ B.flip (g x)) := by ext; simp
   rw [heq, map_neg]
   exact h.neg_vol
 
-theorem HasStieltjesIntegral.neg_right {f : ℝ → E} {g : ℝ → F} {L : G}
-    (h : HasStieltjesIntegral a b B f g L) :
+theorem HasStieltjesIntegral.neg_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b B f (-g) (-L) := by
   rcases lt_trichotomy a b with hab | rfl | hab
   · simp only [of_lt, hab] at h ⊢
@@ -641,10 +646,11 @@ theorem HasStieltjesIntegral.neg_right {f : ℝ → E} {g : ℝ → F} {L : G}
   · simp_all
   rw [symm_iff] at h ⊢
   simp only [hab, of_lt, neg_neg] at h ⊢
-  convert h.neg_right _ _ _ using 1
+  convert h.neg_right using 1
   norm_num
 
-theorem HasStieltjesIntegral'.sub_right {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
+theorem HasStieltjesIntegral'.sub_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral' a b B f g₁ L₁) (h₂ : HasStieltjesIntegral' a b B f g₂ L₂) :
     HasStieltjesIntegral' a b B f (g₁ - g₂) (L₁ - L₂) := by
   unfold HasStieltjesIntegral' at h₁ h₂ ⊢
@@ -653,27 +659,29 @@ theorem HasStieltjesIntegral'.sub_right {f : ℝ → E} {g₁ g₂ : ℝ → F} 
   rw [h, map_sub]
   exact h₁.sub_vol h₂
 
-theorem HasStieltjesIntegral.sub_right {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
+theorem HasStieltjesIntegral.sub_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g₁ g₂ : ℝ → F} {L₁ L₂ : G}
     (h₁ : HasStieltjesIntegral a b B f g₁ L₁) (h₂ : HasStieltjesIntegral a b B f g₂ L₂) :
     HasStieltjesIntegral a b B f (g₁ - g₂) (L₁ - L₂) := by
   rcases lt_trichotomy a b with hab | rfl | hab
   · simp only [of_lt, hab] at h₁ h₂ ⊢
-    exact h₁.sub_right _ _ _ h₂
+    exact h₁.sub_right h₂
   · simp_all
   rw [symm_iff] at h₁ h₂ ⊢
   simp only [hab, of_lt] at h₁ h₂ ⊢
-  convert h₁.sub_right _ _ _ h₂ using 1
+  convert h₁.sub_right h₂ using 1
   abel
 
-private theorem HasStieltjesIntegral'.smul_right {f : ℝ → E} {g : ℝ → F} {L : G}
-    (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
+private theorem HasStieltjesIntegral'.smul_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
     HasStieltjesIntegral' a b B f (c • g) (c • L) := by
   unfold HasStieltjesIntegral' at h ⊢
   have heq : (fun x : ℝ ↦ B.flip ((c • g) x)) = c • (fun x ↦ B.flip (g x)) := by ext; simp
   rw [heq, BoxIntegral.BoxAdditiveMap.ofDiff_smul]
   exact h.smul_vol c
 
-theorem HasStieltjesIntegral.smul_right {f : ℝ → E} {g : ℝ → F} {L : G}
+theorem HasStieltjesIntegral.smul_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G}
     (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
     HasStieltjesIntegral a b B f (c • g) (c • L) := by
   rcases lt_trichotomy a b with hab | rfl | hab
@@ -682,7 +690,7 @@ theorem HasStieltjesIntegral.smul_right {f : ℝ → E} {g : ℝ → F} {L : G}
   · simp_all
   rw [symm_iff] at h ⊢
   simp only [hab, of_lt] at h ⊢
-  convert h.smul_right _ _ _ _ using 1
+  convert h.smul_right _ using 1
   norm_num
 
 /-! ### Splitting over adjacent intervals -/
@@ -691,7 +699,7 @@ theorem HasStieltjesIntegral.smul_right {f : ℝ → E} {g : ℝ → F} {L : G}
 and `L'` from `b` to `c` then `f` has Stieltjes integral `L + L'` from `a` to `c`.  No ordering
 is assumed in `a`, `b`, `c` in the final statement of the theorem. -/
 private theorem HasStieltjesIntegral'.add_adjacent [CompleteSpace G]
-    {f : ℝ → E} {g : ℝ → F} {L L' : G} {c : ℝ}
+    {f : ℝ → E} {g : ℝ → F} {L L' : G} {a b c : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
     (hab : a < b) (hbc : b < c)
     (h : StieltjesIntegrable' a c B f g)
     (h₁ : HasStieltjesIntegral' a b B f g L)
@@ -701,41 +709,41 @@ private theorem HasStieltjesIntegral'.add_adjacent [CompleteSpace G]
   have hac : a < c := hab.trans hbc
   have hb_mem :
       b ∈ Set.Ioo ((Ioc a c).lower 0) ((Ioc a c).upper 0) := by
-    simp [Ioc.lower hac, Ioc.upper hac, hab, hbc]
+    simp [hac, hab, hbc]
   refine HasIntegral.split 0 b ?_ ?_ h h₁ h₂
   · rw [Box.splitLower_def hb_mem, WithBot.coe_eq_coe]
     ext x
-    simp [Ioc.lower hac, mem_Ioc hab]
+    simp [hac, hab]
   · rw [Box.splitUpper_def hb_mem, WithBot.coe_eq_coe]
     ext x
-    simp [Ioc.upper hac, mem_Ioc hbc]
+    simp [hac, hbc]
 
 private theorem HasStieltjesIntegral.add_adjacent_prelim [CompleteSpace G]
-    {f : ℝ → E} {g : ℝ → F} {L L' L'' : G} {c : ℝ}
+    {f : ℝ → E} {g : ℝ → F} {L L' L'' : G} {a b c : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
     (hab : a < b) (hbc : b < c)
     (h₁ : HasStieltjesIntegral a b B f g L)
     (h₂ : HasStieltjesIntegral b c B f g L')
     (h₃ : HasStieltjesIntegral a c B f g L'') :
     L'' = L + L' := by
-  apply unique a c B h₃
+  apply unique h₃
   simp only [hab, of_lt, hbc, hab.trans hbc] at h₁ h₂ h₃ ⊢
-  exact HasStieltjesIntegral'.add_adjacent _ _ _ hab hbc ⟨L'', h₃⟩ h₁ h₂
+  exact HasStieltjesIntegral'.add_adjacent hab hbc ⟨L'', h₃⟩ h₁ h₂
 
 /-- Note: the proof here has an excessive amount of case splitting. -/
 theorem HasStieltjesIntegral.add_adjacent [CompleteSpace G]
-    {f : ℝ → E} {g : ℝ → F} {L L' : G} {c : ℝ}
+    {f : ℝ → E} {g : ℝ → F} {L L' : G} {a b c : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
     (h : StieltjesIntegrable a c B f g)
     (h₁ : HasStieltjesIntegral a b B f g L)
     (h₂ : HasStieltjesIntegral b c B f g L') :
     HasStieltjesIntegral a c B f g (L + L') := by
-  have h₃ := h.hasStieltjesIntegral _ _ B
+  have h₃ := h.hasStieltjesIntegral
   by_cases! hab : a = b
   · simp_all
   by_cases! hbc : b = c
   · simp_all
   by_cases! hac : a = c
   · simp_all
-    simp [h₁.unique _ _ _ h₂.symm]
+    simp [h₁.unique h₂.symm]
   have h₁' := h₁.symm
   have h₂' := h₂.symm
   have h₃' := h₃.symm
@@ -744,27 +752,25 @@ theorem HasStieltjesIntegral.add_adjacent [CompleteSpace G]
   rcases lt_or_gt_of_ne hbc with hbc | hcb <;>
   rcases lt_or_gt_of_ne hac with hac | hca <;>
   try order
-  · simp_all [add_adjacent_prelim _ _ _ hab hbc h₁ h₂ h₃]
-  · have := add_adjacent_prelim _ _ _ hac hcb h₃ h₂' h₁
+  · simp_all [add_adjacent_prelim hab hbc h₁ h₂ h₃]
+  · have := add_adjacent_prelim hac hcb h₃ h₂' h₁
     grind
-  · have := add_adjacent_prelim _ _ _ hca hab h₃' h₁ h₂'
+  · have := add_adjacent_prelim hca hab h₃' h₁ h₂'
     grind
-  · have := add_adjacent_prelim _ _ _ hba hac h₁' h₃ h₂
+  · have := add_adjacent_prelim hba hac h₁' h₃ h₂
     grind
-  · have := add_adjacent_prelim _ _ _ hbc hca h₂ h₃' h₁'
+  · have := add_adjacent_prelim hbc hca h₂ h₃' h₁'
     grind
-  · have := add_adjacent_prelim _ _ _ hcb hba h₂' h₁' h₃'
+  · have := add_adjacent_prelim hcb hba h₂' h₁' h₃'
     grind
 
 theorem stieltjesIntegral.add_adjacent [CompleteSpace G]
-    {f : ℝ → E} {g : ℝ → F} {c : ℝ}
+    {f : ℝ → E} {g : ℝ → F} {a b c : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
     (h : StieltjesIntegrable a c B f g)
     (h₁ : StieltjesIntegrable a b B f g)
     (h₂ : StieltjesIntegrable b c B f g) :
     ∫⟨B⟩ x in a..c, f x ∂g = ∫⟨B⟩ x in a..b, f x ∂g + ∫⟨B⟩ x in b..c, f x ∂g := by
-  have h₁' := h₁.hasStieltjesIntegral _ _ B
-  have h₂' := h₂.hasStieltjesIntegral _ _ B
-  have := HasStieltjesIntegral.add_adjacent _ _ _ h h₁' h₂'
+  have := HasStieltjesIntegral.add_adjacent h h₁.hasStieltjesIntegral h₂.hasStieltjesIntegral
   rwa [h.hasStieltjesIntegral_iff] at this
 
 /-! ### Integrability in the integrand -/
@@ -772,23 +778,23 @@ theorem stieltjesIntegral.add_adjacent [CompleteSpace G]
 theorem StieltjesIntegrable.zero_left {g : ℝ → F} : StieltjesIntegrable a b B 0 g :=
   (HasStieltjesIntegral.zero_left a b B).stieltjesIntegrable
 
-theorem StieltjesIntegrable.add_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
+theorem StieltjesIntegrable.add_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f₁ f₂ : ℝ → E} {g : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
     StieltjesIntegrable a b B (f₁ + f₂) g :=
-  (h₁.hasStieltjesIntegral.add_left a b B h₂.hasStieltjesIntegral).stieltjesIntegrable
+  (h₁.hasStieltjesIntegral.add_left h₂.hasStieltjesIntegral).stieltjesIntegrable
 
-theorem StieltjesIntegrable.neg_left {f : ℝ → E} {g : ℝ → F}
+theorem StieltjesIntegrable.neg_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable a b B (-f) g :=
-  (h.hasStieltjesIntegral.neg_left a b B).stieltjesIntegrable
+  h.hasStieltjesIntegral.neg_left.stieltjesIntegrable
 
-theorem StieltjesIntegrable.sub_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
+theorem StieltjesIntegrable.sub_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f₁ f₂ : ℝ → E} {g : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
     StieltjesIntegrable a b B (f₁ - f₂) g :=
-  (h₁.hasStieltjesIntegral.sub_left a b B h₂.hasStieltjesIntegral).stieltjesIntegrable
+  (h₁.hasStieltjesIntegral.sub_left h₂.hasStieltjesIntegral).stieltjesIntegrable
 
-theorem StieltjesIntegrable.smul_left {f : ℝ → E} {g : ℝ → F}
+theorem StieltjesIntegrable.smul_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (c : ℝ) : StieltjesIntegrable a b B (c • f) g :=
-  (h.hasStieltjesIntegral.smul_left a b B c).stieltjesIntegrable
+  (h.hasStieltjesIntegral.smul_left c).stieltjesIntegrable
 
 /-! ### Integrability in the integrator -/
 
@@ -799,55 +805,55 @@ theorem StieltjesIntegrable.const_right {f : ℝ → E} (c : F) :
 theorem StieltjesIntegrable.zero_right {f : ℝ → E} : StieltjesIntegrable a b B f 0 :=
   const_right a b B 0
 
-theorem StieltjesIntegrable.add_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
+theorem StieltjesIntegrable.add_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g₁ g₂ : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
     StieltjesIntegrable a b B f (g₁ + g₂) :=
-  (h₁.hasStieltjesIntegral.add_right a b B h₂.hasStieltjesIntegral).stieltjesIntegrable
+  (h₁.hasStieltjesIntegral.add_right h₂.hasStieltjesIntegral).stieltjesIntegrable
 
-theorem StieltjesIntegrable.neg_right {f : ℝ → E} {g : ℝ → F}
+theorem StieltjesIntegrable.neg_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable a b B f (-g) :=
-  (h.hasStieltjesIntegral.neg_right a b B).stieltjesIntegrable
+  h.hasStieltjesIntegral.neg_right.stieltjesIntegrable
 
-theorem StieltjesIntegrable.sub_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
+theorem StieltjesIntegrable.sub_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g₁ g₂ : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
     StieltjesIntegrable a b B f (g₁ - g₂) :=
-  (h₁.hasStieltjesIntegral.sub_right a b B h₂.hasStieltjesIntegral).stieltjesIntegrable
+  (h₁.hasStieltjesIntegral.sub_right h₂.hasStieltjesIntegral).stieltjesIntegrable
 
-theorem StieltjesIntegrable.smul_right {f : ℝ → E} {g : ℝ → F}
+theorem StieltjesIntegrable.smul_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (c : ℝ) : StieltjesIntegrable a b B f (c • g) :=
-  (h.hasStieltjesIntegral.smul_right a b B c).stieltjesIntegrable
+  (h.hasStieltjesIntegral.smul_right c).stieltjesIntegrable
 
 /-! ### Integral linearity in the integrand -/
 
 theorem stieltjesIntegral_zero_left {g : ℝ → F} : ∫⟨B⟩ _ in a..b, 0 ∂g = 0 :=
   (HasStieltjesIntegral.zero_left a b B).stieltjesIntegral_eq
 
-theorem stieltjesIntegral_add_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
+theorem stieltjesIntegral_add_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f₁ f₂ : ℝ → E} {g : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
     ∫⟨B⟩ x in a..b, (f₁ + f₂) x ∂g
       = ∫⟨B⟩ x in a..b, f₁ x ∂g + ∫⟨B⟩ x in a..b, f₂ x ∂g := by
-  rw [(h₁.hasStieltjesIntegral.add_left a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
+  rw [(h₁.hasStieltjesIntegral.add_left h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
     h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
     h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
 
-theorem stieltjesIntegral_neg_left {f : ℝ → E} {g : ℝ → F}
+theorem stieltjesIntegral_neg_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) :
     ∫⟨B⟩ x in a..b, (-f) x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [(h.hasStieltjesIntegral.neg_left a b B).stieltjesIntegral_eq,
+  rw [h.hasStieltjesIntegral.neg_left.stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
-theorem stieltjesIntegral_sub_left {f₁ f₂ : ℝ → E} {g : ℝ → F}
+theorem stieltjesIntegral_sub_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f₁ f₂ : ℝ → E} {g : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
     ∫⟨B⟩ x in a..b, (f₁ - f₂) x ∂g
       = ∫⟨B⟩ x in a..b, f₁ x ∂g - ∫⟨B⟩ x in a..b, f₂ x ∂g := by
-  rw [(h₁.hasStieltjesIntegral.sub_left a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
+  rw [(h₁.hasStieltjesIntegral.sub_left h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
     h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
     h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
 
-theorem stieltjesIntegral_smul_left {f : ℝ → E} {g : ℝ → F}
+theorem stieltjesIntegral_smul_left {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
     ∫⟨B⟩ x in a..b, (c • f) x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [(h.hasStieltjesIntegral.smul_left a b B c).stieltjesIntegral_eq,
+  rw [(h.hasStieltjesIntegral.smul_left c).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 /-! ### Integral linearity in the integrator -/
@@ -860,32 +866,32 @@ theorem stieltjesIntegral_const_right {f : ℝ → E} (c : F) : ∫⟨B⟩ x in 
 theorem stieltjesIntegral_zero_right {f : ℝ → E} : ∫⟨B⟩ x in a..b, f x ∂0 = 0 :=
   stieltjesIntegral_const_right a b B 0
 
-theorem stieltjesIntegral_add_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
+theorem stieltjesIntegral_add_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g₁ g₂ : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
     ∫⟨B⟩ x in a..b, f x ∂(g₁ + g₂)
       = ∫⟨B⟩ x in a..b, f x ∂g₁ + ∫⟨B⟩ x in a..b, f x ∂g₂ := by
-  rw [(h₁.hasStieltjesIntegral.add_right a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
+  rw [(h₁.hasStieltjesIntegral.add_right h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
     h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
     h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
 
-theorem stieltjesIntegral_neg_right {f : ℝ → E} {g : ℝ → F}
+theorem stieltjesIntegral_neg_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) :
     ∫⟨B⟩ x in a..b, f x ∂(-g) = -∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [(h.hasStieltjesIntegral.neg_right a b B).stieltjesIntegral_eq,
+  rw [(h.hasStieltjesIntegral.neg_right).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
-theorem stieltjesIntegral_sub_right {f : ℝ → E} {g₁ g₂ : ℝ → F}
+theorem stieltjesIntegral_sub_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g₁ g₂ : ℝ → F}
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
     ∫⟨B⟩ x in a..b, f x ∂(g₁ - g₂)
       = ∫⟨B⟩ x in a..b, f x ∂g₁ - ∫⟨B⟩ x in a..b, f x ∂g₂ := by
-  rw [(h₁.hasStieltjesIntegral.sub_right a b B h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
+  rw [(h₁.hasStieltjesIntegral.sub_right h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
     h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
     h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
 
-theorem stieltjesIntegral_smul_right {f : ℝ → E} {g : ℝ → F}
+theorem stieltjesIntegral_smul_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
     ∫⟨B⟩ x in a..b, f x ∂(c • g) = c • ∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [(h.hasStieltjesIntegral.smul_right a b B c).stieltjesIntegral_eq,
+  rw [(h.hasStieltjesIntegral.smul_right c).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 /-! ### Naturality: transporting along continuous linear maps -/
@@ -898,9 +904,9 @@ private theorem HasStieltjesIntegral'.map {E' F' G' : Type*}
     [NormedAddCommGroup E'] [NormedSpace ℝ E']
     [NormedAddCommGroup F'] [NormedSpace ℝ F']
     [NormedAddCommGroup G'] [NormedSpace ℝ G']
-    {f : ℝ → E} {g : ℝ → F} {L : G}
-    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F') (Ψ : G →L[ℝ] G')
-    (B' : E' →L[ℝ] F' →L[ℝ] G')
+    {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F} {L : G}
+    {φ : E →L[ℝ] E'} {ψ : F →L[ℝ] F'} {Ψ : G →L[ℝ] G'}
+    {B' : E' →L[ℝ] F' →L[ℝ] G'}
     (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     (h : HasStieltjesIntegral' a b B f g L) :
     HasStieltjesIntegral' a b B' (fun x ↦ φ (f x)) (fun x ↦ ψ (g x)) (Ψ L) := by
@@ -914,19 +920,19 @@ theorem HasStieltjesIntegral.map {E' F' G' : Type*}
     [NormedAddCommGroup E'] [NormedSpace ℝ E']
     [NormedAddCommGroup F'] [NormedSpace ℝ F']
     [NormedAddCommGroup G'] [NormedSpace ℝ G']
-    {f : ℝ → E} {g : ℝ → F} {L : G}
-    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F') (Ψ : G →L[ℝ] G')
-    (B' : E' →L[ℝ] F' →L[ℝ] G')
+    {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F} {L : G}
+    {φ : E →L[ℝ] E'} {ψ : F →L[ℝ] F'} {Ψ : G →L[ℝ] G'}
+    {B' : E' →L[ℝ] F' →L[ℝ] G'}
     (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     (h : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b B' (fun x ↦ φ (f x)) (fun x ↦ ψ (g x)) (Ψ L) := by
   rcases lt_trichotomy a b with hab | rfl | hab
   · simp only [of_lt, hab] at h ⊢
-    exact h.map _ _ _ _ _ _ _ hB
+    exact h.map hB
   · simp_all
   rw [symm_iff] at h ⊢
   simp only [hab, of_lt] at h ⊢
-  convert h.map _ _ _ _ _ _ _ hB using 1
+  convert h.map hB using 1
   simp
 
 /-- Existence-level naturality: if `(B, B', φ, ψ, Ψ)` are compatible in the sense of
@@ -936,27 +942,27 @@ theorem StieltjesIntegrable.map {E' F' G' : Type*}
     [NormedAddCommGroup E'] [NormedSpace ℝ E']
     [NormedAddCommGroup F'] [NormedSpace ℝ F']
     [NormedAddCommGroup G'] [NormedSpace ℝ G']
-    {f : ℝ → E} {g : ℝ → F}
-    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F') (Ψ : G →L[ℝ] G')
-    (B' : E' →L[ℝ] F' →L[ℝ] G')
+    {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
+    {φ : E →L[ℝ] E'} {ψ : F →L[ℝ] F'} {Ψ : G →L[ℝ] G'}
+    {B' : E' →L[ℝ] F' →L[ℝ] G'}
     (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable a b B' (fun x ↦ φ (f x)) (fun x ↦ ψ (g x)) :=
-  (h.hasStieltjesIntegral.map a b B φ ψ Ψ B' hB).stieltjesIntegrable
+  (h.hasStieltjesIntegral.map hB).stieltjesIntegrable
 
 /-- Function-level naturality of `stieltjesIntegral` under continuous linear maps. -/
 theorem stieltjesIntegral_map {E' F' G' : Type*}
     [NormedAddCommGroup E'] [NormedSpace ℝ E']
     [NormedAddCommGroup F'] [NormedSpace ℝ F']
     [NormedAddCommGroup G'] [NormedSpace ℝ G']
-    {f : ℝ → E} {g : ℝ → F}
-    (φ : E →L[ℝ] E') (ψ : F →L[ℝ] F') (Ψ : G →L[ℝ] G')
-    (B' : E' →L[ℝ] F' →L[ℝ] G')
+    {f : ℝ → E} {B : E →L[ℝ] F →L[ℝ] G} {g : ℝ → F} {a b : ℝ}
+    {φ : E →L[ℝ] E'} {ψ : F →L[ℝ] F'} {Ψ : G →L[ℝ] G'}
+    {B' : E' →L[ℝ] F' →L[ℝ] G'}
     (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     (h : StieltjesIntegrable a b B f g) :
     ∫⟨B'⟩ x in a..b, φ (f x) ∂(fun x ↦ ψ (g x)) =
       Ψ (∫⟨B⟩ x in a..b, f x ∂g) := by
-  rw [(h.hasStieltjesIntegral.map a b B φ ψ Ψ B' hB).stieltjesIntegral_eq,
+  rw [(h.hasStieltjesIntegral.map hB).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 /-! ### Integrability on subboxes -/
@@ -964,7 +970,7 @@ theorem stieltjesIntegral_map {E' F' G' : Type*}
 /-- If `f` is Stieltjes-integrable from `a` to `b` (with `a < b`) against `g`, then
 it is also Stieltjes-integrable on any sub-interval `(c, d]` with `a ≤ c < d ≤ b`. -/
 private theorem StieltjesIntegrable'.to_subbox [CompleteSpace G] {f : ℝ → E} {g : ℝ → F}
-    {c : ℝ} {d : ℝ} (hab : a < b) (hcd : c < d) (hac : a ≤ c) (hdb : d ≤ b)
+    {a b c d : ℝ} {B : E →L[ℝ] F →L[ℝ] G} (hab : a < b) (hcd : c < d) (hac : a ≤ c) (hdb : d ≤ b)
     (h : StieltjesIntegrable' a b B f g) :
     StieltjesIntegrable' c d B f g := by
   simp only [stieltjesIntegrable'_iff_integrable, Fin.isValue] at h ⊢
@@ -972,12 +978,11 @@ private theorem StieltjesIntegrable'.to_subbox [CompleteSpace G] {f : ℝ → E}
     simp [hab, hcd, hac, hdb]
   exact Integrable.to_subbox h hle
 
--- Ensure you have the correct import at the top of your file:
--- import BoxIntegral.Partition.OrderedDivision
+/-! ## Main theorems -/
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
-lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
+private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → F)
     (hg : BoundedVariationOn g (Set.Icc a b))
     (π : BoxIntegral.Prepartition (Ioc a b)) :
     ∑ J ∈ π.boxes, ‖(BoxIntegral.BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
@@ -1010,8 +1015,8 @@ lemma sum_norm_ofDiff_le_norm_mul_eVariationOn (g : ℝ → F)
 
 /-- Continuous integrand and a
 bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
-lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
-   (f : ℝ → E) (g : ℝ → F) (hab : a < b) (l : IntegrationParams)
+private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
+   {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab : a < b) (l : IntegrationParams)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
     Integrable (Ioc a b) l
       (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by
@@ -1073,18 +1078,16 @@ lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
     _ ≤ (‖B‖ * V) * η := by
       grw [norm_sum_le, Finset.sum_le_sum hterm, ← Finset.sum_mul]
       gcongr
-      exact sum_norm_ofDiff_le_norm_mul_eVariationOn a b B g hg π
+      exact sum_norm_ofDiff_le_norm_mul_eVariationOn B g hg π
     _ ≤ ε := by grind
-
-/-! ## Main theorems -/
 
 /-- Theorem A.1 of Montgomery-Vaughan: a continuous integrand and a bounded-variation integrator
 have a Riemann-Stieltjes integral. -/
-theorem exists_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
+theorem exists_of_continuousOn_of_boundedVariationOn [CompleteSpace G] {a b : ℝ}
     (f : ℝ → E) (g : ℝ → F) (hab : a < b)
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
     StieltjesIntegrable a b B f g := by
-  obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn a b B f g
+  obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn B
     hab IntegrationParams.Riemann hf hg
   use L
   rw [HasStieltjesIntegral, if_neg (ne_of_lt hab), if_pos hab]
@@ -1092,39 +1095,40 @@ theorem exists_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
 
 /-- Theorem A.2 of Montgomery Vaughan: if ∫ₐᵇ f dg exists, then ∫ₐᵇ g df exists and
 ∫ₐᵇ g df = g(b) * f(b) - g(a) * f(a) - ∫ₐᵇ f dg. -/
-theorem HasStieltjesIntegral.by_parts {f : ℝ → E} {g : ℝ → F} {L : G}
-    (hL : HasStieltjesIntegral a b B f g L) :
+theorem HasStieltjesIntegral.by_parts {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (hL : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b B.flip g f (B (f b) (g b) - B (f a) (g a) - L) := by sorry
 
-theorem StieltjesIntegrable.by_parts {f : ℝ → E} {g : ℝ → F}
+theorem StieltjesIntegrable.by_parts {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable a b B.flip g f := by
-  exact ⟨_, (h.hasStieltjesIntegral.by_parts a b B)⟩
+  exact ⟨_, h.hasStieltjesIntegral.by_parts⟩
 
-theorem stieltjesIntegral.by_parts {f : ℝ → E} {g : ℝ → F}
+theorem stieltjesIntegral.by_parts {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) :
     ∫⟨B.flip⟩ x in a..b, g x ∂f = B (f b) (g b) - B (f a) (g a) - ∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [(h.hasStieltjesIntegral.by_parts a b B).stieltjesIntegral_eq,
+  rw [h.hasStieltjesIntegral.by_parts.stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
-theorem HasStieltjesIntegral.of_const (c : E) (g : ℝ → F) :
+theorem HasStieltjesIntegral.of_const {a b : ℝ} (c : E) (g : ℝ → F) :
     HasStieltjesIntegral a b B (fun _ ↦ c) g (B c (g b) - B c (g a)) := by
-  convert by_parts a b B.flip (f := g) (g := fun _ ↦ c) (L := 0) (by simp [const_right]) using 1
+  convert by_parts (B := B.flip) (f := g) (g := fun _ ↦ c) (L := 0) (by simp [const_right]) using 1
   simp [flip_apply]
 
 theorem StieltjesIntegrable.of_const (c : E) (g : ℝ → F) :
     StieltjesIntegrable a b B (fun _ ↦ c) g :=
-  (HasStieltjesIntegral.of_const a b B c g).stieltjesIntegrable
+  (HasStieltjesIntegral.of_const B c g).stieltjesIntegrable
 
 @[simp]
 theorem stieltjesIntegral.of_const (c : E) (g : ℝ → F) :
     ∫⟨B⟩ _ in a..b, c ∂g = B c (g b) - B c (g a) :=
-  (HasStieltjesIntegral.of_const a b B c g).stieltjesIntegral_eq
+  (HasStieltjesIntegral.of_const B c g).stieltjesIntegral_eq
 
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
-theorem variation_of_derivative {g : ℝ → F} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) :
+theorem variation_of_derivative {a b : ℝ} {g : ℝ → F} (hab : a < b)
+    (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) :
     (eVariationOn g (Set.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
 
 /-- Placeholder abbreviation; there may be a better spelling for this. TODO: make this definition
@@ -1135,7 +1139,7 @@ abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
-theorem integral_of_derivative {f : ℝ → E} {g : ℝ → F} (hab : a < b)
+theorem integral_of_derivative {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab : a < b)
     (hg : ContDiffOn ℝ 1 g (Set.Icc a b))
     (hf : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
@@ -1143,8 +1147,9 @@ theorem integral_of_derivative {f : ℝ → E} {g : ℝ → F} (hab : a < b)
 /-- Theorem A.4. Suppose that g has bounded variation, and put g∗(x) = Varₐˣ g. Then
 ‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dg∗(x),
 provided that both integrals exist. -/
-theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G} {L' : ℝ} (hab : a < b)
-    (hg : BoundedVariationOn g (Set.Icc a b))
+theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} {L' : ℝ}
+    (hab : a < b) (hg : BoundedVariationOn g (Set.Icc a b))
     (hfg : HasStieltjesIntegral a b B f g L)
     (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (fun x ↦ ‖f x‖)
       (fun x ↦ (eVariationOn g (Set.Icc a x)).toReal) L') :
@@ -1155,7 +1160,7 @@ theorem integral_le_integral_of_variation {f : ℝ → E} {g : ℝ → F} {L : G
 /-- When the integrator is the identity, the Stieltjes integral with the scalar-multiplication
 pairing `(lsmul ℝ ℝ).flip` reduces to the ordinary `BoxIntegral.HasIntegral` against the
 Lebesgue volume on `(a, b]`. -/
-theorem hasStieltjesIntegral_id_iff_hasIntegral_volume (hab : a < b) (f : ℝ → E) (L : E) :
+theorem hasStieltjesIntegral_id_iff_hasIntegral_volume {a b : ℝ} (hab : a < b) (f : ℝ → E) (L : E) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L ↔
       HasIntegral (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0))
         BoxAdditiveMap.volume L := by
@@ -1167,7 +1172,7 @@ Riemann integral of `B (f x) (g' x)`. -/
 theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' {f : ℝ → E} {g : ℝ → F} {a b : ℝ}
     (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hf : RiemannIntegrable a b f) :
     ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) :=
-  (integral_of_derivative a b B hab hg hf).stieltjesIntegral_eq
+  (integral_of_derivative B hab hg hf).stieltjesIntegral_eq
 
 theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g : ℝ → F} {a b : ℝ}
     (hg : ContDiffOn ℝ 1 g (Set.Icc (min a b) (max a b)))
@@ -1192,26 +1197,26 @@ theorem stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable
 /-! ### Sums as Stieltjes integrals -/
 
 /-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f ∂⌊x⌋ -/
-theorem sum_eq_integral_nat_floor (hab : a < b) (f : ℝ → E) :
-    HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
+theorem sum_eq_integral_nat_floor {a b : ℝ} (hab : a < b) (f : ℝ → E) :
+    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f
       (fun x ↦ ⌊x⌋₊)
       (∑ n ∈ Finset.Ico ⌈a⌉₊ ⌈b⌉₊, f n) := by sorry
 
-theorem sum_eq_integral_int_floor (hab : a < b) (f : ℝ → E) :
-    HasStieltjesIntegral a b (lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip f
+theorem sum_eq_integral_int_floor {a b : ℝ} (hab : a < b) (f : ℝ → E) :
+    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f
       (fun x ↦ ⌊x⌋)
       (∑ n ∈ Finset.Ico ⌈a⌉ ⌈b⌉, f n) := by sorry
 
 /-- Sum of pairings `B (f n) (g n)` over natural `n ∈ (⌊a⌋, ⌊b⌋]`, expressed as a Stieltjes
 integral of `f` against the right-continuous summatory `x ↦ ∑ n ≤ x, g n`. -/
-theorem sum_eq_integral_natSummatory_le (hab : a < b) (f : ℝ → E) (g : ℕ → F) :
+theorem sum_eq_integral_natSummatory_le {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℕ → F) :
     HasStieltjesIntegral a b B f
       (fun x ↦ ∑ n ∈ Finset.Iic ⌊x⌋₊, g n)
       (∑ n ∈ Finset.Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n)) := by sorry
 
 /-- Sum of pairings `B (f n) (g n)` over natural `n ∈ [⌈a⌉, ⌈b⌉)`, expressed as a Stieltjes
 integral of `f` against the left-continuous summatory `x ↦ ∑ n < x, g n`. -/
-theorem sum_eq_integral_natSummatory_lt (hab : a < b) (f : ℝ → E) (g : ℕ → F) :
+theorem sum_eq_integral_natSummatory_lt {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℕ → F) :
     HasStieltjesIntegral a b B f
       (fun x ↦ ∑ n ∈ Finset.Iio ⌈x⌉₊, g n)
       (∑ n ∈ Finset.Ico ⌈a⌉₊ ⌈b⌉₊, B (f n) (g n)) := by sorry
