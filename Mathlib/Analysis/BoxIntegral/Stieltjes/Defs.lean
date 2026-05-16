@@ -153,6 +153,10 @@ lemma StieltjesIntegrable.symm {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : 
   (h : StieltjesIntegrable a b B f g) :  StieltjesIntegrable b a B f g := by
   rwa [← symm_iff]
 
+lemma StieltjesIntegrable.of_gt {a b : ℝ} (f : ℝ → E) (g : ℝ → F) (hba : b < a) :
+    StieltjesIntegrable a b B f g ↔ StieltjesIntegrable' b a B f g := by
+  rw [symm_iff]; exact of_lt B f g hba
+
 lemma StieltjesIntegrable.iff_min_max {f : ℝ → E} {g : ℝ → F} :
     StieltjesIntegrable a b B f g ↔
     StieltjesIntegrable (min a b) (max a b) B f g := by
