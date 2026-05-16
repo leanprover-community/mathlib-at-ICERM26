@@ -1,10 +1,125 @@
 module
 
-public import Mathlib.MeasureTheory.Integral.CurveIntegral.Poincare
+public import Mathlib.Order.CompletePartialOrder
 public import Mathlib.Topology.Covering.Basic
-public import Mathlib.AlgebraicTopology.FundamentalGroupoid.SimplyConnected
-import Mathlib.Topology.Germ
-import Mathlib.Topology.Homotopy.Lifting
+public import Mathlib.Topology.Sheaves.Stalks
+
+open Function Set CategoryTheory TopologicalSpace Opposite Filter
+open scoped Topology
+
+structure WithDiscreteTopology (α : Type*) where
+  val : α
+
+instance (α : Type*) : TopologicalSpace (WithDiscreteTopology α) := ⊥
+instance (α : Type*) : DiscreteTopology (WithDiscreteTopology α) := ⟨rfl⟩
+
+namespace TopCat.Presheaf
+
+-- TODO: add universes everywhere
+variable {X : TopCat.{0}} {C : Type} [Category.{0} C] {CC : C → Type} {FC : C → C → Type}
+  [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC] [Limits.HasColimits C]
+
+structure EspaceEtale (F : Presheaf C X) where
+  base : X
+  germ : ToType (F.stalk base)
+
+instance (F : Presheaf C X) : TopologicalSpace F.EspaceEtale :=
+  .generateFrom {s | ∃ U, ∃ f : ToType (F.obj (op U)),
+    s = {g | ∃ h, g.germ = F.germ U g.base h f}}
+
+variable {F : Presheaf C X}
+
+theorem EspaceEtale.eventually_nhds (g : EspaceEtale F) {U : Opens X} (h : g.base ∈ U)
+    (f : ToType (F.obj (op U))) (hf : F.germ U g.base h f = g.germ) :
+    ∀ᶠ g' : EspaceEtale F in 𝓝 g, ∃ hgU : g'.base ∈ U, g'.germ = F.germ U g'.base hgU f := by
+  simp only [nhds_generateFrom, Filter.Eventually, mem_setOf_eq, iInf_and, iInf_exists]
+  refine mem_iInf_of_mem _ <| mem_iInf_of_mem ?_ <| mem_iInf_of_mem U <| mem_iInf_of_mem f <|
+    mem_iInf_of_mem rfl <| mem_principal_self _
+  simp [*]
+
+variable [Limits.PreservesColimits (forget C)]
+
+theorem exists_le_germ_eq {x : X} {U : Opens X} (h : x ∈ U) (g : ToType (F.stalk x)) :
+    ∃ V ≤ U, ∃ (h : x ∈ V) (f : ToType (F.obj (op V))), F.germ V x h f = g := by
+  rcases F.germ_exist x g with ⟨V, hxV, f, rfl⟩
+  refine ⟨U ⊓ V, inf_le_left, mem_inter h hxV, F.map (.op <| homOfLE inf_le_right) f, ?_⟩
+  exact germ_res_apply ..
+
+variable (F) in
+@[fun_prop]
+theorem EspaceEtale.continuous_base : Continuous (base (F := F)) := by
+  rw [continuous_iff_continuousAt]
+  intro x
+  rw [ContinuousAt, (nhds_basis_opens _).tendsto_right_iff]
+  rintro U ⟨hxU, hUo⟩
+  lift U to Opens X using hUo
+  rcases exists_le_germ_eq hxU x.germ with ⟨V, hVU, hxV, f, hf⟩
+  refine x.eventually_nhds hxV f hf |>.mono ?_
+  simp +contextual [@hVU _]
+
+@[simps apply_fst]
+noncomputable def EspaceEtale.homeomorph
+    (U : Opens X)
+    (hF_bij : ∀ (x : X) (hx : x ∈ U), Bijective (F.germ U x hx))
+    (x : X) (hx : x ∈ U) :
+    (base (F := F) ⁻¹' U) ≃ₜ U × WithDiscreteTopology (ToType (F.stalk x)) where
+  toFun s := (⟨s.1.base, s.2⟩,
+    ⟨F.germ U x hx <| surjInv (hF_bij s.1.base s.2).surjective s.1.germ⟩)
+  invFun
+  | (⟨y, hy⟩, ⟨g⟩) => ⟨⟨y, F.germ U y hy <| surjInv (hF_bij x hx).surjective g⟩, hy⟩
+  left_inv := by
+    rintro ⟨⟨base, s⟩, hs⟩
+    simp only
+    congr 2
+    rw [leftInverse_surjInv (hF_bij _ _), surjInv_eq (hF_bij _ _).surjective]
+  right_inv := by
+    rintro ⟨⟨y, hy⟩, ⟨g⟩⟩
+    simp only
+    congr
+    rw [leftInverse_surjInv (hF_bij _ _), surjInv_eq (hF_bij _ _).surjective]
+  continuous_toFun := by
+    refine .prodMk (by fun_prop) ?_
+    simp_rw [continuous_iff_continuousAt, ContinuousAt, nhds_discrete, tendsto_pure, nhds_subtype,
+      eventually_comap]
+    rintro ⟨g, hg⟩
+    rcases hF_bij _ hg |>.surjective g.germ with ⟨f, hf⟩
+    filter_upwards [g.eventually_nhds hg f hf]
+    rintro _ ⟨hgU, hgf⟩ g' rfl
+    congr 1
+    rw [hgf, ← hf, leftInverse_surjInv (hF_bij _ _), leftInverse_surjInv (hF_bij _ _)]
+  continuous_invFun := by
+    simp_rw [continuous_iff_continuousAt, continuousAt_prod_of_discrete_right]
+    rintro ⟨y, ⟨g⟩⟩
+    simp only [ContinuousAt, nhds_subtype_eq_comap, tendsto_comap_iff, comp_def,
+      nhds_generateFrom, tendsto_iInf, mem_setOf_eq, tendsto_principal]
+    rintro _ ⟨hmem, V, f, rfl⟩
+    simp only [mem_setOf_eq] at hmem
+    rcases hmem with ⟨hyV, hgf⟩
+    rcases F.germ_eq _ _ _ _ _ hgf with ⟨W, hyW, ιWU, ιWV, hW⟩
+    filter_upwards [W.isOpen.preimage continuous_subtype_val |>.mem_nhds hyW] with z hz
+    use ιWV.le hz
+    rw [← F.germ_res_apply ιWU z hz, hW, F.germ_res_apply]
+
+theorem EspaceEtale.isCoveringMap_base
+    (hF_bij : ∀ x, ∃ (U : Opens X), x ∈ U ∧ ∀ y (hyU : y ∈ U), Bijective (F.germ U y hyU)) :
+    IsCoveringMap (base (F := F)) := by
+  refine fun x ↦ .to_isEvenlyCovered_preimage (I := WithDiscreteTopology (ToType (F.stalk x))) ?_
+  use inferInstance
+  rcases hF_bij x with ⟨U, hxU, hU_bij⟩
+  use U, hxU, U.isOpen, U.isOpen.preimage (continuous_base F), homeomorph U hU_bij x hxU
+  simp
+
+theorem EspaceEtale.exists_section_of_tendsto {α : Type*} {l : Filter α} {g : α → F.EspaceEtale}
+    {g₀ : F.EspaceEtale} (h : Tendsto g l (𝓝 g₀)) :
+    ∃ (U : Opens X), g₀.base ∈ U ∧ ∃ (f : ToType (F.obj (op U))),
+      ∀ᶠ a in l, ∃ ha : (g a).base ∈ U, (g a).germ = F.germ U (g a).base ha f := by
+  rcases F.germ_exist _ g₀.germ with ⟨U, hU, s, hs⟩
+  use U, hU, s
+  exact h.eventually <| g₀.eventually_nhds hU s hs
+
+end TopCat.Presheaf
+
+#exit
 
 open Filter Metric
 open scoped Topology Asymptotics
@@ -36,12 +151,6 @@ structure LocalMulGerms.EtaleSpace {X G : Type*} [TopologicalSpace X] [Group G]
     (gs : LocalMulGerms X G) where
   base (gs) : X
   value : G
-
-structure WithDiscreteTopology (α : Type*) where
-  val : α
-
-instance (α : Type*) : TopologicalSpace (WithDiscreteTopology α) := ⊥
-instance (α : Type*) : DiscreteTopology (WithDiscreteTopology α) := ⟨rfl⟩
 
 namespace LocalMulGerms
 
