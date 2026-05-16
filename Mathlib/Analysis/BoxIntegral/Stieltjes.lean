@@ -315,32 +315,9 @@ namespace BoxIntegral
 
 /-! ## Definition of the Riemann–Stieltjes integral -/
 
-/- Our notion of Stieltjes transformation requires a choice of continuous bilinear mapping `B` from
-the ranges of `f`, `g` to the desired output range.
-Standard choices already available in Mathlib
-include:
-* `ContinuousLinearMap.mul ℝ A : A →L[ℝ] A →L[ℝ] A` for `A` a normed `ℝ`-algebra
-  (e.g. when `f`, `g` are both real- or both complex-valued).
-* `ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E` for scalar multiplication when `f` is real,
-  and `(ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E).flip : E →L[ℝ] ℝ →L[ℝ] E` when `g`
-  is real.
-Use `ContinuousLinearMap.flip` to swap the argument order of any of these.
-
-One can `open ContinuousLinearMap` when using the Stieltjes integral to simplify notation. -/
-
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
-
-/- Endpoint convention. The underlying box `Ioc a b` is the half-open interval `(a, b]`,
-but most hypotheses and outputs below use `Set.Icc a b` rather than `Set.Ioc a b`. This is the
-conservative choice and is needed in several places:
-* `ContinuousOn` / `ContDiffOn` hypotheses rely on compactness of the domain (e.g. for uniform
-  continuity), which fails on `Set.Ioc`.
-* For a prepartition of `(a, b]` the leftmost sub-box has lower endpoint `a`, so `g a` appears
-  in `BoxAdditiveMap.ofDiff g`. Bounded-variation hypotheses on `g` must therefore include `a`.
-Some occurrences below may admit a half-open weakening; for now we keep `Set.Icc` everywhere
-and flag this as a possible future refinement. -/
 
 /-- The Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear
 map `B : E → F → G` and endpoints `a`, `b` takes values in `G`.  Initially defined under the
@@ -483,8 +460,8 @@ theorem HasStieltjesIntegral.stieltjesIntegral_eq {a b : ℝ} {B : E →L[ℝ] F
   simp only [stieltjesIntegral, dif_pos hI]
   exact hI.choose_spec.unique h
 
-theorem StieltjesIntegrable.hasStieltjesIntegral_iff {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
-    (h : StieltjesIntegrable a b B f g) (L : G) :
+theorem StieltjesIntegrable.hasStieltjesIntegral_iff {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} (h : StieltjesIntegrable a b B f g) (L : G) :
    HasStieltjesIntegral a b B f g L ↔ ∫⟨B⟩ x in a..b, f x ∂g = L
      := by
   grind [hasStieltjesIntegral, HasStieltjesIntegral.unique]
@@ -742,8 +719,7 @@ theorem HasStieltjesIntegral.add_adjacent [CompleteSpace G]
   by_cases! hbc : b = c
   · simp_all
   by_cases! hac : a = c
-  · simp_all
-    simp [h₁.unique h₂.symm]
+  · simp_all; simp [h₁.unique h₂.symm]
   have h₁' := h₁.symm
   have h₂' := h₂.symm
   have h₃' := h₃.symm
