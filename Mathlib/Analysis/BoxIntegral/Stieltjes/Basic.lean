@@ -305,10 +305,13 @@ theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E)
 
 section Linearity
 
-/-! ## Linearity -/
+/-! ## Linearity
 
-variable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f f₁ f₂ : ℝ → E} {g g₁ g₂ : ℝ → F}
-    {L L₁ L₂ : G}
+The provided API demonstrates that the Riemann--Stieltjes integral `∫⟨B⟩ x in a..b, f x ∂g` is
+linear in each of the inputs `f`,`g`, `B`.
+-/
+
+variable {a b : ℝ} {B B₁ B₂ : E →L[ℝ] F →L[ℝ] G} {f f₁ f₂ : ℝ → E} {g g₁ g₂ : ℝ → F} {L L₁ L₂ : G}
 
 /-! ### In the integrand -/
 
@@ -352,6 +355,7 @@ theorem StieltjesIntegrable.add_left
     StieltjesIntegrable a b B (f₁ + f₂) g :=
   (h₁.hasStieltjesIntegral.add_left h₂.hasStieltjesIntegral).stieltjesIntegrable
 
+@[simp]
 theorem stieltjesIntegral_add_left
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
     ∫⟨B⟩ x in a..b, (f₁ + f₂) x ∂g
@@ -378,6 +382,7 @@ theorem StieltjesIntegrable.neg_left
   (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable a b B (-f) g :=
   h.hasStieltjesIntegral.neg_left.stieltjesIntegrable
 
+@[simp]
 theorem stieltjesIntegral_neg_left (h : StieltjesIntegrable a b B f g) :
     ∫⟨B⟩ x in a..b, (-f) x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
   rw [h.hasStieltjesIntegral.neg_left.stieltjesIntegral_eq,
@@ -405,6 +410,7 @@ theorem StieltjesIntegrable.sub_left
     StieltjesIntegrable a b B (f₁ - f₂) g :=
   (h₁.hasStieltjesIntegral.sub_left h₂.hasStieltjesIntegral).stieltjesIntegrable
 
+@[simp]
 theorem stieltjesIntegral_sub_left
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
     ∫⟨B⟩ x in a..b, (f₁ - f₂) x ∂g
@@ -432,6 +438,7 @@ theorem StieltjesIntegrable.smul_left
     (h : StieltjesIntegrable a b B f g) (c : ℝ) : StieltjesIntegrable a b B (c • f) g :=
   (h.hasStieltjesIntegral.smul_left c).stieltjesIntegrable
 
+@[simp]
 theorem stieltjesIntegral_smul_left
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
     ∫⟨B⟩ x in a..b, (c • f) x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g := by
@@ -502,6 +509,7 @@ theorem StieltjesIntegrable.add_right
     StieltjesIntegrable a b B f (g₁ + g₂) :=
   (h₁.hasStieltjesIntegral.add_right h₂.hasStieltjesIntegral).stieltjesIntegrable
 
+@[simp]
 theorem stieltjesIntegral_add_right
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
     ∫⟨B⟩ x in a..b, f x ∂(g₁ + g₂)
@@ -533,10 +541,11 @@ theorem StieltjesIntegrable.neg_right
     (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable a b B f (-g) :=
   h.hasStieltjesIntegral.neg_right.stieltjesIntegrable
 
+@[simp]
 theorem stieltjesIntegral_neg_right
     (h : StieltjesIntegrable a b B f g) :
     ∫⟨B⟩ x in a..b, f x ∂(-g) = -∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [(h.hasStieltjesIntegral.neg_right).stieltjesIntegral_eq,
+  rw [h.hasStieltjesIntegral.neg_right.stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
 theorem HasStieltjesIntegral'.sub_right
@@ -565,6 +574,7 @@ theorem StieltjesIntegrable.sub_right
     StieltjesIntegrable a b B f (g₁ - g₂) :=
   (h₁.hasStieltjesIntegral.sub_right h₂.hasStieltjesIntegral).stieltjesIntegrable
 
+@[simp]
 theorem stieltjesIntegral_sub_right
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
     ∫⟨B⟩ x in a..b, f x ∂(g₁ - g₂)
@@ -595,11 +605,148 @@ theorem StieltjesIntegrable.smul_right (h : StieltjesIntegrable a b B f g) (c : 
     StieltjesIntegrable a b B f (c • g) :=
   (h.hasStieltjesIntegral.smul_right c).stieltjesIntegrable
 
+@[simp]
 theorem stieltjesIntegral_smul_right
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
     ∫⟨B⟩ x in a..b, f x ∂(c • g) = c • ∫⟨B⟩ x in a..b, f x ∂g := by
   rw [(h.hasStieltjesIntegral.smul_right c).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+/-! ### In the bilinear form -/
+
+private theorem HasStieltjesIntegral'.zero_bil : HasStieltjesIntegral' a b 0 f g (0 : G) := by
+  simp [HasStieltjesIntegral', hasIntegral_zero_vol]
+
+@[simp]
+theorem HasStieltjesIntegral.zero_bil : HasStieltjesIntegral a b 0 f g (0 : G) := by
+  rcases lt_trichotomy a b with hab | rfl | hab
+  · simp only [of_lt, hab] at ⊢
+    apply HasStieltjesIntegral'.zero_bil
+  · simp_all
+  rw [symm_iff] at ⊢
+  simp only [neg_zero, hab, of_lt] at ⊢
+  apply HasStieltjesIntegral'.zero_bil
+
+@[simp]
+theorem StieltjesIntegrable.zero_bil : StieltjesIntegrable (G := G) a b 0 f g :=
+  HasStieltjesIntegral.zero_bil.stieltjesIntegrable
+
+@[simp]
+theorem stieltjesIntegral_zero_bil : ∫⟨0⟩ x in a..b, f x ∂g = (0 : G) :=
+  HasStieltjesIntegral.zero_bil.stieltjesIntegral_eq
+
+private theorem HasStieltjesIntegral'.add_bil
+    (h₁ : HasStieltjesIntegral' a b B₁ f g L₁) (h₂ : HasStieltjesIntegral' a b B₂ f g L₂) :
+    HasStieltjesIntegral' a b (B₁ + B₂) f g (L₁ + L₂) := by
+  unfold HasStieltjesIntegral' at h₁ h₂ ⊢
+  have h : (fun x : ℝ ↦ (B₁ + B₂).flip (g x)) =
+      (fun x ↦ B₁.flip (g x)) + (fun x ↦ B₂.flip (g x)) := by ext; simp
+  rw [h, map_add]
+  exact h₁.add_vol h₂
+
+@[simp]
+theorem HasStieltjesIntegral.add_bil
+    (h₁ : HasStieltjesIntegral a b B₁ f g L₁) (h₂ : HasStieltjesIntegral a b B₂ f g L₂) :
+    HasStieltjesIntegral a b (B₁ + B₂) f g (L₁ + L₂) := by
+  rcases lt_trichotomy a b with hab | rfl | hab
+  · simp only [of_lt, hab] at h₁ h₂ ⊢
+    exact h₁.add_bil h₂
+  · simp_all
+  rw [symm_iff] at h₁ h₂ ⊢
+  simp only [hab, of_lt] at h₁ h₂ ⊢
+  convert h₁.add_bil h₂ using 1
+  abel
+
+private theorem HasStieltjesIntegral'.neg_bil
+    {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral' a b B f g L) :
+    HasStieltjesIntegral' a b (-B) f g (-L) := by
+  unfold HasStieltjesIntegral' at h ⊢
+  have heq : (fun x : ℝ ↦ (-B).flip (g x)) = -(fun x ↦ B.flip (g x)) := by ext; simp
+  rw [heq, map_neg]
+  exact h.neg_vol
+
+theorem HasStieltjesIntegral.neg_bil (h : HasStieltjesIntegral a b B f g L) :
+    HasStieltjesIntegral a b (-B) f g (-L) := by
+  rcases lt_trichotomy a b with hab | rfl | hab
+  · simp only [of_lt, hab] at h ⊢
+    apply h.neg_bil
+  · simp_all
+  rw [symm_iff] at h ⊢
+  simp only [hab, of_lt, neg_neg] at h ⊢
+  convert h.neg_bil using 1
+  norm_num
+
+@[simp]
+theorem stieltjesIntegral_neg_bil
+    (h : StieltjesIntegrable a b B f g) :
+    ∫⟨-B⟩ x in a..b, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
+  rw [h.hasStieltjesIntegral.neg_bil.stieltjesIntegral_eq,
+    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+theorem HasStieltjesIntegral'.sub_bil
+    (h₁ : HasStieltjesIntegral' a b B₁ f g L₁) (h₂ : HasStieltjesIntegral' a b B₂ f g L₂) :
+    HasStieltjesIntegral' a b (B₁ - B₂) f g (L₁ - L₂) := by
+  unfold HasStieltjesIntegral' at h₁ h₂ ⊢
+  have h : (fun x : ℝ ↦ (B₁ - B₂).flip (g x)) =
+      (fun x ↦ B₁.flip (g x)) - (fun x ↦ B₂.flip (g x)) := by ext; simp
+  rw [h, map_sub]
+  exact h₁.sub_vol h₂
+
+theorem HasStieltjesIntegral.sub_bil
+    (h₁ : HasStieltjesIntegral a b B₁ f g L₁) (h₂ : HasStieltjesIntegral a b B₂ f g L₂) :
+    HasStieltjesIntegral a b (B₁ - B₂) f g (L₁ - L₂) := by
+  rcases lt_trichotomy a b with hab | rfl | hab
+  · simp only [of_lt, hab] at h₁ h₂ ⊢
+    exact h₁.sub_bil h₂
+  · simp_all
+  rw [symm_iff] at h₁ h₂ ⊢
+  simp only [hab, of_lt] at h₁ h₂ ⊢
+  convert h₁.sub_bil h₂ using 1
+  abel
+
+theorem StieltjesIntegrable.sub_right
+    (h₁ : StieltjesIntegrable a b B₁ f g) (h₂ : StieltjesIntegrable a b B₂ f g) :
+    StieltjesIntegrable a b (B₁ - B₂) f g :=
+  (h₁.hasStieltjesIntegral.sub_bil h₂.hasStieltjesIntegral).stieltjesIntegrable
+
+@[simp]
+theorem stieltjesIntegral_sub_right
+    (h₁ : StieltjesIntegrable a b B₁ f g) (h₂ : StieltjesIntegrable a b B₂ f g) :
+    ∫⟨B₁ - B₂⟩ x in a..b, f x ∂g
+      = ∫⟨B₁⟩ x in a..b, f x ∂g - ∫⟨B₂⟩ x in a..b, f x ∂g₂ := by
+  rw [(h₁.hasStieltjesIntegral.sub_bil h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
+    h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
+    h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
+
+private theorem HasStieltjesIntegral'.smul_bil (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
+    HasStieltjesIntegral' a b (c • B) f g (c • L) := by
+  unfold HasStieltjesIntegral' at h ⊢
+  have heq : (fun x : ℝ ↦ (c • B).flip (g x)) = c • (fun x ↦ B.flip (g x)) := by ext; simp
+  rw [heq, BoxIntegral.BoxAdditiveMap.ofDiff_smul]
+  exact h.smul_vol c
+
+theorem HasStieltjesIntegral.smul_bil (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
+    HasStieltjesIntegral a b (c • B) f g (c • L) := by
+  rcases lt_trichotomy a b with hab | rfl | hab
+  · simp only [of_lt, hab] at h ⊢
+    apply h.smul_bil
+  · simp_all
+  rw [symm_iff] at h ⊢
+  simp only [hab, of_lt] at h ⊢
+  convert h.smul_bil _ using 1
+  norm_num
+
+theorem StieltjesIntegrable.smul_bil (h : StieltjesIntegrable a b B f g) (c : ℝ) :
+    StieltjesIntegrable a b (c • B) f g :=
+  (h.hasStieltjesIntegral.smul_bil c).stieltjesIntegrable
+
+@[simp]
+theorem stieltjesIntegral_smul_bil
+    (h : StieltjesIntegrable a b B f g) (c : ℝ) :
+    ∫⟨c • B⟩ x in a..b, f x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g := by
+  rw [(h.hasStieltjesIntegral.smul_bil c).stieltjesIntegral_eq,
+    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+#exit
 
 end Linearity
 
