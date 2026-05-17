@@ -767,7 +767,7 @@ private theorem HasStieltjesIntegral'.map (hB : ∀ e y, Ψ (B e y) = B' (φ e) 
     HasStieltjesIntegral' a b B' (fun x ↦ φ (f x)) (fun x ↦ ψ (g x)) (Ψ L) := by
   unfold HasStieltjesIntegral' at h ⊢
   refine HasIntegral.map φ Ψ ?_ h
-  intro J e
+  intros
   simp only [BoxIntegral.BoxAdditiveMap.ofDiff_apply, ContinuousLinearMap.sub_apply,
     ContinuousLinearMap.flip_apply, map_sub, hB]
 
@@ -826,7 +826,7 @@ theorem StieltjesIntegrable.to_subinterval (hab : a < b) (hc : c ∈ Set.Icc a b
   · simp only [hcd, of_lt]
     exact StieltjesIntegrable'.to_subinterval hab hcd hc.1 hd.2 h
   · simp
-  rw [symm_iff]
+  symm
   simp only [hcd, of_lt]
   exact StieltjesIntegrable'.to_subinterval hab hcd hd.1 hc.2 h
 
@@ -845,16 +845,12 @@ private theorem HasStieltjesIntegral'.add_adjacent (hab : a < b) (hbc : b < c)
     HasStieltjesIntegral' a c B f g (L + L') := by
   simp only [HasStieltjesIntegral', StieltjesIntegrable'] at h h₁ h₂ ⊢
   have hac : a < c := hab.trans hbc
-  have hb_mem :
-      b ∈ Set.Ioo ((Ioc a c).lower 0) ((Ioc a c).upper 0) := by
-    simp [hac, hab, hbc]
+  have hb_mem : b ∈ Set.Ioo ((Ioc a c).lower 0) ((Ioc a c).upper 0) := by simp [hac, hab, hbc]
   refine HasIntegral.split 0 b ?_ ?_ h h₁ h₂
   · rw [Box.splitLower_def hb_mem, WithBot.coe_eq_coe]
-    ext x
-    simp [hac, hab]
+    ext; simp [hac, hab]
   · rw [Box.splitUpper_def hb_mem, WithBot.coe_eq_coe]
-    ext x
-    simp [hac, hbc]
+    ext; simp [hac, hbc]
 
 private theorem HasStieltjesIntegral.add_adjacent_prelim (hab : a < b) (hbc : b < c)
     (h₁ : HasStieltjesIntegral a b B f g L)
@@ -953,7 +949,7 @@ theorem _root_.Set.BijOn.of_strictMonoOn_continuousOn {α : Type*} [TopologicalS
   Set.BijOn.mk hf_mono.monotoneOn.mapsTo_Icc hf_mono.injOn
   (hf.surjOn_Icc (Set.left_mem_Icc.mpr hab) (Set.right_mem_Icc.mpr hab))
 
-theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
+theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
   (hmono : StrictMonoOn φ (Set.Icc a b))
   (hcont : ContinuousOn φ (Set.Icc a b))
   (h : HasStieltjesIntegral (φ a) (φ b) B f g L) :
@@ -1055,7 +1051,15 @@ theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
     grind
   specialize h π' hhen' hpart' hmesh'
   convert h using 2
-  sorry
+  have : ∀ J ∈ π, J = Ioc.comp ψ (Ioc.comp φ J) := by
+    intro J hJ
+    simp [Ioc.comp, h2 hJ, hinv.1 (h1 hJ).1, hinv.1 (h1 hJ).2, ← J.eq_Ioc]
+  symm
+  convert Finset.sum_image (g := Ioc.comp φ) ?_ with J hJ
+    <;> try first | simp [← this J hJ] | simp [Ioc.comp, h2 hJ]
+  intro I hI J hJ hIJ
+  apply_fun Ioc.comp ψ at hIJ
+  rwa [← this I hI, ← this J hJ] at hIJ
 
 end Change
 
@@ -1101,57 +1105,39 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
     (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
     Integrable (Ioc a b) l
       (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) := by
-  -- Step 1: Reduce integrability to the Cauchy convergence criterion over fine prepartitions
   let f' := fun x : Fin 1 → ℝ ↦ f (x 0)
   refine integrable_iff_cauchy_basis.2 fun ε hε ↦ ?_
-  -- Step 2: Define global constants for total variation and bilinear scaling bounds
   let V : ℝ := (eVariationOn g (Set.Icc a b)).toReal
   rcases exists_pos_mul_lt hε (‖B‖ * V) with ⟨η, hη, hηC⟩
-  -- Step 3: Extract the uniform continuity margin δ required to achieve our target error η
   obtain ⟨δ, hδ, hδf⟩ :=
     Metric.uniformContinuousOn_iff.mp (isCompact_Icc.uniformContinuousOn_of_continuous hf) η hη
-  -- Step 4: Define a strictly positive, constant gauge ρ = δ / 4
-  -- Forcing subboxes to have a radius ≤ δ / 4 ensures that any two tags inside overlapping
-  -- subboxes are separated by a strict total distance of less than δ.
   let ρ : ℝ := δ / 4
   let r : NNReal → (Fin 1 → ℝ) → Set.Ioi (0 : ℝ) := fun _ _ ↦ ⟨ρ, by grind⟩
   refine ⟨r, fun _ _ _ ↦ by rfl, fun c₁ c₂ π₁ π₂ hπ₁ hpart₁ hπ₂ hpart₂ ↦ ?_⟩
-  -- Evaluate the Cauchy distance between two arbitrary r-fine prepartitions π₁ and π₂
   let vol := BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))
   let π := π₁.toPrepartition ⊓ π₂.toPrepartition
   let τ₁ := π₁.infPrepartition π₂.toPrepartition
   let τ₂ := π₂.infPrepartition π₁.toPrepartition
   have hsub₁ : τ₁.IsSubordinate (r c₁) := hπ₁.isSubordinate.infPrepartition _
   have hsub₂ : τ₂.IsSubordinate (r c₂) := hπ₂.isSubordinate.infPrepartition _
-  -- Express the global difference of integral sums as the discrete sum of local subbox
-  -- differences.
   have hdiff : integralSum f' vol π₁ - integralSum f' vol π₂ =
       ∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))) := by
-    simpa [vol, π, τ₁, τ₂] using
-      integralSum_sub_partitions f' vol hpart₁ hpart₂
-  -- Step 5: Prove that each localized subbox evaluation is bounded strictly by η * ‖vol J‖
-  have hterm : ∀ J ∈ π.boxes,
-      ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖ ≤ ‖vol J‖ * η := by
+    simpa [vol, π, τ₁, τ₂] using integralSum_sub_partitions f' vol hpart₁ hpart₂
+  have hterm : ∀ J ∈ π.boxes, ‖vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))‖ ≤ ‖vol J‖ * η := by
     intro J hJ
     have hJτ₁ : J ∈ τ₁ := by change J ∈ τ₁.toPrepartition; simpa [π, τ₁] using hJ
     have hJτ₂ : J ∈ τ₂ := TaggedPrepartition.mem_infPrepartition_comm.mp hJτ₁
-    -- Map local tag coordinates back inside the global ambient domain [a, b]
     have := τ₁.tag_mem_Icc J
     have := τ₂.tag_mem_Icc J
-    -- Gauge subordination forces both tags to sit within ρ of the shared upper boundary corner
     have hτ₁_upper : dist (τ₁.tag J) J.upper ≤ ρ := by
       simpa [Metric.mem_closedBall, r, ρ, dist_comm] using hsub₁ J hJτ₁ J.upper_mem_Icc
     have hτ₂_upper : dist J.upper (τ₂.tag J) ≤ ρ := by
       simpa [Metric.mem_closedBall, r, ρ] using hsub₂ J hJτ₂ J.upper_mem_Icc
-    -- Chain the tag metrics through the shared upper corner via the triangle inequality
-    -- Trigger the uniform continuity bound using the coordinated metric separation
-    -- Factor the bounded vector difference through the linear volume operator norm
     grw [← map_sub, (vol J).le_opNorm, ← dist_eq_norm]
     gcongr
     apply le_of_lt (hδf _ (by simp_all) _ (by simp_all) _)
     grw [dist_le_pi_dist, dist_triangle _ J.upper _]
     unfold ρ at *; linarith
-  -- Step 6: Aggregate local bounds over the partition to confirm total metric distance < ε
   calc
     dist (integralSum f' vol π₁) (integralSum f' vol π₂)
       = ‖∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0)))‖ := by
