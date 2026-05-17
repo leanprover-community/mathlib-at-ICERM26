@@ -387,9 +387,8 @@ theorem StieltjesIntegrable.neg_left
 
 @[simp]
 theorem stieltjesIntegral_neg_left (h : StieltjesIntegrable a b B f g) :
-    ∫⟨B⟩ x in a..b, (-f) x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [h.hasStieltjesIntegral.neg_left.stieltjesIntegral_eq,
-    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+    ∫⟨B⟩ x in a..b, (-f) x ∂g = -∫⟨B⟩ x in a..b, f x ∂g :=
+  h.hasStieltjesIntegral.neg_left.stieltjesIntegral_eq
 
 private theorem HasStieltjesIntegral'.sub_left
     (h₁ : HasStieltjesIntegral' a b B f₁ g L₁) (h₂ : HasStieltjesIntegral' a b B f₂ g L₂) :
@@ -444,9 +443,8 @@ theorem StieltjesIntegrable.smul_left
 @[simp]
 theorem stieltjesIntegral_smul_left
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
-    ∫⟨B⟩ x in a..b, (c • f) x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [(h.hasStieltjesIntegral.smul_left c).stieltjesIntegral_eq,
-    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+    ∫⟨B⟩ x in a..b, (c • f) x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g :=
+  (h.hasStieltjesIntegral.smul_left c).stieltjesIntegral_eq
 
 /-! ### In the integrator -/
 
@@ -516,10 +514,8 @@ theorem StieltjesIntegrable.add_right
 theorem stieltjesIntegral_add_right
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
     ∫⟨B⟩ x in a..b, f x ∂(g₁ + g₂)
-      = ∫⟨B⟩ x in a..b, f x ∂g₁ + ∫⟨B⟩ x in a..b, f x ∂g₂ := by
-  rw [(h₁.hasStieltjesIntegral.add_right h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
-    h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
-    h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
+      = ∫⟨B⟩ x in a..b, f x ∂g₁ + ∫⟨B⟩ x in a..b, f x ∂g₂ :=
+    (h₁.hasStieltjesIntegral.add_right h₂.hasStieltjesIntegral).stieltjesIntegral_eq
 
 private theorem HasStieltjesIntegral'.neg_right
     {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral' a b B f g L) :
@@ -547,9 +543,8 @@ theorem StieltjesIntegrable.neg_right
 @[simp]
 theorem stieltjesIntegral_neg_right
     (h : StieltjesIntegrable a b B f g) :
-    ∫⟨B⟩ x in a..b, f x ∂(-g) = -∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [h.hasStieltjesIntegral.neg_right.stieltjesIntegral_eq,
-    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+    ∫⟨B⟩ x in a..b, f x ∂(-g) = -∫⟨B⟩ x in a..b, f x ∂g :=
+  h.hasStieltjesIntegral.neg_right.stieltjesIntegral_eq
 
 theorem HasStieltjesIntegral'.sub_right
     (h₁ : HasStieltjesIntegral' a b B f g₁ L₁) (h₂ : HasStieltjesIntegral' a b B f g₂ L₂) :
@@ -581,10 +576,8 @@ theorem StieltjesIntegrable.sub_right
 theorem stieltjesIntegral_sub_right
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
     ∫⟨B⟩ x in a..b, f x ∂(g₁ - g₂)
-      = ∫⟨B⟩ x in a..b, f x ∂g₁ - ∫⟨B⟩ x in a..b, f x ∂g₂ := by
-  rw [(h₁.hasStieltjesIntegral.sub_right h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
-    h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
-    h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
+      = ∫⟨B⟩ x in a..b, f x ∂g₁ - ∫⟨B⟩ x in a..b, f x ∂g₂ :=
+  (h₁.hasStieltjesIntegral.sub_right h₂.hasStieltjesIntegral).stieltjesIntegral_eq
 
 private theorem HasStieltjesIntegral'.smul_right (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
     HasStieltjesIntegral' a b B f (c • g) (c • L) := by
@@ -611,9 +604,8 @@ theorem StieltjesIntegrable.smul_right (h : StieltjesIntegrable a b B f g) (c : 
 @[simp]
 theorem stieltjesIntegral_smul_right
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
-    ∫⟨B⟩ x in a..b, f x ∂(c • g) = c • ∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [(h.hasStieltjesIntegral.smul_right c).stieltjesIntegral_eq,
-    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+    ∫⟨B⟩ x in a..b, f x ∂(c • g) = c • ∫⟨B⟩ x in a..b, f x ∂g :=
+  (h.hasStieltjesIntegral.smul_right c).stieltjesIntegral_eq
 
 /-! ### In the bilinear form -/
 
@@ -682,9 +674,8 @@ theorem HasStieltjesIntegral.neg_bil (h : HasStieltjesIntegral a b B f g L) :
 @[simp]
 theorem stieltjesIntegral_neg_bil
     (h : StieltjesIntegrable a b B f g) :
-    ∫⟨-B⟩ x in a..b, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [h.hasStieltjesIntegral.neg_bil.stieltjesIntegral_eq,
-    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+    ∫⟨-B⟩ x in a..b, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g :=
+  h.hasStieltjesIntegral.neg_bil.stieltjesIntegral_eq
 
 theorem HasStieltjesIntegral'.sub_bil
     (h₁ : HasStieltjesIntegral' a b B₁ f g L₁) (h₂ : HasStieltjesIntegral' a b B₂ f g L₂) :
@@ -716,10 +707,8 @@ theorem StieltjesIntegrable.sub_bil
 theorem stieltjesIntegral_sub_bil
     (h₁ : StieltjesIntegrable a b B₁ f g) (h₂ : StieltjesIntegrable a b B₂ f g) :
     ∫⟨B₁ - B₂⟩ x in a..b, f x ∂g
-      = ∫⟨B₁⟩ x in a..b, f x ∂g - ∫⟨B₂⟩ x in a..b, f x ∂g := by
-  rw [(h₁.hasStieltjesIntegral.sub_bil h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
-    h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
-    h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
+      = ∫⟨B₁⟩ x in a..b, f x ∂g - ∫⟨B₂⟩ x in a..b, f x ∂g :=
+  (h₁.hasStieltjesIntegral.sub_bil h₂.hasStieltjesIntegral).stieltjesIntegral_eq
 
 private theorem HasStieltjesIntegral'.smul_bil (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
     HasStieltjesIntegral' a b (c • B) f g (c • L) := by
@@ -746,9 +735,8 @@ theorem StieltjesIntegrable.smul_bil (h : StieltjesIntegrable a b B f g) (c : �
 @[simp]
 theorem stieltjesIntegral_smul_bil
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
-    ∫⟨c • B⟩ x in a..b, f x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g := by
-  rw [(h.hasStieltjesIntegral.smul_bil c).stieltjesIntegral_eq,
-    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+    ∫⟨c • B⟩ x in a..b, f x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g :=
+  (h.hasStieltjesIntegral.smul_bil c).stieltjesIntegral_eq
 
 end Linearity
 
@@ -768,8 +756,7 @@ private theorem HasStieltjesIntegral'.map (hB : ∀ e y, Ψ (B e y) = B' (φ e) 
   unfold HasStieltjesIntegral' at h ⊢
   refine HasIntegral.map φ Ψ ?_ h
   intros
-  simp only [BoxIntegral.BoxAdditiveMap.ofDiff_apply, ContinuousLinearMap.sub_apply,
-    ContinuousLinearMap.flip_apply, map_sub, hB]
+  simp only [BoxAdditiveMap.ofDiff_apply, sub_apply, flip_apply, map_sub, hB]
 
 /-- If a bilinear pairing `B : E →L[ℝ] F →L[ℝ] G` and CLMs `φ : E →L[ℝ] E'`, `ψ : F →L[ℝ] F'`,
 `Ψ : G →L[ℝ] G'` satisfy the compatibility `Ψ (B e y) = B' (φ e) (ψ y)` for all `e, y`, then
@@ -795,9 +782,8 @@ theorem StieltjesIntegrable.map (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
 theorem stieltjesIntegral_map (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     (h : StieltjesIntegrable a b B f g) :
     ∫⟨B'⟩ x in a..b, φ (f x) ∂(fun x ↦ ψ (g x)) =
-      Ψ (∫⟨B⟩ x in a..b, f x ∂g) := by
-  rw [(h.hasStieltjesIntegral.map hB).stieltjesIntegral_eq,
-    h.hasStieltjesIntegral.stieltjesIntegral_eq]
+      Ψ (∫⟨B⟩ x in a..b, f x ∂g) :=
+  (h.hasStieltjesIntegral.map hB).stieltjesIntegral_eq
 
 end Naturality
 
@@ -811,9 +797,7 @@ private theorem StieltjesIntegrable'.to_subinterval
     (hab : a < b) (hcd : c < d) (hac : a ≤ c) (hdb : d ≤ b) (h : StieltjesIntegrable' a b B f g) :
     StieltjesIntegrable' c d B f g := by
   simp only [stieltjesIntegrable'_iff_integrable, Fin.isValue] at h ⊢
-  have hle : Ioc c d ≤ Ioc a b := by
-    simp [hab, hcd, hac, hdb]
-  exact Integrable.to_subbox h hle
+  exact Integrable.to_subbox h (by simp [hab, hcd, hac, hdb])
 
 /-- If `f` is Stieltjes-integrable from `a` to `b` (with `a < b`) against `g`, then
 it is also Stieltjes-integrable on any sub-interval of `(a, b]`. -/
@@ -900,9 +884,9 @@ theorem HasStieltjesIntegral.add_adjacent
 
 theorem stieltjesIntegral.add_adjacent (h : StieltjesIntegrable a c B f g)
     (h₁ : StieltjesIntegrable a b B f g) (h₂ : StieltjesIntegrable b c B f g) :
-    ∫⟨B⟩ x in a..c, f x ∂g = ∫⟨B⟩ x in a..b, f x ∂g + ∫⟨B⟩ x in b..c, f x ∂g := by
-  have := HasStieltjesIntegral.add_adjacent h h₁.hasStieltjesIntegral h₂.hasStieltjesIntegral
-  rwa [h.hasStieltjesIntegral_iff] at this
+    ∫⟨B⟩ x in a..c, f x ∂g = ∫⟨B⟩ x in a..b, f x ∂g + ∫⟨B⟩ x in b..c, f x ∂g :=
+  (HasStieltjesIntegral.add_adjacent h h₁.hasStieltjesIntegral
+    h₂.hasStieltjesIntegral).stieltjesIntegral_eq
 
 end Split
 
@@ -910,7 +894,7 @@ section Change
 
 /-! ## Change of variables -/
 
-variable {φ : ℝ → ℝ} {f : ℝ → E} {g : ℝ → F} {L : G}
+variable {φ : ℝ → ℝ} {f : ℝ → E} {g : ℝ → F} {L : G} {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
 
 lemma Ioc.le_Ioc_iff {a b c d : ℝ} (hab : a < b) (hcd : c < d) :
   Ioc c d ≤ Ioc a b ↔ a ≤ c ∧ d ≤ b := by
@@ -949,6 +933,11 @@ theorem _root_.Set.BijOn.of_strictMonoOn_continuousOn {α : Type*} [TopologicalS
   Set.BijOn.mk hf_mono.monotoneOn.mapsTo_Icc hf_mono.injOn
   (hf.surjOn_Icc (Set.left_mem_Icc.mpr hab) (Set.right_mem_Icc.mpr hab))
 
+/-- The Riemann-Stieltjes integral is unchanged after composing with a strictly monotone
+continuous function.
+
+TODO: establish a similar theorem for strictly antitone continuous functions. One may wish
+to golf this proof first. -/
 theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
   (hmono : StrictMonoOn φ (Set.Icc a b))
   (hcont : ContinuousOn φ (Set.Icc a b))
@@ -971,10 +960,8 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
   refine ⟨ NNReal.mk (δ/2) (by linarith), (show 0 < δ/2 by positivity),
     fun π hhen hpart hmesh ↦ ?_ ⟩
   have h1 {J : Box (Fin 1)} (hJ : J ∈ π) := J.mem_of_le hab (π.le_of_mem' _ hJ)
-  have h2 {J : Box (Fin 1)} (hJ : J ∈ π) : φ (J.lower 0) < φ (J.upper 0) := by
-    specialize h1 hJ
-    have := J.lower_lt_upper 0
-    apply hmono _ _ this <;> grind
+  have h2 {J : Box (Fin 1)} (hJ : J ∈ π) : φ (J.lower 0) < φ (J.upper 0) :=
+    hmono (h1 hJ).1 (h1 hJ).2 (J.lower_lt_upper 0)
   classical
   let π' : TaggedPrepartition (Ioc (φ a) (φ b)) := {
     boxes := π.boxes.image (Ioc.comp φ)
@@ -1049,8 +1036,7 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
     specialize hmesh J hJπ
     simp [Real.dist_eq] at hmesh ⊢
     grind
-  specialize h π' hhen' hpart' hmesh'
-  convert h using 2
+  convert h π' hhen' hpart' hmesh' using 2
   have : ∀ J ∈ π, J = Ioc.comp ψ (Ioc.comp φ J) := by
     intro J hJ
     simp [Ioc.comp, h2 hJ, hinv.1 (h1 hJ).1, hinv.1 (h1 hJ).2, ← J.eq_Ioc]
@@ -1061,6 +1047,21 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
   apply_fun Ioc.comp ψ at hIJ
   rwa [← this I hI, ← this J hJ] at hIJ
 
+theorem StieltjesIntegrable.of_comp_strictMono_continuous (hab : a < b)
+    (hmono : StrictMonoOn φ (Set.Icc a b))
+    (hcont : ContinuousOn φ (Set.Icc a b))
+    (h : StieltjesIntegrable (φ a) (φ b) B f g) :
+    StieltjesIntegrable a b B (f ∘ φ) (g ∘ φ) :=
+  (h.hasStieltjesIntegral.of_comp_strictMono_continuous hab hmono hcont).stieltjesIntegrable
+
+theorem stieltjesIntegral_of_comp_strictMono_continuous (hab : a < b)
+    (hmono : StrictMonoOn φ (Set.Icc a b))
+    (hcont : ContinuousOn φ (Set.Icc a b))
+    (h : StieltjesIntegrable (φ a) (φ b) B f g) :
+    ∫⟨B⟩ x in a..b, f (φ x) ∂(fun x ↦ g (φ x)) = ∫⟨B⟩ x in φ a..φ b, f x ∂g := by
+  rw [← (h.hasStieltjesIntegral.of_comp_strictMono_continuous hab hmono hcont).stieltjesIntegral_eq]
+  congr
+
 end Change
 
 /-! ## Main theorems -/
@@ -1069,16 +1070,16 @@ end Change
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → F)
     (hg : BoundedVariationOn g (Set.Icc a b))
-    (π : BoxIntegral.Prepartition (Ioc a b)) :
-    ∑ J ∈ π.boxes, ‖(BoxIntegral.BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
+    (π : Prepartition (Ioc a b)) :
+    ∑ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
       ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
 
   -- Step 1: Bound each local subbox evaluation by the operator norm of B.flip
-  have h_term : ∀ J ∈ π.boxes, ‖(BoxIntegral.BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
+  have h_term : ∀ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) J‖ ≤
       ‖B‖ * ‖g (J.upper 0) - g (J.lower 0)‖ := by
     intro J hJ
     change ‖B.flip (g (J.upper 0)) - B.flip (g (J.lower 0))‖ ≤ _
-    rw [← map_sub, ← ContinuousLinearMap.opNorm_flip B]
+    rw [← map_sub, ← opNorm_flip B]
     exact (B.flip).le_opNorm (g (J.upper 0) - g (J.lower 0))
 
   -- Step 2: Apply bound term-wise to sum and cancel operator norm
@@ -1195,10 +1196,40 @@ theorem stieltjesIntegral.of_const (c : E) (g : ℝ → F) :
 -/
 lemma subset_smaller_distance {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
   (hn : n ∈ Set.Icc a b) : |m - n| ≤ b - a := by
-  rcases hm with ⟨ham, hmb⟩
-  rcases hn with ⟨han, hnb⟩
-  rw [abs_sub_le_iff]
-  exact ⟨by linarith, by linarith⟩
+  grind
+
+lemma MVT_with_error' [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
+  (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
+  : ∃ δ > 0, ∀ a' ∈ Set.Icc a b, ∀ b' ∈ Set.Icc a b,
+  |b' - a'| < δ → ∀ c ∈ Set.uIcc a' b', dist (g b' -g a')
+    ((b' - a') • (derivWithin g (Set.Icc a b)) c) ≤ ε * |b' - a'| := by
+  set g' := derivWithin g (Set.Icc a b)
+  have hderiv_ucont :=
+    isCompact_Icc.uniformContinuousOn_of_continuous
+      (ContDiffOn.continuousOn_derivWithin hg (uniqueDiffOn_Icc hab) le_rfl)
+  obtain ⟨δ, hδ_pos, hδ_prop⟩ := Metric.uniformContinuousOn_iff.mp hderiv_ucont ε (by positivity)
+  refine ⟨δ, hδ_pos, fun a' ha' b' hb' h_b'_sub_a'_lt_δ c hc => ?_⟩
+  by_cases! ha'b' : a' = b'
+  · simp [ha'b']
+  have hIcc_subset : Set.uIcc a' b' ⊆ Set.Icc a b := by intro; simp [Set.mem_uIcc]; grind
+  have h_ftc := calc
+     g b' - g a' = ∫ x in a'..b', g' c + (g' x - g' c) := by
+      rw [← intervalIntegral.integral_derivWithin_uIcc_of_contDiffOn_uIcc (hg.mono hIcc_subset)]
+      apply intervalIntegral.integral_congr
+      intro x hx
+      simp only [add_sub_cancel]
+      exact derivWithin_subset hIcc_subset (uniqueDiffOn_Icc (by grind) x hx)
+        (hg.differentiableOn one_ne_zero x (hIcc_subset hx))
+     _ = (∫ x in a'..b', g' c) + (∫ x in a'..b', (g' x - g' c)) := by
+      rw [intervalIntegral.integral_add intervalIntegrable_const]
+      exact ((hderiv_ucont.mono hIcc_subset).continuousOn.intervalIntegrable).sub
+        intervalIntegrable_const
+  simp only [h_ftc, intervalIntegral.integral_const, dist_self_add_left, ge_iff_le]
+  apply intervalIntegral.norm_integral_le_of_norm_le_const
+  intro x hx
+  rw [←dist_eq_norm]
+  apply (hδ_prop _ (hIcc_subset ⟨hx.1.le, hx.2⟩) _ (hIcc_subset hc) _).le
+  exact lt_of_le_of_lt (subset_smaller_distance ⟨hx.1.le, hx.2⟩ hc) (by grind)
 
 /-- Lemma MVT version using a bilinear form, this theorem is used in the proof of Theorem A3 (b)
 Since the MVT is false in general (for higher dimensions), we prove a version where it is true up
@@ -1216,116 +1247,36 @@ fact that this will imply that f is bounded. However, for the MVT statement, we 
 bounded. Furthermore, there is no statement in Mathlib that states that Riemann integrable functions
 are bounded.
 -/
-lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : ℝ → F} {ε : ℝ}
-  {B : E →L[ℝ] F →L[ℝ] G} (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
-  (hB : B ≠ 0) (f_bounded : ∃ M > 0, ∀ x ∈ (Set.Icc a b), ‖f x‖ < M) : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b,
+lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : ℝ → F} {a b ε : ℝ}
+  (B : E →L[ℝ] F →L[ℝ] G) (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
+  (f_bounded : ∃ M > 0, ∀ x ∈ Set.Icc a b, ‖f x‖ < M) : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b,
   a' < b' → b' - a' < δ → ∀ c ∈ Set.Icc a' b', ‖B (f c) (g b' -g a')‖
-    ≤ ‖B (f c) (derivWithin g (Set.Icc a' b') c)‖ * (b' - a') + ε * (b' - a') := by
-  have hba_pos : 0 < b - a := by linarith
-  have hderiv_ucont : UniformContinuousOn (derivWithin g (Set.Icc a b)) (Set.Icc a b) :=
-    isCompact_Icc.uniformContinuousOn_of_continuous
-      (ContDiffOn.continuousOn_derivWithin hg (uniqueDiffOn_Icc hab) le_rfl)
-  have hB_norm_pos : 0 < ‖B‖ := norm_pos_iff.mpr hB
-  have huIcc_eq_Icc : Set.uIcc a b = Set.Icc a b := Set.uIcc_of_le hab.le
-  have hB_opNorm_bound : ∀ (y : F) (x : ℝ), ‖B (f x) y‖ ≤ ‖B‖ * ‖f x‖ * ‖y‖ :=
-    fun y x => B.le_opNorm₂ (f x) y
-  rw [Metric.uniformContinuousOn_iff] at hderiv_ucont
+    ≤ ‖B (f c) (derivWithin g (Set.Icc a b) c)‖ * (b' - a') + ε * (b' - a') := by
+  by_cases! hB : B = 0
+  · use 1; simp only [gt_iff_lt, zero_lt_one, ge_iff_le, Set.mem_Icc, hB, zero_apply, norm_zero,
+    zero_mul, zero_add, and_imp, true_and]; intros; positivity
   obtain ⟨M, hM_pos, hM_bound⟩ := f_bounded
-  let ε₂ := ε / (‖B‖ * M)
-  have hε₂_pos : 0 < ε₂ := div_pos hε (by positivity)
-  obtain ⟨δ, hδ_pos, hδ_prop⟩ := hderiv_ucont ε₂ hε₂_pos
-  refine ⟨δ, hδ_pos, fun a' ha' b' hb' h_a'_lt_b' h_b'_sub_a'_lt_δ c hc => ?_⟩
-  have hc_mem_big_Icc : c ∈ Set.Icc a b := by grind
-  have h_sub_len_le : b' - a' ≤ b - a := by linarith
-  have h_abs_sub_eq : |b' - a'| = b' - a' := by grind
-  have huIoc_eq_Ioc : Set.uIoc a' b' = Set.Ioc a' b' := by grind
-  have huIcc_eq_Icc' : Set.uIcc a' b' = Set.Icc a' b' := Set.uIcc_of_le h_a'_lt_b'.le
-  have hIcc_subset : (Set.Icc a' b') ⊆ (Set.Icc a b) := by grind
-  have hg_restricted : ContDiffOn ℝ 1 g (Set.Icc a' b') := hg.mono hIcc_subset
-  have hderiv_ucont_sub : UniformContinuousOn (derivWithin g (Set.Icc a' b')) (Set.Icc a' b') :=
-    isCompact_Icc.uniformContinuousOn_of_continuous
-      (ContDiffOn.continuousOn_derivWithin hg_restricted (uniqueDiffOn_Icc h_a'_lt_b') le_rfl)
-  have hderiv_integrable :
-      IntervalIntegrable (derivWithin g (Set.uIcc a' b')) MeasureTheory.volume a' b' := by
-    have : ContinuousOn (derivWithin g (Set.uIcc a' b')) (Set.uIcc a' b') := by
-      rw [huIcc_eq_Icc']
-      exact hderiv_ucont_sub.continuousOn
-    exact this.intervalIntegrable
-  have hg_ftc := intervalIntegral.integral_deriv_of_contDiffOn_Icc hg_restricted h_a'_lt_b'.le
-  have hderiv_eq_on_interior : ∀ x ∈ Set.Ioo (min a' b') (max a' b'),
-      derivWithin g (Set.uIcc a' b') x = deriv g x := by
-    intro x hx
-    rw [Set.uIcc_of_le h_a'_lt_b'.le]
-    have hx_open : x ∈ Set.Ioo a' b' := by grind
-    exact derivWithin_of_mem_nhds
-      (Filter.mem_of_superset (IsOpen.mem_nhds isOpen_Ioo hx_open) Set.Ioo_subset_Icc_self)
-  have hintegral_deriv_congr : ∫ x in a'..b', deriv g x = ∫ x in a'..b',
-      derivWithin g (Set.Icc a' b') x := by
-    apply intervalIntegral.integral_congr_ae
-    filter_upwards [MeasureTheory.compl_mem_ae_iff.mpr (MeasureTheory.measure_singleton b')]
-    with x hxb hx
-    grind
-  rw [← hg_ftc, hintegral_deriv_congr]
-  have hintegrand_split_eq : ‖B (f c) (∫ x in a'..b', derivWithin g (Set.Icc a' b') x)‖ =
-      ‖B (f c) (∫ x in a'..b', derivWithin g (Set.Icc a' b') c +
-      (derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c))‖ := by grind
-  rw [hintegrand_split_eq]
-  have hintegral_add_split : (∫ x in a'..b', derivWithin g (Set.Icc a' b') c) +
-      (∫ x in a'..b', (derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c))
-      = ∫ x in a'..b', derivWithin g (Set.Icc a' b') c
-        + (derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c) := by
-    rw [intervalIntegral.integral_add]
-    · exact intervalIntegrable_const
-    · refine IntervalIntegrable.sub ?_ intervalIntegrable_const
-      apply IntervalIntegrable.congr_ae hderiv_integrable
-      rw [huIcc_eq_Icc']
-  rw [← hintegral_add_split]
-  have hderiv_diff_lt_ε₂ : ∀ x ∈ Set.Icc a' b',
-      ‖derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c‖ < ε₂ := by
-    intro x hx
-    have hx_mem_big_Icc : x ∈ Set.Icc a b := by grind
-    have hdist_lt_delta : dist x c < δ :=
-      Std.lt_of_le_of_lt (subset_smaller_distance hx hc) h_b'_sub_a'_lt_δ
-    specialize hδ_prop x hx_mem_big_Icc c hc_mem_big_Icc hdist_lt_delta
-    rw [← dist_eq_norm]
-    have hderiv_x_congr : derivWithin g (Set.Icc a' b') x = derivWithin g (Set.Icc a b) x :=
-      derivWithin_subset hIcc_subset (uniqueDiffOn_Icc h_a'_lt_b' x hx)
-        (hg.differentiableOn one_ne_zero x hx_mem_big_Icc)
-    have hderiv_c_congr : derivWithin g (Set.Icc a' b') c = derivWithin g (Set.Icc a b) c :=
-      derivWithin_subset hIcc_subset (uniqueDiffOn_Icc h_a'_lt_b' c hc)
-        (hg.differentiableOn one_ne_zero c hc_mem_big_Icc)
-    rw [hderiv_x_congr, hderiv_c_congr]
-    exact hδ_prop
-  have herror_norm_bound : ‖∫ x in a'..b',
-        derivWithin g (Set.Icc a' b') x - derivWithin g (Set.Icc a' b') c‖ ≤ ε₂ * |b' - a'| := by
-    apply intervalIntegral.norm_integral_le_of_norm_le_const
-    intro x hx
-    rw [huIoc_eq_Ioc] at hx
-    exact (hderiv_diff_lt_ε₂ x ⟨hx.1.le, hx.2⟩).le
-  rw [map_add]
-  apply le_trans (norm_add_le _ _)
-  apply add_le_add
-  · rw [intervalIntegral.integral_const, map_smul, norm_smul, Real.norm_eq_abs, h_abs_sub_eq]
-    ring_nf
-    linarith
-  · refine (hB_opNorm_bound _ c).trans ?_
-    rw [h_abs_sub_eq] at herror_norm_bound
-    field_simp at herror_norm_bound
-    have hB_fc_times_error : ‖B‖ * ‖f c‖ * ‖∫ (x : ℝ) in a'..b', derivWithin g (Set.Icc a' b') x
-        - derivWithin g (Set.Icc a' b') c‖ ≤ ‖B‖ * ‖f c‖ * (ε₂ * (b' - a')) :=
-      mul_le_mul_of_nonneg_left herror_norm_bound (mul_nonneg (norm_nonneg _) (norm_nonneg _))
-    refine hB_fc_times_error.trans ?_
-    unfold ε₂
-    specialize hM_bound c hc_mem_big_Icc
-    have hBM_pos : 0 < ‖B‖ * M := mul_pos hB_norm_pos hM_pos
-    have hfc_lt_bound : ‖B‖ * ‖f c‖ * (ε / (‖B‖ * M) * (b' - a')) <
-        ‖B‖ * M * (ε / (‖B‖ * M) * (b' - a')) := by
-      apply mul_lt_mul_of_pos_right
-      · exact mul_lt_mul_of_pos_left hM_bound hB_norm_pos
-      · exact mul_pos (div_pos hε hBM_pos) (sub_pos.mpr h_a'_lt_b')
-    refine hfc_lt_bound.le.trans ?_
-    field_simp
-    linarith
+  have hB_norm_pos : 0 < ‖B‖ := norm_pos_iff.mpr hB
+  obtain ⟨ δ, hδ_pos, hδ_prop⟩ := MVT_with_error' hab hg (show 0 < ε / (‖B‖ * M) by positivity)
+  use δ, hδ_pos
+  intros a' ha' b' hb' h_a'_lt_b' h_b'_sub_a'_lt_δ c hc
+  specialize hδ_prop a' (by grind) b' (by grind) (by grind) c
+    (by simpa [Set.uIcc_of_lt h_a'_lt_b'] using hc)
+  rw [dist_eq_norm] at hδ_prop
+  have : |b'-a'| = b' - a' := abs_of_pos (by positivity)
+  calc
+    _ = ‖B (f c) ((b' - a') • derivWithin g (Set.Icc a b) c)
+      + B (f c) (g b' - g a' - (b' - a') • derivWithin g (Set.Icc a b) c)‖ := by
+      simp only [map_sub, map_smul, add_sub_cancel]
+    _ ≤ ‖B (f c) ((b' - a') • derivWithin g (Set.Icc a b) c)‖
+      + ‖B (f c) (g b' - g a' - (b' - a') • derivWithin g (Set.Icc a b) c)‖ := by
+       apply norm_add_le
+    _ ≤ _ := by
+      simp only [map_smul, norm_smul, Real.norm_eq_abs, this, mul_comm,
+        add_le_add_iff_left]
+      grw [B.le_opNorm₂ (f c) _, hδ_prop, hM_bound _ (by grind), this]
+      field_simp
+      order
 
 /-- Lemma for a vector valued MVT with error since MVT is false for a general
 funcion in higher dimensions, but is true up to some error for higher dimensions.
@@ -1340,36 +1291,12 @@ b' - a' < δ, we have that for all c ∈ [a',b'] that
 lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {ε : ℝ} (hab : a < b)
     (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
     : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b, a' < b' → b' - a' < δ → ∀ c ∈ Set.Icc a' b',
-    ‖g b' - g a'‖ ≤ ‖derivWithin g (Set.Icc a' b') c‖ * (b' - a') + ε * (b' - a') := by
-  let f : ℝ → ℝ := fun _ => 1
-  have f_bounded : ∃ M > 0, ∀ x ∈ (Set.Icc a b), ‖f x‖ < M := by
-    use 2
-    constructor
-    · linarith
-    · intro x hx
-      unfold f
-      simp
-  let B := (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] F →L[ℝ] F)
-  rcases subsingleton_or_nontrivial F with hF | hf
-  · use 1, zero_lt_one
-    intro a' ha' b' hb' hab' hdist c hc
-    have : g b' - g a' = 0 := Subsingleton.elim _ _
-    simp only [this, norm_zero]
-    apply add_nonneg
-    · exact mul_nonneg (norm_nonneg _) (sub_nonneg.mpr hab'.le)
-    · exact mul_nonneg hε.le (sub_nonneg.mpr hab'.le)
-  · have hB : B ≠ 0 := by
-      -- Since F is nontrivial, there is some v ≠ 0. B(1, v) = v ≠ 0.
-      intro h
-      obtain ⟨v, hv⟩ := exists_ne (0 : F)
-      have h_one_v := DFunLike.congr_fun (DFunLike.congr_fun h 1) v
-      simp only [B, ContinuousLinearMap.lsmul_apply, one_smul] at h_one_v
-      exact hv h_one_v
-    obtain ⟨δ, hδ_pos, hδ⟩ := MVT_with_bilinear_form_and_error a b hab hg hε hB f_bounded
-    use δ, hδ_pos
-    intro a' ha' b' hb' hab' hdist c hc
-    specialize hδ a' ha' b' hb' hab' hdist c hc
-    simpa [B, f] using hδ
+    ‖g b' - g a'‖ ≤ ‖derivWithin g (Set.Icc a b) c‖ * (b' - a') + ε * (b' - a') := by
+  have f_bounded : ∃ M > 0, ∀ x ∈ Set.Icc a b, ‖(fun _ => (1 : ℝ)) x‖ < M :=
+    ⟨ 2, by linarith, by intros; simp ⟩
+  obtain ⟨δ, hδ_pos, hδ⟩ := MVT_with_bilinear_form_and_error (lsmul ℝ ℝ) hab hg hε f_bounded
+  refine ⟨ δ, hδ_pos, fun a' ha' b' hb' hab' hdist c hc ↦ ?_ ⟩
+  simpa using hδ a' ha' b' hb' hab' hdist c hc
 
 
 
