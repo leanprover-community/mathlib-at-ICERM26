@@ -307,6 +307,7 @@ theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E)
   rw [HasRiemannIntegral]
   exact hasStieltjesIntegral_iff_lim_sum _ hab _ _ _
 
+/-- A Riemann integrable function on a closed interval is bounded. -/
 theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannIntegrable a b f) :
     Bornology.IsBounded (f '' (Set.Ioc a b)) := by
   rw [RiemannIntegrable.def] at h
@@ -332,10 +333,10 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
   rw [isBounded_iff_forall_norm_le]
   refine ⟨ (Finset.range (N + 1)).sup (fun n ↦ ‖f (z n)‖₊) + 2 * N / (b - a), fun y hy ↦ ?_ ⟩
   simp only [Set.mem_image, Set.mem_Ioc] at hy; obtain ⟨ x, ⟨ hx, hx' ⟩, rfl ⟩ := hy
-  let i : ℕ := ⌈N * (x - a) / (b - a)⌉₊
-  have hipos : 0 < i := by positivity
-  have hi : i ≤ N := by simp [i]; field_simp; linarith
-  have hi_sub : i - 1 + 1 = i := by lia
+  let i : ℝ → ℕ := fun x ↦ ⌈N * (x - a) / (b - a)⌉₊
+  have hipos {x : ℝ} (hx : a < x) : 0 < i x := by positivity
+  have hi {x : ℝ} (hx' : x ≤ b) : i x ≤ N := by simp [i]; field_simp; linarith
+  have hi_sub {x : ℝ} (hx : a < x) : i x - 1 + 1 = i x := by have := hipos hx; omega
   classical
   let π : Bool → TaggedPrepartition (Ioc a b) := fun p ↦ {
     boxes := (Finset.range N).image box
@@ -351,7 +352,7 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
       · left; exact zmono' (by lia)
       · simp at hdisj
       right; exact zmono' (by lia)
-    tag J := if p ∧ J = box (i - 1) then (fun _ ↦ x) else
+    tag J := if p ∧ J = box (i x - 1) then (fun _ ↦ x) else
       if J ∈ (Finset.range N).image box then J.upper else (Ioc a b).upper
     tag_mem_Icc J := by
       split_ifs with h h'
@@ -360,35 +361,58 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
         exact (Box.le_iff_Icc.mp (box_le hj)) (Box.upper_mem_Icc _)
       apply Box.upper_mem_Icc
   }
+  have hmem {x : ℝ} (hx : a < x) (hx' : x ≤ b) : (fun _ ↦ x) ∈ box (i x - 1) := by
+    simp only [zmono (i x - 1), box, mem_Ioc]
+    simp only [hi_sub hx, z, i]
+    constructor
+    · calc
+        _ < a + (b - a) * (↑N * (x - a) / (b - a)) / ↑N := by
+          gcongr
+          grw [← add_lt_add_iff_right 1]
+          convert Nat.ceil_lt_add_one ?_ <;> try infer_instance
+          · rw [←Nat.cast_add_one, Nat.sub_one_add_one]
+            positivity
+          positivity
+        _ ≤ _ := by field_simp; linarith
+    grw [← Nat.le_ceil]
+    field_simp; linarith
   have hhen (p : Bool) : (π p).IsHenstock := by
     intro J hJ
     simp only [Finset.mem_image, Finset.mem_range, π]; split_ifs with h h'
-    · simp only [h.2, zmono (i - 1), Icc_of_Ioc, Fin.isValue, Set.mem_Icc, Set.mem_setOf_eq, box]
-      simp only [hi_sub, z, i]
-      constructor
-      · calc
-          _ ≤ a + (b - a) * ↑⌊↑N * (x - a) / (b - a)⌋₊ / ↑N := by
-            gcongr; grw [Nat.ceil_le_floor_add_one]; lia
-          _ ≤ _ := by
-            grw [Nat.floor_le (by positivity)]; field_simp; linarith
-      grw [← Nat.le_ceil]
-      field_simp; linarith
+    · rw [h.2]
+      exact Box.coe_subset_Icc (hmem hx hx')
     · obtain ⟨ j, hj, rfl ⟩ := h'
       apply Box.upper_mem_Icc
     simp [π] at hJ; tauto
   have hpart (p : Bool) : (π p).IsPartition := by
-    sorry
+    intro x hx
+    simp only [hab, mem_Ioc, Fin.isValue] at hx
+    refine ⟨ box (i (x 0) - 1), ?_, ?_ ⟩
+    · simp only [Fin.isValue, Prepartition.mem_mk, Finset.mem_image, Finset.mem_range, π]
+      exact ⟨ i (x 0) - 1, by have := hi hx.2; grind, by rfl ⟩
+    convert hmem hx.1 hx.2
   have hmesh (p : Bool) : (π p).mesh_size ≤ δ := by
-    sorry
-  have : ‖((box (i - 1)).upper 0 - (box (i - 1)).lower 0) • (f x - f ((box (i - 1)).upper 0))‖
+    simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
+      TaggedPrepartition.mem_toPrepartition, tsub_le_iff_right, Fin.forall_fin_one, Fin.isValue]
+    intro J hJ;
+    simp only [Finset.mem_image, Finset.mem_range, TaggedPrepartition.mem_mk,
+      Prepartition.mem_mk, π] at hJ
+    obtain ⟨ i, hi, rfl ⟩ := hJ
+    simp only [Fin.isValue, box_upper, zdiff, box_lower, N]
+    nth_rw 1 [add_comm]; gcongr; field_simp
+    grw [← Nat.le_ceil]; field_simp; norm_num
+  specialize hi hx'
+  specialize hipos hx
+  specialize hi_sub hx
+  have : ‖((box (i x - 1)).upper 0 - (box (i x - 1)).lower 0) • (f x - f ((box (i x - 1)).upper 0))‖
     ≤ 2 := calc
     _ = dist (∑ x ∈ (π true).boxes, (x.upper 0 - x.lower 0) • f ((π true).tag x 0))
       (∑ x ∈ (π false).boxes, (x.upper 0 - x.lower 0) • f ((π false).tag x 0)) := by
         simp only [Fin.isValue, true_and, Bool.false_eq_true, false_and, ↓reduceIte, dist_eq_norm,
           ← Finset.sum_sub_distrib, π]
         congr; symm
-        convert Finset.sum_eq_single (box (i - 1)) ?_ ?_ using 1
-        · have : ∃ a < N, box a = box (i - 1) := ⟨ i - 1, by lia, rfl ⟩
+        convert Finset.sum_eq_single (box (i x - 1)) ?_ ?_ using 1
+        · have : ∃ a < N, box a = box (i x - 1) := ⟨ i x - 1, by lia, rfl ⟩
           simp [← smul_sub, this]
         · intro I hI hIi
           simp only [Finset.mem_image, Finset.mem_range] at hI;
@@ -396,25 +420,23 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
           simp [hIi]
         simp only [Finset.mem_image, Finset.mem_range, not_exists, not_and,
           Fin.isValue, ↓reduceIte]
-        intro h; specialize h (i - 1) (by lia); simp at h
+        intro h; specialize h (i x - 1) (by lia); simp at h
     _ ≤ 2 := by
       grw [dist_triangle_right _ _ L, h (π true) (hhen true) (hpart true) (hmesh true),
         h (π false) (hhen false) (hpart false) (hmesh false)]
       norm_num
-  have h : ((box (i-1)).upper 0 - (box (i-1)).lower 0) = (b - a) / N := by
+  have h : ((box (i x - 1)).upper 0 - (box (i x - 1)).lower 0) = (b - a) / N := by
     simp [box_upper, box_lower, zdiff]
   simp only [Fin.isValue, h, norm_smul, norm_div, Real.norm_eq_abs, RCLike.norm_natCast] at this
   grw [← this, box_upper]
-  have : ‖f (z i)‖₊ ≤ (Finset.range (N + 1)).sup (fun n ↦ ‖f (z n)‖₊) := by
-    apply Finset.le_sup (f := fun n ↦ ‖f (z n)‖₊) (b := i)
+  have : ‖f (z (i x))‖₊ ≤ (Finset.range (N + 1)).sup (fun n ↦ ‖f (z n)‖₊) := by
+    apply Finset.le_sup (f := fun n ↦ ‖f (z n)‖₊) (b := i x)
     simp [hi]
   rw [← NNReal.coe_le_coe] at this
   grw [← this]
   simp [hi_sub, abs_of_pos hab']
   field_simp
   apply norm_le_insert'
-
-#exit
 
 section Linearity
 
