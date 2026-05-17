@@ -317,31 +317,65 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
   have hN : N > 0 := by positivity
   have hab' : 0 < b - a := by positivity
   let z : ℕ → ℝ := fun n ↦ a + (b - a) * n / N
+  have z0 : z 0 = a := by simp [z]
+  have zN : z N = b := by simp [z]; field_simp; abel
   have zdiff (n : ℕ) : z (n + 1) = z n + (b - a) / N := by simp [z]; grind
   have zmono (n : ℕ) : z n < z (n + 1) := by simp only [zdiff, lt_add_iff_pos_right]; positivity
+  have zmono' : Monotone z := by intro i j hij; unfold z; grw [hij]
   let box : ℕ → Box (Fin 1) := fun n ↦ Ioc (z n) (z (n + 1))
   have box_upper (i : ℕ) : (box i).upper 0 = z (i + 1) := by simp [box, Ioc.upper (zmono i)]
   have box_lower (i : ℕ) : (box i).lower 0 = z i := by simp [box, Ioc.lower (zmono i)]
+  have box_le {i : ℕ} (hi : i < N) : box i ≤ Ioc a b := by
+    simp only [hab, zmono i, Ioc_le_Ioc_iff, box]
+    simp only [← z0, ← zN]
+    exact ⟨ zmono' (by lia), zmono' (by lia) ⟩
   rw [isBounded_iff_forall_norm_le]
   refine ⟨ (Finset.range (N + 1)).sup (fun n ↦ ‖f (z n)‖₊) + 2 * N / (b - a), fun y hy ↦ ?_ ⟩
   simp only [Set.mem_image, Set.mem_Ioc] at hy; obtain ⟨ x, ⟨ hx, hx' ⟩, rfl ⟩ := hy
   let i : ℕ := ⌈N * (x - a) / (b - a)⌉₊
   have hipos : 0 < i := by positivity
   have hi : i ≤ N := by simp [i]; field_simp; linarith
+  have hi_sub : i - 1 + 1 = i := by lia
   classical
   let π : Bool → TaggedPrepartition (Ioc a b) := fun p ↦ {
     boxes := (Finset.range N).image box
     le_of_mem' J hJ := by
-      sorry
+      simp only [Finset.mem_image, Finset.mem_range] at hJ; obtain ⟨ j, hj, rfl ⟩ := hJ
+      exact box_le hj
     pairwiseDisjoint I hI J hJ hdisj := by
-      sorry
-    tag J := if p ∧ J = box (i - 1) then (fun _ ↦ x) else J.upper
+      simp only [Finset.coe_image, Finset.coe_range, Set.mem_image, Set.mem_Iio] at hI hJ
+      obtain ⟨ i, hi, rfl ⟩ := hI
+      obtain ⟨ j, hj, rfl ⟩ := hJ
+      simp only [Function.onFun, Box.disjoint_iff, Fin.isValue, box_upper, box_lower]
+      rcases lt_trichotomy i j with hlt | rfl | hgt
+      · left; exact zmono' (by lia)
+      · simp at hdisj
+      right; exact zmono' (by lia)
+    tag J := if p ∧ J = box (i - 1) then (fun _ ↦ x) else
+      if J ∈ (Finset.range N).image box then J.upper else (Ioc a b).upper
     tag_mem_Icc J := by
-      sorry
+      split_ifs with h h'
+      · simp [Box.Icc_def, Pi.le_def, hab, hx.le, hx']
+      · simp only [Finset.mem_image, Finset.mem_range] at h'; obtain ⟨ j, hj, rfl ⟩ := h'
+        exact (Box.le_iff_Icc.mp (box_le hj)) (Box.upper_mem_Icc _)
+      apply Box.upper_mem_Icc
   }
   have hhen (p : Bool) : (π p).IsHenstock := by
     intro J hJ
-    sorry
+    simp only [Finset.mem_image, Finset.mem_range, π]; split_ifs with h h'
+    · simp only [h.2, zmono (i - 1), Icc_of_Ioc, Fin.isValue, Set.mem_Icc, Set.mem_setOf_eq, box]
+      simp only [hi_sub, z, i]
+      constructor
+      · calc
+          _ ≤ a + (b - a) * ↑⌊↑N * (x - a) / (b - a)⌋₊ / ↑N := by
+            gcongr; grw [Nat.ceil_le_floor_add_one]; lia
+          _ ≤ _ := by
+            grw [Nat.floor_le (by positivity)]; field_simp; linarith
+      grw [← Nat.le_ceil]
+      field_simp; linarith
+    · obtain ⟨ j, hj, rfl ⟩ := h'
+      apply Box.upper_mem_Icc
+    simp [π] at hJ; tauto
   have hpart (p : Bool) : (π p).IsPartition := by
     sorry
   have hmesh (p : Bool) : (π p).mesh_size ≤ δ := by
@@ -354,7 +388,8 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
           ← Finset.sum_sub_distrib, π]
         congr; symm
         convert Finset.sum_eq_single (box (i - 1)) ?_ ?_ using 1
-        · simp [← smul_sub]
+        · have : ∃ a < N, box a = box (i - 1) := ⟨ i - 1, by lia, rfl ⟩
+          simp [← smul_sub, this]
         · intro I hI hIi
           simp only [Finset.mem_image, Finset.mem_range] at hI;
           obtain ⟨ j, hj, rfl ⟩ := hI
@@ -375,7 +410,7 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
     simp [hi]
   rw [← NNReal.coe_le_coe] at this
   grw [← this]
-  simp [show i - 1 + 1 = i by omega, abs_of_pos hab']
+  simp [hi_sub, abs_of_pos hab']
   field_simp
   apply norm_le_insert'
 
