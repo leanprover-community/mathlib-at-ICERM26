@@ -83,7 +83,7 @@ lemma Box.le_Ioc_iff (hab : a < b) (J : Box (Fin 1)) :
 lemma Box.ge_Ioc_iff (hab : a < b) (J : Box (Fin 1)) :
   Ioc a b ≤ J ↔ J.lower 0 ≤ a ∧ b ≤ J.upper 0 := by
   nth_rw 1 [J.eq_Ioc]
-  exact Ioc.le_Ioc_iff (J.lower_lt_upper 0) hab 
+  exact Ioc.le_Ioc_iff (J.lower_lt_upper 0) hab
 
 lemma Box.mem_of_le (hab : a < b) {J : Box (Fin 1)} (hJ : J ≤ Ioc a b) :
   J.lower 0 ∈ Set.Icc a b ∧ J.upper 0 ∈ Set.Icc a b := by
