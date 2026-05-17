@@ -972,7 +972,8 @@ theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
   obtain ⟨ δ', hδ', h ⟩ := h
   obtain ⟨ δ, hδ, hδf ⟩ :=  Metric.uniformContinuousOn_iff.mp
     (isCompact_Icc.uniformContinuousOn_of_continuous hcont) δ' hδ'
-  refine ⟨ NNReal.mk δ (le_of_lt hδ), hδ, fun π hhen hpart hmesh ↦ ?_ ⟩
+  refine ⟨ NNReal.mk (δ/2) (by linarith), (show 0 < δ/2 by positivity),
+    fun π hhen hpart hmesh ↦ ?_ ⟩
   have h1 {J : Box (Fin 1)} (hJ : J ∈ π) := J.mem_of_le hab (π.le_of_mem' _ hJ)
   have h2 {J : Box (Fin 1)} (hJ : J ∈ π) : φ (J.lower 0) < φ (J.upper 0) := by
     specialize h1 hJ
@@ -1019,14 +1020,42 @@ theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
     simp only [Box.Icc_def, Set.mem_Icc, Pi.le_def, hab, Ioc.lower, Fin.forall_fin_one, Fin.isValue,
       Ioc.upper] at h3 h4
     exact ⟨ hmono' h1.1 (by simp [h3]) h4.1, hmono' (by simp [h3]) h1.2 h4.2 ⟩
-  have hpart' : π'.IsPartition := by sorry
-  have hmesh' : ∀ J ∈ π', J.upper 0 ≤ δ' + J.lower 0 := by sorry
+  have hpart' : π'.IsPartition := by
+    intro x' hx'
+    simp only [Box.mem_def, hφab, Ioc.lower, Ioc.upper, Set.mem_Ioc, Fin.forall_fin_one,
+      Fin.isValue, TaggedPrepartition.mem_toPrepartition] at hx' ⊢
+    have := hsurj (show x' 0 ∈ Set.Icc (φ a) (φ b) by grind)
+    simp only [Fin.isValue, Set.mem_image, Set.mem_Icc] at this
+    obtain ⟨ x, hx, hxx' ⟩ := this
+    simp only [Fin.isValue, ← hxx', TaggedPrepartition.mem_mk, Prepartition.mem_mk,
+      Finset.mem_image, Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition,
+      exists_exists_and_eq_and, π'] at hx' ⊢
+    have : a < x := by grind
+    obtain ⟨ J, hJπ, hxJ ⟩ := hpart (fun _ ↦ x) (by simp [mem_Ioc, hab, this, hx])
+    use J, hJπ
+    simp only [Box.mem_def, Set.mem_Ioc, Fin.forall_fin_one, Fin.isValue, Ioc.comp, h2 hJπ,
+      Ioc.lower, Ioc.upper] at hxJ ⊢
+    specialize h1 hJπ
+    exact ⟨ hmono h1.1 (by simp [hx]) hxJ.1, hmono' (by simp [hx]) h1.2 hxJ.2 ⟩
+  have hmesh' : ∀ J' ∈ π', J'.upper 0 ≤ δ' + J'.lower 0 := by
+    intro J' hJ'
+    simp only [Fin.isValue, TaggedPrepartition.mem_mk, Prepartition.mem_mk, Finset.mem_image,
+      Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition, π'] at hJ'
+    obtain ⟨ J, hJπ, rfl ⟩ := hJ'
+    specialize h1 hJπ
+    specialize h2 hJπ
+    have := J.lower_lt_upper 0
+    simp only [Ioc.comp, Fin.isValue, h2, Ioc.upper, Ioc.lower]
+    suffices dist (φ (J.lower 0)) (φ (J.upper 0)) < δ' by
+      simp [Real.dist_eq] at this
+      grind
+    apply hδf _ h1.1 _ h1.2
+    specialize hmesh J hJπ
+    simp [Real.dist_eq] at hmesh ⊢
+    grind
   specialize h π' hhen' hpart' hmesh'
   convert h using 2
   sorry
-
-
-#exit
 
 end Change
 
