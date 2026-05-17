@@ -1214,10 +1214,6 @@ lemma subset_smaller_distance {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
   rw [abs_sub_le_iff]
   exact ⟨by linarith, by linarith⟩
 
-abbrev RiemannIntegrable (f : ℝ → E) : Prop :=
-  Integrable (Ioc a b) IntegrationParams.Riemann
-    (fun x ↦ f (x 0)) BoxAdditiveMap.volume
-
 /-- Lemma MVT version using a bilinear form, this theorem is used in the proof of Theorem A3 (b)
 Since the MVT is false in general (for higher dimensions), we prove a version where it is true up
 to some error term.
@@ -1417,15 +1413,6 @@ theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[�
     ‖L‖ ≤ ‖B‖ * L' := by sorry
 
 /-! ### Connection to standard integrals -/
-
-/-- When the integrator is the identity, the Stieltjes integral with the scalar-multiplication
-pairing `(lsmul ℝ ℝ).flip` reduces to the ordinary `BoxIntegral.HasIntegral` against the
-Lebesgue volume on `(a, b]`. -/
-theorem hasStieltjesIntegral_id_iff_hasIntegral_volume {a b : ℝ} (hab : a < b) (f : ℝ → E) (L : E) :
-    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L ↔
-      HasIntegral (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0))
-        BoxAdditiveMap.volume L := by
-    simp [hab, HasStieltjesIntegral', BoxAdditiveMap.ofDiff_lsmul_eq_volume]
 
 /-- Function-level form of Theorem A.3(b) (`integral_of_derivative`): when `g` is `C¹` on
 `[a, b]` and `f` is Riemann integrable, the Stieltjes integral of `f` against `g` equals the

@@ -99,13 +99,12 @@ lemma HasStieltjesIntegral.of_gt {a b : ℝ} (hba : b < a) :
 
 lemma HasStieltjesIntegral.symm_iff :
     HasStieltjesIntegral a b B f g L ↔ HasStieltjesIntegral b a B f g (-L) := by
+  unfold HasStieltjesIntegral
   rcases lt_trichotomy a b with h | rfl | h
-  · simp [HasStieltjesIntegral, h, Std.not_gt_of_lt h, h.ne, h.ne.symm]
-  · simp [HasStieltjesIntegral]
-  simp [HasStieltjesIntegral, h, Std.not_gt_of_lt h, h.ne, h.ne.symm]
+  · simp [h, Std.not_gt_of_lt h, h.ne, h.ne.symm]
+  · simp
+  simp [h, Std.not_gt_of_lt h, h.ne, h.ne.symm]
 
-/-- Technically, this lemma is not currently usable by the `symm` tactic because it also maps
-`L` to `-L`.  Adding the tag anyway in case a future version of `symm` is able to use this lemma. -/
 @[symm]
 lemma HasStieltjesIntegral.symm {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L : G}
     (h : HasStieltjesIntegral a b B f g L) :
