@@ -935,16 +935,23 @@ lemma Box.disjoint_iff {J J' : Box (Fin 1)} :
   Disjoint J.toSet J'.toSet ↔ J.upper 0 ≤ J'.lower 0 ∨ J'.upper 0 ≤ J.lower 0 := by
   have := J.lower_lt_upper 0
   have := J'.lower_lt_upper 0
+  rw [← not_iff_not]
+  simp only [Set.not_disjoint_iff_nonempty_inter, Fin.isValue, not_or, not_le]
   refine ⟨ fun h ↦ ?_, fun h ↦ ?_ ⟩
-  · contrapose! h
-    simp only [Set.not_disjoint_iff_nonempty_inter]
-    use min J.upper J'.upper
-    simp [Box.mem_def, h]
-  contrapose! h
-  simp only [Set.not_disjoint_iff_nonempty_inter] at h
-  obtain ⟨ x, hx ⟩ := h
-  simp [Box.mem_def] at hx
-  grind
+  · obtain ⟨ x, hx ⟩ := h
+    simp [Box.mem_def] at hx
+    grind
+  use min J.upper J'.upper
+  simp [Box.mem_def, h]
+
+/-- Move to Mathlib.Topology.Order.IntermediateValue -/
+theorem _root_.Set.BijOn.of_strictMonoOn_continuousOn {α : Type*} [TopologicalSpace α]
+    [ConditionallyCompleteLinearOrder α] [OrderTopology α] [DenselyOrdered α] {δ : Type u_1}
+    [LinearOrder δ] [TopologicalSpace δ] [OrderClosedTopology δ] {f : α → δ} {a b : α}
+    (hab : a ≤ b) (hf : ContinuousOn f (Set.Icc a b)) (hf_mono : StrictMonoOn f (Set.Icc a b)) :
+    Set.BijOn f (Set.Icc a b) (Set.Icc (f a) (f b)) :=
+  Set.BijOn.mk hf_mono.monotoneOn.mapsTo_Icc hf_mono.injOn
+  (hf.surjOn_Icc (Set.left_mem_Icc.mpr hab) (Set.right_mem_Icc.mpr hab))
 
 theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
   (hmono : StrictMonoOn φ (Set.Icc a b))
@@ -953,7 +960,11 @@ theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
   HasStieltjesIntegral a b B (f ∘ φ) (g ∘ φ) L := by
   have ha_mem : a ∈ Set.Icc a b := by simp [hab.le]
   have hb_mem : b ∈ Set.Icc a b := by simp [hab.le]
+  have hsurj := hcont.surjOn_Icc ha_mem hb_mem
   have hφab : φ a < φ b := hmono ha_mem hb_mem hab
+  have hmono' := hmono.monotoneOn
+  have hinv := (Set.BijOn.of_strictMonoOn_continuousOn hab.le hcont hmono).invOn_invFunOn
+  set ψ := Function.invFunOn φ (Set.Icc a b)
   simp only [hφab, hasStieltjesIntegral_iff_lim_sum, gt_iff_lt, Prepartition.mesh_size_le_iff,
     Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition, tsub_le_iff_right,
     Fin.forall_fin_one, Fin.isValue, map_sub, hab, Function.comp_apply] at h ⊢
@@ -964,7 +975,7 @@ theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
   refine ⟨ NNReal.mk δ (le_of_lt hδ), hδ, fun π hhen hpart hmesh ↦ ?_ ⟩
   have h1 {J : Box (Fin 1)} (hJ : J ∈ π) := J.mem_of_le hab (π.le_of_mem' _ hJ)
   have h2 {J : Box (Fin 1)} (hJ : J ∈ π) : φ (J.lower 0) < φ (J.upper 0) := by
-    replace hJ := h1 hJ
+    specialize h1 hJ
     have := J.lower_lt_upper 0
     apply hmono _ _ this <;> grind
   classical
@@ -976,15 +987,23 @@ theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
       obtain ⟨ J, hJπ, rfl ⟩ := hJ'
       rw [J.eq_Ioc]
       simp only [Fin.isValue, Box.lower_lt_upper, Ioc.comp_apply, Ioc.le_Ioc_iff hφab (h2 hJπ)]
-      and_intros <;> apply hmono.monotoneOn <;> grind
+      and_intros <;> apply hmono' <;> grind
     pairwiseDisjoint I' hI' J' hJ' hdisj := by
       simp only [Finset.coe_image, Set.mem_image, SetLike.mem_coe, Prepartition.mem_boxes,
         TaggedPrepartition.mem_toPrepartition, Function.onFun] at hI' hJ' ⊢
       obtain ⟨ I, hIπ, rfl ⟩ := hI'
       obtain ⟨ J, hJπ, rfl ⟩ := hJ'
-      sorry
-    tag J := π.tag ((Ioc.comp φ) J)
-    tag_mem_Icc := by sorry
+      have h : I ≠ J := by grind
+      replace h := π.pairwiseDisjoint hIπ hJπ h
+      simp only [Function.onFun, Box.disjoint_iff, Fin.isValue, Ioc.comp, h2 hIπ, Ioc.upper, h2 hJπ,
+        Ioc.lower] at h ⊢
+      apply Or.imp _ _ h <;> apply hmono' <;> grind
+    tag J := fun _ ↦ φ (π.tag ((Ioc.comp ψ) J) 0)
+    tag_mem_Icc J := by
+      have := π.tag_mem_Icc ((Ioc.comp ψ) J)
+      simp only [Box.Icc_def, Set.mem_Icc, Pi.le_def, hab, Ioc.lower, Fin.forall_fin_one,
+        Fin.isValue, Ioc.upper, hφab, forall_const] at this ⊢
+      refine ⟨ hmono' ha_mem (by simp [this]) this.1, hmono' (by simp [this]) hb_mem this.2 ⟩
   }
   have hhen' : π'.IsHenstock := by sorry
   have hpart' : π'.IsPartition := by sorry
