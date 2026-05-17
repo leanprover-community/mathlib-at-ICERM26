@@ -979,7 +979,7 @@ theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
     have := J.lower_lt_upper 0
     apply hmono _ _ this <;> grind
   classical
-  have π' : TaggedPrepartition (Ioc (φ a) (φ b)) := {
+  let π' : TaggedPrepartition (Ioc (φ a) (φ b)) := {
     boxes := π.boxes.image (Ioc.comp φ)
     le_of_mem' J' hJ' := by
       simp only [Finset.mem_image, Prepartition.mem_boxes,
@@ -1005,7 +1005,20 @@ theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
         Fin.isValue, Ioc.upper, hφab, forall_const] at this ⊢
       refine ⟨ hmono' ha_mem (by simp [this]) this.1, hmono' (by simp [this]) hb_mem this.2 ⟩
   }
-  have hhen' : π'.IsHenstock := by sorry
+  have hhen' : π'.IsHenstock := by
+    intro J' hJ'
+    simp only [Fin.isValue, TaggedPrepartition.mem_mk, Prepartition.mem_mk, Finset.mem_image,
+      Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition, Box.Icc_def, Set.mem_Icc,
+      Pi.le_def, Fin.forall_fin_one, π'] at hJ' ⊢
+    obtain ⟨ J, hJπ, rfl ⟩ := hJ'
+    specialize h1 hJπ
+    simp only [Ioc.comp, Fin.isValue, h2 hJπ, Ioc.lower, hinv.1 h1.1, Ioc.upper, hinv.1 h1.2,
+      ← Box.eq_Ioc]
+    have h3 := π.tag_mem_Icc J
+    have h4 := hhen J hJπ
+    simp only [Box.Icc_def, Set.mem_Icc, Pi.le_def, hab, Ioc.lower, Fin.forall_fin_one, Fin.isValue,
+      Ioc.upper] at h3 h4
+    exact ⟨ hmono' h1.1 (by simp [h3]) h4.1, hmono' (by simp [h3]) h1.2 h4.2 ⟩
   have hpart' : π'.IsPartition := by sorry
   have hmesh' : ∀ J ∈ π', J.upper 0 ≤ δ' + J.lower 0 := by sorry
   specialize h π' hhen' hpart' hmesh'
