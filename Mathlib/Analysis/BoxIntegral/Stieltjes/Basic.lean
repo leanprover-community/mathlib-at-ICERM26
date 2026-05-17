@@ -71,7 +71,6 @@ or by further conversation with the AI agent).
 * Develop a higher-dimensional Stieltjes integral (exists in the literature, but is rarely used)
 * Develop a Stieltjes integral based around `Ico` intervals rather than `Ioc` intervals
 * Other variants of Stieltjes integration, such as the Henstock-Stieltjes integral
-* Change of variables formula wrt monotone substitutions
 * Interpretation of `ofDiff` as a measure (assuming monotonicity)
 * Interpretation of `ofDiff` as a signed measure (assuming bounded variation).  This requires
 the development of signed measures in Mathlib
@@ -447,6 +446,7 @@ linear in each of the inputs `f`, `g`, `B`.
 -/
 
 variable {a b : ℝ} {B B₁ B₂ : E →L[ℝ] F →L[ℝ] G} {f f₁ f₂ : ℝ → E} {g g₁ g₂ : ℝ → F} {L L₁ L₂ : G}
+    {M M₁ M₂ : E}
 
 /-! ### In the integrand -/
 
@@ -462,8 +462,16 @@ theorem HasStieltjesIntegral.zero_left : HasStieltjesIntegral a b B 0 g 0 := by
   simp only [neg_zero, h, of_lt, HasStieltjesIntegral'.zero_left]
 
 @[simp]
+theorem HasRiemannIntegral.zero : HasRiemannIntegral a b (0 : ℝ  → E) 0 :=
+  HasStieltjesIntegral.zero_left
+
+@[simp]
 theorem StieltjesIntegrable.zero_left : StieltjesIntegrable a b B 0 g :=
   HasStieltjesIntegral.zero_left.stieltjesIntegrable
+
+@[simp]
+theorem RiemannIntegrable.zero : RiemannIntegrable a b (0 : ℝ  → E) :=
+  HasRiemannIntegral.zero.stieltjesIntegrable
 
 @[simp]
 theorem stieltjesIntegral_zero_left : ∫⟨B⟩ _ in a..b, 0 ∂g = 0 :=
@@ -485,10 +493,18 @@ theorem HasStieltjesIntegral.add_left
   simp only [h, of_lt, neg_add] at h₁ h₂ ⊢
   exact h₁.add_left h₂
 
+theorem HasRiemannIntegral.add
+    (h₁ : HasRiemannIntegral a b f₁ M₁) (h₂ : HasRiemannIntegral a b f₂ M₂) :
+    HasRiemannIntegral a b (f₁ + f₂) (M₁ + M₂) := HasStieltjesIntegral.add_left h₁ h₂
+
 theorem StieltjesIntegrable.add_left
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
     StieltjesIntegrable a b B (f₁ + f₂) g :=
   (h₁.hasStieltjesIntegral.add_left h₂.hasStieltjesIntegral).stieltjesIntegrable
+
+theorem RiemannIntegrable.add
+    (h₁ : RiemannIntegrable a b f₁) (h₂ : RiemannIntegrable a b f₂) :
+    RiemannIntegrable a b (f₁ + f₂) := StieltjesIntegrable.add_left h₁ h₂
 
 @[simp]
 theorem stieltjesIntegral_add_left
@@ -513,9 +529,17 @@ theorem HasStieltjesIntegral.neg_left (h : HasStieltjesIntegral a b B f g L) :
   simp only [hab, of_lt] at h ⊢
   apply h.neg_left
 
+theorem HasRiemannIntegral.neg (h : HasRiemannIntegral a b f M) :
+  HasRiemannIntegral a b (-f) (-M) :=
+  HasStieltjesIntegral.neg_left h
+
 theorem StieltjesIntegrable.neg_left
   (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable a b B (-f) g :=
   h.hasStieltjesIntegral.neg_left.stieltjesIntegrable
+
+theorem RiemannIntegrable.neg
+  (h : RiemannIntegrable a b f) : RiemannIntegrable a b (-f) :=
+  StieltjesIntegrable.neg_left h
 
 @[simp]
 theorem stieltjesIntegral_neg_left (h : StieltjesIntegrable a b B f g) :
@@ -539,10 +563,19 @@ theorem HasStieltjesIntegral.sub_left
   convert h₁.sub_left h₂ using 1
   abel
 
+theorem HasRiemannIntegral.sub
+    (h₁ : HasRiemannIntegral a b f₁ M₁) (h₂ : HasRiemannIntegral a b f₂ M₂) :
+    HasRiemannIntegral a b (f₁ - f₂) (M₁ - M₂) :=
+  HasStieltjesIntegral.sub_left h₁ h₂
+
 theorem StieltjesIntegrable.sub_left
     (h₁ : StieltjesIntegrable a b B f₁ g) (h₂ : StieltjesIntegrable a b B f₂ g) :
     StieltjesIntegrable a b B (f₁ - f₂) g :=
   (h₁.hasStieltjesIntegral.sub_left h₂.hasStieltjesIntegral).stieltjesIntegrable
+
+theorem RiemannIntegrable.sub
+    (h₁ : RiemannIntegrable a b f₁) (h₂ : RiemannIntegrable a b f₂) :
+    RiemannIntegrable a b (f₁ - f₂) := StieltjesIntegrable.sub_left h₁ h₂
 
 @[simp]
 theorem stieltjesIntegral_sub_left
@@ -568,9 +601,17 @@ theorem HasStieltjesIntegral.smul_left (h : HasStieltjesIntegral a b B f g L) (c
   convert h.smul_left _ using 1
   norm_num
 
+theorem HasRiemannIntegral.smul (h : HasRiemannIntegral a b f M) (c : ℝ) :
+    HasRiemannIntegral a b (c • f) (c • M) :=
+  HasStieltjesIntegral.smul_left h c
+
 theorem StieltjesIntegrable.smul_left
     (h : StieltjesIntegrable a b B f g) (c : ℝ) : StieltjesIntegrable a b B (c • f) g :=
   (h.hasStieltjesIntegral.smul_left c).stieltjesIntegrable
+
+theorem RiemannIntegrable.smul
+    (h : RiemannIntegrable a b f) (c : ℝ) : RiemannIntegrable a b (c • f) :=
+  StieltjesIntegrable.smul_left h c
 
 @[simp]
 theorem stieltjesIntegral_smul_left
@@ -1021,7 +1062,6 @@ theorem stieltjesIntegral.add_adjacent (h : StieltjesIntegrable a c B f g)
     h₂.hasStieltjesIntegral).stieltjesIntegral_eq
 
 end Split
-
 section Change
 
 /-! ## Change of variables -/
@@ -1202,7 +1242,6 @@ private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → 
 
   sorry
 
-
 /-- Continuous integrand and a
 bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
 private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
@@ -1356,8 +1395,7 @@ say that if the mesh is fine enough (of size < δ), then we have this MVT with s
 
 Remark: In the use of MV theorem A3, they assume that f is Riemann integrable on [a,b], and use the
 fact that this will imply that f is bounded. However, for the MVT statement, we need only that f is
-bounded. Furthermore, there is no statement in Mathlib that states that Riemann integrable functions
-are bounded.
+bounded.
 -/
 lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : ℝ → F} {a b ε : ℝ}
   (B : E →L[ℝ] F →L[ℝ] G) (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
