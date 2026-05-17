@@ -704,16 +704,16 @@ theorem HasStieltjesIntegral.sub_bil
   convert h₁.sub_bil h₂ using 1
   abel
 
-theorem StieltjesIntegrable.sub_right
+theorem StieltjesIntegrable.sub_bil
     (h₁ : StieltjesIntegrable a b B₁ f g) (h₂ : StieltjesIntegrable a b B₂ f g) :
     StieltjesIntegrable a b (B₁ - B₂) f g :=
   (h₁.hasStieltjesIntegral.sub_bil h₂.hasStieltjesIntegral).stieltjesIntegrable
 
 @[simp]
-theorem stieltjesIntegral_sub_right
+theorem stieltjesIntegral_sub_bil
     (h₁ : StieltjesIntegrable a b B₁ f g) (h₂ : StieltjesIntegrable a b B₂ f g) :
     ∫⟨B₁ - B₂⟩ x in a..b, f x ∂g
-      = ∫⟨B₁⟩ x in a..b, f x ∂g - ∫⟨B₂⟩ x in a..b, f x ∂g₂ := by
+      = ∫⟨B₁⟩ x in a..b, f x ∂g - ∫⟨B₂⟩ x in a..b, f x ∂g := by
   rw [(h₁.hasStieltjesIntegral.sub_bil h₂.hasStieltjesIntegral).stieltjesIntegral_eq,
     h₁.hasStieltjesIntegral.stieltjesIntegral_eq,
     h₂.hasStieltjesIntegral.stieltjesIntegral_eq]
@@ -746,7 +746,6 @@ theorem stieltjesIntegral_smul_bil
     ∫⟨c • B⟩ x in a..b, f x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g := by
   rw [(h.hasStieltjesIntegral.smul_bil c).stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
-#exit
 
 end Linearity
 
@@ -833,7 +832,8 @@ end Subinterval
 section Split
 /-! ## Splitting over adjacent intervals -/
 
-variable {f : ℝ → E} {g : ℝ → F} {L L' L'' : G} {a b c : ℝ} {B : E →L[ℝ] F →L[ℝ] G} [CompleteSpace G]
+variable {f : ℝ → E} {g : ℝ → F} {L L' L'' : G} {a b c : ℝ}
+  {B : E →L[ℝ] F →L[ℝ] G} [CompleteSpace G]
 
 private theorem HasStieltjesIntegral'.add_adjacent (hab : a < b) (hbc : b < c)
     (h : StieltjesIntegrable' a c B f g)
@@ -907,6 +907,94 @@ theorem stieltjesIntegral.add_adjacent (h : StieltjesIntegrable a c B f g)
 
 end Split
 
+section Change
+
+/-! ## Change of variables -/
+
+variable {φ : ℝ → ℝ} {f : ℝ → E} {g : ℝ → F} {L : G}
+
+lemma Ioc.le_Ioc_iff {a b c d : ℝ} (hab : a < b) (hcd : c < d) :
+  Ioc c d ≤ Ioc a b ↔ a ≤ c ∧ d ≤ b := by
+  simp [Box.le_iff_bounds, Pi.le_def, hab, hcd]
+
+lemma Box.le_Ioc_iff {a b : ℝ} (hab : a < b) (J : Box (Fin 1)) :
+  J ≤ Ioc a b ↔ a ≤ J.lower 0 ∧ J.upper 0 ≤ b := by
+  nth_rw 1 [J.eq_Ioc]
+  exact Ioc.le_Ioc_iff hab (J.lower_lt_upper 0)
+
+lemma Box.mem_of_le {a b : ℝ} (hab : a < b) {J : Box (Fin 1)} (hJ : J ≤ Ioc a b) :
+  J.lower 0 ∈ Set.Icc a b ∧ J.upper 0 ∈ Set.Icc a b := by
+  rw [le_Ioc_iff hab] at hJ
+  have := J.lower_lt_upper 0
+  grind
+
+lemma Box.disjoint_iff {J J' : Box (Fin 1)} :
+  Disjoint J.toSet J'.toSet ↔ J.upper 0 ≤ J'.lower 0 ∨ J'.upper 0 ≤ J.lower 0 := by
+  have := J.lower_lt_upper 0
+  have := J'.lower_lt_upper 0
+  refine ⟨ fun h ↦ ?_, fun h ↦ ?_ ⟩
+  · contrapose! h
+    simp only [Set.not_disjoint_iff_nonempty_inter]
+    use min J.upper J'.upper
+    simp [Box.mem_def, h]
+  contrapose! h
+  simp only [Set.not_disjoint_iff_nonempty_inter] at h
+  obtain ⟨ x, hx ⟩ := h
+  simp [Box.mem_def] at hx
+  grind
+
+theorem HasStieltjesIntegral.of_comp_comp (hab : a < b)
+  (hmono : StrictMonoOn φ (Set.Icc a b))
+  (hcont : ContinuousOn φ (Set.Icc a b))
+  (h : HasStieltjesIntegral (φ a) (φ b) B f g L) :
+  HasStieltjesIntegral a b B (f ∘ φ) (g ∘ φ) L := by
+  have ha_mem : a ∈ Set.Icc a b := by simp [hab.le]
+  have hb_mem : b ∈ Set.Icc a b := by simp [hab.le]
+  have hφab : φ a < φ b := hmono ha_mem hb_mem hab
+  simp only [hφab, hasStieltjesIntegral_iff_lim_sum, gt_iff_lt, Prepartition.mesh_size_le_iff,
+    Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition, tsub_le_iff_right,
+    Fin.forall_fin_one, Fin.isValue, map_sub, hab, Function.comp_apply] at h ⊢
+  peel h with ε hε h
+  obtain ⟨ δ', hδ', h ⟩ := h
+  obtain ⟨ δ, hδ, hδf ⟩ :=  Metric.uniformContinuousOn_iff.mp
+    (isCompact_Icc.uniformContinuousOn_of_continuous hcont) δ' hδ'
+  refine ⟨ NNReal.mk δ (le_of_lt hδ), hδ, fun π hhen hpart hmesh ↦ ?_ ⟩
+  have h1 {J : Box (Fin 1)} (hJ : J ∈ π) := J.mem_of_le hab (π.le_of_mem' _ hJ)
+  have h2 {J : Box (Fin 1)} (hJ : J ∈ π) : φ (J.lower 0) < φ (J.upper 0) := by
+    replace hJ := h1 hJ
+    have := J.lower_lt_upper 0
+    apply hmono _ _ this <;> grind
+  classical
+  have π' : TaggedPrepartition (Ioc (φ a) (φ b)) := {
+    boxes := π.boxes.image (Ioc.comp φ)
+    le_of_mem' J' hJ' := by
+      simp only [Finset.mem_image, Prepartition.mem_boxes,
+        TaggedPrepartition.mem_toPrepartition] at hJ'
+      obtain ⟨ J, hJπ, rfl ⟩ := hJ'
+      rw [J.eq_Ioc]
+      simp only [Fin.isValue, Box.lower_lt_upper, Ioc.comp_apply, Ioc.le_Ioc_iff hφab (h2 hJπ)]
+      and_intros <;> apply hmono.monotoneOn <;> grind
+    pairwiseDisjoint I' hI' J' hJ' hdisj := by
+      simp only [Finset.coe_image, Set.mem_image, SetLike.mem_coe, Prepartition.mem_boxes,
+        TaggedPrepartition.mem_toPrepartition, Function.onFun] at hI' hJ' ⊢
+      obtain ⟨ I, hIπ, rfl ⟩ := hI'
+      obtain ⟨ J, hJπ, rfl ⟩ := hJ'
+      sorry
+    tag J := π.tag ((Ioc.comp φ) J)
+    tag_mem_Icc := by sorry
+  }
+  have hhen' : π'.IsHenstock := by sorry
+  have hpart' : π'.IsPartition := by sorry
+  have hmesh' : ∀ J ∈ π', J.upper 0 ≤ δ' + J.lower 0 := by sorry
+  specialize h π' hhen' hpart' hmesh'
+  convert h using 2
+  sorry
+
+
+#exit
+
+end Change
+
 /-! ## Main theorems -/
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
@@ -956,8 +1044,8 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
   let V : ℝ := (eVariationOn g (Set.Icc a b)).toReal
   rcases exists_pos_mul_lt hε (‖B‖ * V) with ⟨η, hη, hηC⟩
   -- Step 3: Extract the uniform continuity margin δ required to achieve our target error η
-  rcases Metric.uniformContinuousOn_iff.mp (isCompact_Icc.uniformContinuousOn_of_continuous hf) η hη
-    with ⟨δ, hδ, hδf⟩
+  obtain ⟨δ, hδ, hδf⟩ :=
+    Metric.uniformContinuousOn_iff.mp (isCompact_Icc.uniformContinuousOn_of_continuous hf) η hη
   -- Step 4: Define a strictly positive, constant gauge ρ = δ / 4
   -- Forcing subboxes to have a radius ≤ δ / 4 ensures that any two tags inside overlapping
   -- subboxes are separated by a strict total distance of less than δ.

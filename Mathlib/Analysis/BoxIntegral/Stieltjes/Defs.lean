@@ -67,38 +67,37 @@ namespace BoxIntegral
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
-variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
+variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G) (f : ℝ → E) (g : ℝ → F) (L : G)
 
 /-- The (Riemann--)Stieltjes integral of a function `f : ℝ → E` and `g : ℝ → F` given a bilinear
 map `B : E → F → G` and endpoints `a`, `b` takes values in `G`.
 Initially defined under the implicit assumption that `a < b`. -/
-def HasStieltjesIntegral' (f : ℝ → E) (g : ℝ → F) (L : G) : Prop :=
+def HasStieltjesIntegral' : Prop :=
   HasIntegral (Ioc a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) L
 
 /-- Extension of the Stieltjes integral to cover the cases `a = b` and `a > b`.  Prefer this
 notion over `HasStieltjesIntegral'`, as it has a more developed API. -/
-def HasStieltjesIntegral (f : ℝ → E) (g : ℝ → F) (L : G) : Prop :=
+def HasStieltjesIntegral : Prop :=
   if a = b then L = 0 else
     if a < b then HasStieltjesIntegral' a b B f g L else
       HasStieltjesIntegral' b a B f g (-L)
 
 @[simp]
-lemma HasStieltjesIntegral.of_eq_iff_zero (f : ℝ → E) (g : ℝ → F) (L : G) :
+lemma HasStieltjesIntegral.of_eq_iff_zero :
     HasStieltjesIntegral a a B f g L ↔ L = 0 := by
   simp [HasStieltjesIntegral]
 
-@[simp]
-lemma HasStieltjesIntegral.of_lt {a b : ℝ} (f : ℝ → E) (g : ℝ → F) (L : G) (hab : a < b) :
+lemma HasStieltjesIntegral.of_lt {a b : ℝ} (hab : a < b) :
     HasStieltjesIntegral a b B f g L ↔ HasStieltjesIntegral' a b B f g L := by
   simp [HasStieltjesIntegral, hab, hab.ne]
 
 @[simp]
-lemma HasStieltjesIntegral.of_gt {a b : ℝ} (f : ℝ → E) (g : ℝ → F) (L : G) (hba : b < a) :
+lemma HasStieltjesIntegral.of_gt {a b : ℝ} (hba : b < a) :
     HasStieltjesIntegral a b B f g L ↔ HasStieltjesIntegral' b a B f g (-L) := by
   simp [HasStieltjesIntegral, Std.not_gt_of_lt hba, hba.ne.symm]
 
-lemma HasStieltjesIntegral.symm_iff (f : ℝ → E) (g : ℝ → F) (L : G) :
+lemma HasStieltjesIntegral.symm_iff :
     HasStieltjesIntegral a b B f g L ↔ HasStieltjesIntegral b a B f g (-L) := by
   rcases lt_trichotomy a b with h | rfl | h
   · simp [HasStieltjesIntegral, h, Std.not_gt_of_lt h, h.ne, h.ne.symm]
@@ -116,7 +115,7 @@ lemma HasStieltjesIntegral.symm {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L :
 /-- `StieltjesIntegrable' a b B f g` asserts that the Riemann–Stieltjes integral of `f` against `g`
 paired by `B` over `(a, b]` exists, i.e. some `L` satisfies `HasStieltjesIntegral' a b B f g L`.
 -/
-def StieltjesIntegrable' (f : ℝ → E) (g : ℝ → F) : Prop :=
+def StieltjesIntegrable' : Prop :=
   ∃ L, HasStieltjesIntegral' a b B f g L
 
 /-- `StieltjesIntegrable a b B f g` asserts that the Riemann–Stieltjes integral of `f` against `g`
@@ -125,25 +124,25 @@ paired by `B` from `a` to `b` exists, i.e. some `L` satisfies `HasStieltjesInteg
 Prefer this over `StieltjesIntegrable` as it has a better API and remains
 useful even outside of the case `a < b`.
 -/
-def StieltjesIntegrable (f : ℝ → E) (g : ℝ → F) : Prop :=
+def StieltjesIntegrable : Prop :=
   ∃ L, HasStieltjesIntegral a b B f g L
 
-theorem stieltjesIntegrable'_iff_integrable {f : ℝ → E} {g : ℝ → F} :
+theorem stieltjesIntegrable'_iff_integrable :
   StieltjesIntegrable' a b B f g ↔
   Integrable (Ioc a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) :=
   ⟨ fun ⟨ _, hL ⟩ ↦ HasIntegral.integrable hL, fun h ↦ ⟨ _, h.hasIntegral ⟩ ⟩
 
 @[simp]
-lemma StieltjesIntegrable.of_eq (f : ℝ → E) (g : ℝ → F) :
+lemma StieltjesIntegrable.of_eq :
   StieltjesIntegrable a a B f g := by
   simp [StieltjesIntegrable, HasStieltjesIntegral]
 
-lemma StieltjesIntegrable.of_lt {a b : ℝ} (f : ℝ → E) (g : ℝ → F) (hab : a < b) :
+lemma StieltjesIntegrable.of_lt {a b : ℝ} (hab : a < b) :
     StieltjesIntegrable a b B f g ↔ StieltjesIntegrable' a b B f g := by
-  simp [StieltjesIntegrable, StieltjesIntegrable', hab]
+  simp [StieltjesIntegrable, StieltjesIntegrable', HasStieltjesIntegral.of_lt, hab]
 
-lemma StieltjesIntegrable.symm_iff (f : ℝ → E) (g : ℝ → F) :
+lemma StieltjesIntegrable.symm_iff :
     StieltjesIntegrable a b B f g ↔ StieltjesIntegrable b a B f g := by
   unfold StieltjesIntegrable
   constructor <;> rintro ⟨ L, h ⟩ <;> use -L <;> apply h.symm
@@ -153,11 +152,11 @@ lemma StieltjesIntegrable.symm {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : 
   (h : StieltjesIntegrable a b B f g) :  StieltjesIntegrable b a B f g := by
   rwa [← symm_iff]
 
-lemma StieltjesIntegrable.of_gt {a b : ℝ} (f : ℝ → E) (g : ℝ → F) (hba : b < a) :
+lemma StieltjesIntegrable.of_gt {a b : ℝ} (hba : b < a) :
     StieltjesIntegrable a b B f g ↔ StieltjesIntegrable' b a B f g := by
   rw [symm_iff]; exact of_lt B f g hba
 
-lemma StieltjesIntegrable.iff_min_max {f : ℝ → E} {g : ℝ → F} :
+lemma StieltjesIntegrable.iff_min_max :
     StieltjesIntegrable a b B f g ↔
     StieltjesIntegrable (min a b) (max a b) B f g := by
   rcases le_total a b with h | h <;> simp [h, symm_iff]
@@ -166,7 +165,7 @@ open Classical in
 /-- The Riemann–Stieltjes integral of `f` against `g` paired by `B` from `a` to `b`.
 Returns the junk value `0` if no such integral exists.
 The integral remains meaningful outside of the case `a < b`. -/
-noncomputable def stieltjesIntegral (f : ℝ → E) (g : ℝ → F) : G :=
+noncomputable def stieltjesIntegral : G :=
   if h : StieltjesIntegrable a b B f g then h.choose else 0
 
 /-- Notation for the Riemann–Stieltjes integral. `∫⟨B⟩ x in a..b, f x ∂g` is
@@ -175,11 +174,14 @@ The notation parallels Mathlib's `∫ x in a..b, f x ∂μ` for `intervalIntegra
 scoped notation3 "∫⟨"B"⟩ "(...)" in "a".."b", "r:60:(scoped f => f)" ∂"g:70 =>
   stieltjesIntegral a b B r g
 
+section Simple
+
 /-! ## Simple properties -/
 
+variable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F} {L L₁ L₂ : G}
+
 /-- Uniqueness: the Riemann–Stieltjes integral, when it exists, is unique. -/
-theorem HasStieltjesIntegral.unique {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
-    {f : ℝ → E} {g : ℝ → F} {L₁ L₂ : G}
+theorem HasStieltjesIntegral.unique
     (h₁ : HasStieltjesIntegral a b B f g L₁) (h₂ : HasStieltjesIntegral a b B f g L₂) :
     L₁ = L₂ := by
   rcases lt_trichotomy a b with h | rfl | h
@@ -192,72 +194,72 @@ theorem HasStieltjesIntegral.unique {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
   grind
 
 /-- The existence of a Riemann–Stieltjes integral implies `StieltjesIntegrable`. -/
-theorem HasStieltjesIntegral.stieltjesIntegrable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
-    {f : ℝ → E} {g : ℝ → F} {L : G}
+theorem HasStieltjesIntegral.stieltjesIntegrable
     (h : HasStieltjesIntegral a b B f g L) : StieltjesIntegrable a b B f g :=
   ⟨L, h⟩
 
 /-- A chosen witness extracted from `StieltjesIntegrable`. -/
-theorem StieltjesIntegrable.hasStieltjesIntegral {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
-    {f : ℝ → E} {g : ℝ → F} (h : StieltjesIntegrable a b B f g) :
+theorem StieltjesIntegrable.hasStieltjesIntegral (h : StieltjesIntegrable a b B f g) :
     HasStieltjesIntegral a b B f g (∫⟨B⟩ x in a..b, f x ∂g) := by
   simp [stieltjesIntegral, h, h.choose_spec]
 
-/-- If `HasStieltjesIntegral a b B f g L`, then `stieltjesIntegral a b B f g = L`. -/
-theorem HasStieltjesIntegral.stieltjesIntegral_eq {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
-    {f : ℝ → E} {g : ℝ → F} {L : G}
+/-- If `HasStieltjesIntegral a b B f g L`, then `∫⟨B⟩ x in a..b, f x ∂g = L`. -/
+theorem HasStieltjesIntegral.stieltjesIntegral_eq
     (h : HasStieltjesIntegral a b B f g L) : ∫⟨B⟩ x in a..b, f x ∂g = L := by
   classical
   have hI : StieltjesIntegrable a b B f g := h.stieltjesIntegrable
   simp only [stieltjesIntegral, dif_pos hI]
   exact hI.choose_spec.unique h
 
-theorem StieltjesIntegrable.hasStieltjesIntegral_iff {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
-    {f : ℝ → E} {g : ℝ → F} (h : StieltjesIntegrable a b B f g) (L : G) :
+theorem StieltjesIntegrable.hasStieltjesIntegral_iff (h : StieltjesIntegrable a b B f g) (L : G) :
    HasStieltjesIntegral a b B f g L ↔ ∫⟨B⟩ x in a..b, f x ∂g = L
      := by
   grind [hasStieltjesIntegral, HasStieltjesIntegral.unique]
 
 @[simp]
-theorem stieltjesIntegral.of_eq (f : ℝ → E) (g : ℝ → F) :
-    ∫⟨B⟩ x in a..a, f x ∂g = 0 := by
+theorem stieltjesIntegral.of_eq : ∫⟨B⟩ x in a..a, f x ∂g = 0 := by
   simp only [stieltjesIntegral, StieltjesIntegrable.of_eq, ↓reduceDIte]
   rw [← HasStieltjesIntegral.of_eq_iff_zero a B f g]
   apply Exists.choose_spec
 
-theorem stieltjesIntegral.integral_symm (f : ℝ → E) (g : ℝ → F) :
-    ∫⟨B⟩ x in b..a, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
+theorem stieltjesIntegral.integral_symm : ∫⟨B⟩ x in b..a, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
   by_cases h_integ : StieltjesIntegrable a b B f g
   · exact (h_integ.hasStieltjesIntegral.symm.unique h_integ.symm.hasStieltjesIntegral).symm
   have h_integ_symm : ¬ StieltjesIntegrable b a B f g := by contrapose! h_integ; exact h_integ.symm
   simp [stieltjesIntegral, h_integ, h_integ_symm]
 
+end Simple
+
+section Riemann
+
 /-! ## The Riemann integral -/
 
-def HasRiemannIntegral (f : ℝ → E) (L : E) :=
-    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L
+variable (f : ℝ → E) (L : E)
 
-def RiemannIntegrable (f : ℝ → E) :=
-  StieltjesIntegrable a b (lsmul ℝ ℝ).flip f id
+def HasRiemannIntegral := HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L
 
-noncomputable def riemannIntegral (f : ℝ → E) : E :=
-  ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id
+def RiemannIntegrable := StieltjesIntegrable a b (lsmul ℝ ℝ).flip f id
 
-theorem HasRiemannIntegral.iff_hasIntegral {a b : ℝ} (hab : a < b) (f : ℝ → E) (L : E) :
+noncomputable def riemannIntegral : E := ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id
+
+theorem HasRiemannIntegral.iff_hasIntegral {a b : ℝ} (hab : a < b) :
     HasRiemannIntegral a b f L ↔
       HasIntegral (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0))
         BoxAdditiveMap.volume L := by
-    simp [HasRiemannIntegral, hab, HasStieltjesIntegral', BoxAdditiveMap.ofDiff_lsmul_eq_volume]
+    simp [HasRiemannIntegral, hab, HasStieltjesIntegral.of_lt, HasStieltjesIntegral',
+      BoxAdditiveMap.ofDiff_lsmul_eq_volume]
 
-lemma RiemannIntegrable.def (f : ℝ → E) :
+lemma RiemannIntegrable.def :
     RiemannIntegrable a b f ↔ ∃ L, HasRiemannIntegral a b f L := by rfl
 
-lemma RiemannIntegrable.symm (f : ℝ → E) (h : RiemannIntegrable a b f) : RiemannIntegrable b a f :=
-  StieltjesIntegrable.symm h
+lemma RiemannIntegrable.symm {a b : ℝ} {f : ℝ → E} (h : RiemannIntegrable a b f) :
+    RiemannIntegrable b a f := StieltjesIntegrable.symm h
 
-theorem RiemannIntegrable.iff_integrable {a b : ℝ} (hab : a < b) (f : ℝ → E) :
+theorem RiemannIntegrable.iff_integrable {a b : ℝ} (hab : a < b) :
     RiemannIntegrable a b f ↔
       Integrable (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0)) BoxAdditiveMap.volume := by
     simp [RiemannIntegrable.def, Integrable, HasRiemannIntegral.iff_hasIntegral, hab]
+
+end Riemann
 
 end BoxIntegral

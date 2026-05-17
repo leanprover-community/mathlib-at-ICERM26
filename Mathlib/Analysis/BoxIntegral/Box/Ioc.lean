@@ -69,4 +69,16 @@ lemma Icc_of_Ioc {a b : ℝ} (hab : a < b) : Box.Icc (Ioc a b) = { x | x 0 ∈ S
   simp only [Box.Icc_def, Fin.isValue, Set.mem_Icc]; ext x
   simp [Pi.le_def, Ioc.lower hab, Ioc.upper hab]
 
+/-! ## Mapping an interval -/
+
+variable (φ : ℝ → ℝ)
+
+noncomputable def Ioc.comp (J : Box (Fin 1)) := Ioc (φ (J.lower 0)) (φ (J.upper 0))
+
+@[simp]
+lemma Ioc.comp_apply {a b : ℝ} (hab : a < b) : Ioc.comp φ (Ioc a b) = Ioc (φ a) (φ b) := by
+  simp [comp, hab]
+
+
+
 end BoxIntegral
