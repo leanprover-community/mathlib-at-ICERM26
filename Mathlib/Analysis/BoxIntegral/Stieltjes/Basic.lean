@@ -286,6 +286,7 @@ variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 
+
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
 theorem hasStieltjesIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
@@ -306,12 +307,86 @@ theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E)
   rw [HasRiemannIntegral]
   exact hasStieltjesIntegral_iff_lim_sum _ hab _ _ _
 
+theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannIntegrable a b f) :
+    Bornology.IsBounded (f '' (Set.Ioc a b)) := by
+  rw [RiemannIntegrable.def] at h
+  obtain ⟨ L, hL ⟩ := h
+  rw [hasRiemannIntegral_iff_lim_sum hab] at hL
+  obtain ⟨ δ, hδ, h ⟩ := hL 1 (by norm_num)
+  let N := ⌈(b - a) / δ⌉₊
+  have hN : N > 0 := by positivity
+  have hab' : 0 < b - a := by positivity
+  let z : ℕ → ℝ := fun n ↦ a + (b - a) * n / N
+  have zdiff (n : ℕ) : z (n + 1) = z n + (b - a) / N := by simp [z]; grind
+  have zmono (n : ℕ) : z n < z (n + 1) := by simp only [zdiff, lt_add_iff_pos_right]; positivity
+  let box : ℕ → Box (Fin 1) := fun n ↦ Ioc (z n) (z (n + 1))
+  have box_upper (i : ℕ) : (box i).upper 0 = z (i + 1) := by simp [box, Ioc.upper (zmono i)]
+  have box_lower (i : ℕ) : (box i).lower 0 = z i := by simp [box, Ioc.lower (zmono i)]
+  rw [isBounded_iff_forall_norm_le]
+  refine ⟨ (Finset.range (N + 1)).sup (fun n ↦ ‖f (z n)‖₊) + 2 * N / (b - a), fun y hy ↦ ?_ ⟩
+  simp only [Set.mem_image, Set.mem_Ioc] at hy; obtain ⟨ x, ⟨ hx, hx' ⟩, rfl ⟩ := hy
+  let i : ℕ := ⌈N * (x - a) / (b - a)⌉₊
+  have hipos : 0 < i := by positivity
+  have hi : i ≤ N := by simp [i]; field_simp; linarith
+  classical
+  let π : Bool → TaggedPrepartition (Ioc a b) := fun p ↦ {
+    boxes := (Finset.range N).image box
+    le_of_mem' J hJ := by
+      sorry
+    pairwiseDisjoint I hI J hJ hdisj := by
+      sorry
+    tag J := if p ∧ J = box (i - 1) then (fun _ ↦ x) else J.upper
+    tag_mem_Icc J := by
+      sorry
+  }
+  have hhen (p : Bool) : (π p).IsHenstock := by
+    intro J hJ
+    sorry
+  have hpart (p : Bool) : (π p).IsPartition := by
+    sorry
+  have hmesh (p : Bool) : (π p).mesh_size ≤ δ := by
+    sorry
+  have : ‖((box (i - 1)).upper 0 - (box (i - 1)).lower 0) • (f x - f ((box (i - 1)).upper 0))‖
+    ≤ 2 := calc
+    _ = dist (∑ x ∈ (π true).boxes, (x.upper 0 - x.lower 0) • f ((π true).tag x 0))
+      (∑ x ∈ (π false).boxes, (x.upper 0 - x.lower 0) • f ((π false).tag x 0)) := by
+        simp only [Fin.isValue, true_and, Bool.false_eq_true, false_and, ↓reduceIte, dist_eq_norm,
+          ← Finset.sum_sub_distrib, π]
+        congr; symm
+        convert Finset.sum_eq_single (box (i - 1)) ?_ ?_ using 1
+        · simp [← smul_sub]
+        · intro I hI hIi
+          simp only [Finset.mem_image, Finset.mem_range] at hI;
+          obtain ⟨ j, hj, rfl ⟩ := hI
+          simp [hIi]
+        simp only [Finset.mem_image, Finset.mem_range, not_exists, not_and,
+          Fin.isValue, ↓reduceIte]
+        intro h; specialize h (i - 1) (by lia); simp at h
+    _ ≤ 2 := by
+      grw [dist_triangle_right _ _ L, h (π true) (hhen true) (hpart true) (hmesh true),
+        h (π false) (hhen false) (hpart false) (hmesh false)]
+      norm_num
+  have h : ((box (i-1)).upper 0 - (box (i-1)).lower 0) = (b - a) / N := by
+    simp [box_upper, box_lower, zdiff]
+  simp only [Fin.isValue, h, norm_smul, norm_div, Real.norm_eq_abs, RCLike.norm_natCast] at this
+  grw [← this, box_upper]
+  have : ‖f (z i)‖₊ ≤ (Finset.range (N + 1)).sup (fun n ↦ ‖f (z n)‖₊) := by
+    apply Finset.le_sup (f := fun n ↦ ‖f (z n)‖₊) (b := i)
+    simp [hi]
+  rw [← NNReal.coe_le_coe] at this
+  grw [← this]
+  simp [show i - 1 + 1 = i by omega, abs_of_pos hab']
+  field_simp
+  apply norm_le_insert'
+
+#exit
+
 section Linearity
 
 /-! ## Linearity
 
-The provided API demonstrates that the Riemann--Stieltjes integral `∫⟨B⟩ x in a..b, f x ∂g` is
-linear in each of the inputs `f`,`g`, `B`.
+The API provided here demonstrates that the Riemann--Stieltjes integral `∫⟨B⟩ x in a..b, f x ∂g` is
+linear in each of the inputs `f`, `g`, `B`.
 -/
 
 variable {a b : ℝ} {B B₁ B₂ : E →L[ℝ] F →L[ℝ] G} {f f₁ f₂ : ℝ → E} {g g₁ g₂ : ℝ → F} {L L₁ L₂ : G}
@@ -896,34 +971,6 @@ section Change
 
 variable {φ : ℝ → ℝ} {f : ℝ → E} {g : ℝ → F} {L : G} {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
 
-lemma Ioc.le_Ioc_iff {a b c d : ℝ} (hab : a < b) (hcd : c < d) :
-  Ioc c d ≤ Ioc a b ↔ a ≤ c ∧ d ≤ b := by
-  simp [Box.le_iff_bounds, Pi.le_def, hab, hcd]
-
-lemma Box.le_Ioc_iff {a b : ℝ} (hab : a < b) (J : Box (Fin 1)) :
-  J ≤ Ioc a b ↔ a ≤ J.lower 0 ∧ J.upper 0 ≤ b := by
-  nth_rw 1 [J.eq_Ioc]
-  exact Ioc.le_Ioc_iff hab (J.lower_lt_upper 0)
-
-lemma Box.mem_of_le {a b : ℝ} (hab : a < b) {J : Box (Fin 1)} (hJ : J ≤ Ioc a b) :
-  J.lower 0 ∈ Set.Icc a b ∧ J.upper 0 ∈ Set.Icc a b := by
-  rw [le_Ioc_iff hab] at hJ
-  have := J.lower_lt_upper 0
-  grind
-
-lemma Box.disjoint_iff {J J' : Box (Fin 1)} :
-  Disjoint J.toSet J'.toSet ↔ J.upper 0 ≤ J'.lower 0 ∨ J'.upper 0 ≤ J.lower 0 := by
-  have := J.lower_lt_upper 0
-  have := J'.lower_lt_upper 0
-  rw [← not_iff_not]
-  simp only [Set.not_disjoint_iff_nonempty_inter, Fin.isValue, not_or, not_le]
-  refine ⟨ fun h ↦ ?_, fun h ↦ ?_ ⟩
-  · obtain ⟨ x, hx ⟩ := h
-    simp [Box.mem_def] at hx
-    grind
-  use min J.upper J'.upper
-  simp [Box.mem_def, h]
-
 /-- Move to Mathlib.Topology.Order.IntermediateValue -/
 theorem _root_.Set.BijOn.of_strictMonoOn_continuousOn {α : Type*} [TopologicalSpace α]
     [ConditionallyCompleteLinearOrder α] [OrderTopology α] [DenselyOrdered α] {δ : Type u_1}
@@ -1200,9 +1247,7 @@ lemma subset_smaller_distance {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
 
 /-- Lemma for a vector valued MVT with error since MVT is false for a general
 funcion in higher dimensions, but is true up to some error for higher dimensions.
-This lemma is used in the proof of Theorem A3 (a). We prove it by specializing the
-bilinear form version of the statement. However, we must break into cases on whether
-or not F is the trivial space.
+This lemma is used in the proof of Theorem A3 (a).
 
 For g C^1[a,b] and ε > 0, there is a δ > 0 such that for all a ≤ a' < b' ≤ b with
 b' - a' < δ, we have that for all c ∈ [a',b'] that
