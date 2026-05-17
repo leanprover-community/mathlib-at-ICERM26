@@ -1198,7 +1198,17 @@ lemma subset_smaller_distance {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
   (hn : n ∈ Set.Icc a b) : |m - n| ≤ b - a := by
   grind
 
-lemma MVT_with_error' [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
+/-- Lemma for a vector valued MVT with error since MVT is false for a general
+funcion in higher dimensions, but is true up to some error for higher dimensions.
+This lemma is used in the proof of Theorem A3 (a). We prove it by specializing the
+bilinear form version of the statement. However, we must break into cases on whether
+or not F is the trivial space.
+
+For g C^1[a,b] and ε > 0, there is a δ > 0 such that for all a ≤ a' < b' ≤ b with
+b' - a' < δ, we have that for all c ∈ [a',b'] that
+‖g(b')-g(a')‖ ≤ ‖g'(c)‖ * (b' - a') + ε * (b' - a')
+-/
+lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
   (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
   : ∃ δ > 0, ∀ a' ∈ Set.Icc a b, ∀ b' ∈ Set.Icc a b,
   |b' - a'| < δ → ∀ c ∈ Set.uIcc a' b', dist (g b' -g a')
@@ -1257,7 +1267,7 @@ lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : �
     zero_mul, zero_add, and_imp, true_and]; intros; positivity
   obtain ⟨M, hM_pos, hM_bound⟩ := f_bounded
   have hB_norm_pos : 0 < ‖B‖ := norm_pos_iff.mpr hB
-  obtain ⟨ δ, hδ_pos, hδ_prop⟩ := MVT_with_error' hab hg (show 0 < ε / (‖B‖ * M) by positivity)
+  obtain ⟨ δ, hδ_pos, hδ_prop⟩ := MVT_with_error hab hg (show 0 < ε / (‖B‖ * M) by positivity)
   use δ, hδ_pos
   intros a' ha' b' hb' h_a'_lt_b' h_b'_sub_a'_lt_δ c hc
   specialize hδ_prop a' (by grind) b' (by grind) (by grind) c
@@ -1277,28 +1287,6 @@ lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : �
       grw [B.le_opNorm₂ (f c) _, hδ_prop, hM_bound _ (by grind), this]
       field_simp
       order
-
-/-- Lemma for a vector valued MVT with error since MVT is false for a general
-funcion in higher dimensions, but is true up to some error for higher dimensions.
-This lemma is used in the proof of Theorem A3 (a). We prove it by specializing the
-bilinear form version of the statement. However, we must break into cases on whether
-or not F is the trivial space.
-
-For g C^1[a,b] and ε > 0, there is a δ > 0 such that for all a ≤ a' < b' ≤ b with
-b' - a' < δ, we have that for all c ∈ [a',b'] that
-‖g(b')-g(a')‖ ≤ ‖g'(c)‖ * (b' - a') + ε * (b' - a')
--/
-lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {ε : ℝ} (hab : a < b)
-    (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
-    : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b, a' < b' → b' - a' < δ → ∀ c ∈ Set.Icc a' b',
-    ‖g b' - g a'‖ ≤ ‖derivWithin g (Set.Icc a b) c‖ * (b' - a') + ε * (b' - a') := by
-  have f_bounded : ∃ M > 0, ∀ x ∈ Set.Icc a b, ‖(fun _ => (1 : ℝ)) x‖ < M :=
-    ⟨ 2, by linarith, by intros; simp ⟩
-  obtain ⟨δ, hδ_pos, hδ⟩ := MVT_with_bilinear_form_and_error (lsmul ℝ ℝ) hab hg hε f_bounded
-  refine ⟨ δ, hδ_pos, fun a' ha' b' hb' hab' hdist c hc ↦ ?_ ⟩
-  simpa using hδ a' ha' b' hb' hab' hdist c hc
-
-
 
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
