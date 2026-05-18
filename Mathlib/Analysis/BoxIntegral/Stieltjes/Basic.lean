@@ -285,7 +285,6 @@ variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 
-
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
 theorem hasStieltjesIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
@@ -919,7 +918,7 @@ section Naturality
 
 variable {E' F' G' : Type*} [NormedAddCommGroup E'] [NormedSpace ℝ E']
     [NormedAddCommGroup F'] [NormedSpace ℝ F'] [NormedAddCommGroup G'] [NormedSpace ℝ G']
-    {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F} {L : G}
+    {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F} {L : G} {M : E}
     {φ : E →L[ℝ] E'} {ψ : F →L[ℝ] F'} {Ψ : G →L[ℝ] G'}
     {B' : E' →L[ℝ] F' →L[ℝ] G'}
 
@@ -947,10 +946,20 @@ theorem HasStieltjesIntegral.map (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
   convert h.map hB using 1
   simp
 
+theorem HasRiemannIntegral.map (h : HasRiemannIntegral a b f M) :
+    HasRiemannIntegral a b (fun x ↦ φ (f x)) (φ M) := by
+  convert HasStieltjesIntegral.map (ψ := ContinuousLinearMap.id ℝ ℝ) ?_ h
+  simp
+
 theorem StieltjesIntegrable.map (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable a b B' (fun x ↦ φ (f x)) (fun x ↦ ψ (g x)) :=
   (h.hasStieltjesIntegral.map hB).stieltjesIntegrable
+
+theorem RiemannIntegrable.map (h : RiemannIntegrable a b f) :
+    RiemannIntegrable a b (fun x ↦ φ (f x)) := by
+  convert StieltjesIntegrable.map (ψ := ContinuousLinearMap.id ℝ ℝ) (Ψ := φ) ?_ h
+  simp
 
 theorem stieltjesIntegral_map (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     (h : StieltjesIntegrable a b B f g) :
@@ -986,6 +995,10 @@ theorem StieltjesIntegrable.to_subinterval (hab : a < b) (hc : c ∈ Set.Icc a b
   symm
   simp only [hcd, of_lt]
   exact StieltjesIntegrable'.to_subinterval hab hcd hd.1 hc.2 h
+
+theorem RiemannIntegrable.to_subinterval [CompleteSpace E] (hab : a < b)
+    (hc : c ∈ Set.Icc a b) (hd : d ∈ Set.Icc a b) (h : RiemannIntegrable a b f) :
+    RiemannIntegrable c d f := StieltjesIntegrable.to_subinterval hab hc hd h
 
 end Subinterval
 
@@ -1054,6 +1067,13 @@ theorem HasStieltjesIntegral.add_adjacent
     grind
   · have := add_adjacent_prelim hcb hba h₂' h₁' h₃'
     grind
+
+theorem HasRiemannIntegral.add_adjacent [CompleteSpace E] {M M' : E}
+    (h : RiemannIntegrable a c f)
+    (h₁ : HasRiemannIntegral a b f M)
+    (h₂ : HasRiemannIntegral b c f M') :
+    HasRiemannIntegral a c f (M + M') :=
+  HasStieltjesIntegral.add_adjacent h h₁ h₂
 
 theorem stieltjesIntegral.add_adjacent (h : StieltjesIntegrable a c B f g)
     (h₁ : StieltjesIntegrable a b B f g) (h₂ : StieltjesIntegrable b c B f g) :
