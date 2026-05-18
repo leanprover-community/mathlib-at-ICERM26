@@ -1514,9 +1514,37 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
     HasStieltjesIntegral a b B f
       (fun x ↦ g ⌊x⌋)
       (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))) := by
-  rw [hasStieltjesIntegral_iff_lim_sum B hab]
-  intro ε hε
+  rw [hasStieltjesIntegral_iff_lim_sum B hab]; intro ε hε
   let M := ∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, ‖g n - g (n - 1)‖
+  by_cases! hM : M = 0
+  · rw [Finset.sum_eq_zero_iff_of_nonneg (by intros; positivity)] at hM
+    simp only [norm_eq_zero] at hM
+    refine ⟨ 1, by norm_num, fun π _ _ hmesh ↦ ?_ ⟩
+    calc
+      _ = dist (∑ J ∈ π.boxes, 0) (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, (0:G)) := by
+        congr 1
+        · apply Finset.sum_congr rfl; intro J hJ
+          have : g ⌊J.upper 0⌋ - g ⌊J.lower 0⌋ = 0 := by
+            have : ⌊J.upper 0⌋ = ⌊J.lower 0⌋ ∨ ⌊J.upper 0⌋ = ⌊J.lower 0⌋ + 1 := by
+              simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
+                TaggedPrepartition.mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right,
+                Fin.forall_fin_one, Fin.isValue] at hmesh
+              replace hmesh := Int.floor_mono (hmesh J hJ)
+              have := Int.floor_mono (J.lower_lt_upper 0).le
+              rw [add_comm, Int.floor_add_one] at hmesh; grind
+            rcases this with h | h
+            · simp [h]
+            convert hM _ ?_
+            · simp [h]
+            have := π.le_of_mem' J hJ
+            simp only [Box.le_Ioc_iff hab, Fin.isValue] at this
+            have h1 := Int.floor_mono this.1
+            have h2 := Int.floor_mono this.2
+            grind
+          simp [this]
+        apply Finset.sum_congr rfl; intro n hn
+        simp [hM n hn]
+      _ < ε := by simp [hε]
   sorry
 
 theorem HasStieltjesIntegral.of_fun_Nat_floor_right {a b : ℝ} (hab : a < b) {f : ℝ → E}
