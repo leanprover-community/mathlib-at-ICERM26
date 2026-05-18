@@ -297,6 +297,16 @@ theorem RiemannIntegrable.iff_integrable {a b : ℝ} (hab : a < b) :
       Integrable (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0)) BoxAdditiveMap.volume := by
     simp [RiemannIntegrable.def, Integrable, HasRiemannIntegral.iff_hasIntegral, hab]
 
+theorem hasRiemannIntegral_congr {a b : ℝ} {f₁ f₂ : ℝ → E}
+    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) :
+    HasRiemannIntegral a b f₁ L ↔ HasRiemannIntegral a b f₂ L :=
+  hasStieltjesIntegral_congr hf (Set.graphOn_inj.mp rfl)
+
+theorem riemannIntegrable_congr {a b : ℝ} {f₁ f₂ : ℝ → E}
+    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) :
+    RiemannIntegrable a b f₁ ↔ RiemannIntegrable a b f₂ :=
+  stieltjesIntegrable_congr hf (Set.graphOn_inj.mp rfl)
+
 end Riemann
 
 end BoxIntegral
