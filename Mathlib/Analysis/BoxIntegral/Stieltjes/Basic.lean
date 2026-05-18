@@ -717,7 +717,7 @@ theorem stieltjesIntegral_neg_right
     ∫⟨B⟩ x in a..b, f x ∂(-g) = -∫⟨B⟩ x in a..b, f x ∂g :=
   h.hasStieltjesIntegral.neg_right.stieltjesIntegral_eq
 
-theorem HasStieltjesIntegral'.sub_right
+private theorem HasStieltjesIntegral'.sub_right
     (h₁ : HasStieltjesIntegral' a b B f g₁ L₁) (h₂ : HasStieltjesIntegral' a b B f g₂ L₂) :
     HasStieltjesIntegral' a b B f (g₁ - g₂) (L₁ - L₂) := by
   unfold HasStieltjesIntegral' at h₁ h₂ ⊢
@@ -848,7 +848,7 @@ theorem stieltjesIntegral_neg_bil
     ∫⟨-B⟩ x in a..b, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g :=
   h.hasStieltjesIntegral.neg_bil.stieltjesIntegral_eq
 
-theorem HasStieltjesIntegral'.sub_bil
+private theorem HasStieltjesIntegral'.sub_bil
     (h₁ : HasStieltjesIntegral' a b B₁ f g L₁) (h₂ : HasStieltjesIntegral' a b B₂ f g L₂) :
     HasStieltjesIntegral' a b (B₁ - B₂) f g (L₁ - L₂) := by
   unfold HasStieltjesIntegral' at h₁ h₂ ⊢
