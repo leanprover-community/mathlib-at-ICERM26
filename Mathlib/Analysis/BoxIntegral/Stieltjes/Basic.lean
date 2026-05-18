@@ -435,7 +435,6 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
   simp [hi_sub, abs_of_pos hab']
   field_simp
   apply norm_le_insert'
-
 section Linearity
 
 /-! ## Linearity
@@ -1357,10 +1356,11 @@ theorem stieltjesIntegral.of_const (c : E) (g : ℝ → F) :
 
 /-- Lemma Subset given an interval [a,b], if c,d ∈ [a,b], then |c - d| < b -a
 -/
-lemma subset_smaller_distance {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
-  (hn : n ∈ Set.Icc a b) : |m - n| ≤ b - a := by
-  grind
+lemma dist_mem_Icc_le {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
+  (hn : n ∈ Set.Icc a b) : dist m n ≤ b - a := by
+  grind [Real.dist_eq]
 
+open intervalIntegral in
 /-- Lemma for a vector valued MVT with error since MVT is false for a general
 funcion in higher dimensions, but is true up to some error for higher dimensions.
 This lemma is used in the proof of Theorem A3 (a).
@@ -1377,7 +1377,7 @@ lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
   set g' := derivWithin g (Set.Icc a b)
   have hderiv_ucont :=
     isCompact_Icc.uniformContinuousOn_of_continuous
-      (ContDiffOn.continuousOn_derivWithin hg (uniqueDiffOn_Icc hab) le_rfl)
+      (hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) le_rfl)
   obtain ⟨δ, hδ_pos, hδ_prop⟩ := Metric.uniformContinuousOn_iff.mp hderiv_ucont ε (by positivity)
   refine ⟨δ, hδ_pos, fun a' ha' b' hb' h_b'_sub_a'_lt_δ c hc => ?_⟩
   by_cases! ha'b' : a' = b'
@@ -1385,8 +1385,8 @@ lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
   have hIcc_subset : Set.uIcc a' b' ⊆ Set.Icc a b := by intro; simp [Set.mem_uIcc]; grind
   have h_ftc := calc
      g b' - g a' = ∫ x in a'..b', g' c + (g' x - g' c) := by
-      rw [← intervalIntegral.integral_derivWithin_uIcc_of_contDiffOn_uIcc (hg.mono hIcc_subset)]
-      apply intervalIntegral.integral_congr
+      rw [← integral_derivWithin_uIcc_of_contDiffOn_uIcc (hg.mono hIcc_subset)]
+      apply integral_congr
       intro x hx
       simp only [add_sub_cancel]
       exact derivWithin_subset hIcc_subset (uniqueDiffOn_Icc (by grind) x hx)
@@ -1396,11 +1396,11 @@ lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
       exact ((hderiv_ucont.mono hIcc_subset).continuousOn.intervalIntegrable).sub
         intervalIntegrable_const
   simp only [h_ftc, intervalIntegral.integral_const, dist_self_add_left, ge_iff_le]
-  apply intervalIntegral.norm_integral_le_of_norm_le_const
+  apply norm_integral_le_of_norm_le_const
   intro x hx
   rw [←dist_eq_norm]
   apply (hδ_prop _ (hIcc_subset ⟨hx.1.le, hx.2⟩) _ (hIcc_subset hc) _).le
-  exact lt_of_le_of_lt (subset_smaller_distance ⟨hx.1.le, hx.2⟩ hc) (by grind)
+  grw [dist_mem_Icc_le ⟨hx.1.le, hx.2⟩ hc]; grind
 
 /-- Lemma MVT version using a bilinear form, this theorem is used in the proof of Theorem A3 (b)
 Since the MVT is false in general (for higher dimensions), we prove a version where it is true up
@@ -1505,29 +1505,52 @@ theorem stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable
 
 /-! ### Sums as Stieltjes integrals -/
 
-/-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f ∂⌊x⌋ -/
-theorem sum_eq_integral_nat_floor {a b : ℝ} (hab : a < b) (f : ℝ → E) :
-    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f
-      (fun x ↦ ⌊x⌋₊)
-      (∑ n ∈ Finset.Ico ⌈a⌉₊ ⌈b⌉₊, f n) := by sorry
-
-theorem sum_eq_integral_int_floor {a b : ℝ} (hab : a < b) (f : ℝ → E) :
-    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f
-      (fun x ↦ ⌊x⌋)
-      (∑ n ∈ Finset.Ico ⌈a⌉ ⌈b⌉, f n) := by sorry
+section Sums
 
 /-- Sum of pairings `B (f n) (g n)` over natural `n ∈ (⌊a⌋, ⌊b⌋]`, expressed as a Stieltjes
 integral of `f` against the right-continuous summatory `x ↦ ∑ n ≤ x, g n`. -/
-theorem sum_eq_integral_natSummatory_le {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℕ → F) :
+theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : ℝ → E}
+(hf : ContinuousOn f (Set.Icc a b)) (g : ℤ → F) :
+    HasStieltjesIntegral a b B f
+      (fun x ↦ g ⌊x⌋)
+      (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))) := by
+  rw [hasStieltjesIntegral_iff_lim_sum B hab]
+  intro ε hε
+  let M := ∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, ‖g n - g (n - 1)‖
+  sorry
+
+theorem HasStieltjesIntegral.of_fun_Nat_floor_right {a b : ℝ} (hab : a < b) {f : ℝ → E}
+(hf : ContinuousOn f (Set.Icc a b)) (g : ℕ → F) :
+    HasStieltjesIntegral a b B f
+      (fun x ↦ g ⌊x⌋₊)
+      (∑ n ∈ Finset.Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n - g (n - 1))) := by sorry
+
+theorem HasStieltjesIntegral.of_sum_Nat_Iic_right {a b : ℝ} (hab : a < b) {f : ℝ → E}
+(hf : ContinuousOn f (Set.Icc a b)) (g : ℕ → F) :
     HasStieltjesIntegral a b B f
       (fun x ↦ ∑ n ∈ Finset.Iic ⌊x⌋₊, g n)
       (∑ n ∈ Finset.Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n)) := by sorry
 
-/-- Sum of pairings `B (f n) (g n)` over natural `n ∈ [⌈a⌉, ⌈b⌉)`, expressed as a Stieltjes
-integral of `f` against the left-continuous summatory `x ↦ ∑ n < x, g n`. -/
-theorem sum_eq_integral_natSummatory_lt {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℕ → F) :
-    HasStieltjesIntegral a b B f
-      (fun x ↦ ∑ n ∈ Finset.Iio ⌈x⌉₊, g n)
-      (∑ n ∈ Finset.Ico ⌈a⌉₊ ⌈b⌉₊, B (f n) (g n)) := by sorry
+
+/-- Relate sums ∑ f(n) with Stieltjes integrals ∫ f ∂⌊x⌋ -/
+theorem HasStieltjesIntegral.of_Nat_floor_right {a b : ℝ} (hab : a < b) {f : ℝ → E}
+    (hf : ContinuousOn f (Set.Icc a b)) :
+    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f (fun x ↦ ⌊x⌋₊)
+    (∑ n ∈ Finset.Ioc ⌊a⌋₊ ⌊b⌋₊, f n) := by
+  convert of_sum_Nat_Iic_right (lsmul ℝ ℝ).flip hab hf
+    (fun n ↦ if n ≠ 0 then 1 else (0 : ℝ)) using 2 with x n hn
+  · rw [Finset.sum_boole]; simp only [ne_eq, Nat.cast_inj]
+    convert (Nat.card_Ioc 0 ⌊x⌋₊).symm
+    grind
+  have : n ≠ 0 := by grind
+  simp [this]
+
+theorem HasStieltjesIntegral.of_floor_right {a b : ℝ} (hab : a < b) {f : ℝ → E}
+    (hf : ContinuousOn f (Set.Icc a b)) :
+    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f
+      (fun x ↦ ⌊x⌋)
+      (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, f n) := by sorry
+
+end Sums
 
 end BoxIntegral

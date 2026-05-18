@@ -177,7 +177,7 @@ section Simple
 
 /-! ## Simple properties -/
 
-variable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F} {L L₁ L₂ : G}
+variable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f f₁ f₂ : ℝ → E} {g g₁ g₂ : ℝ → F} {L L₁ L₂ : G}
 
 /-- Uniqueness: the Riemann–Stieltjes integral, when it exists, is unique. -/
 theorem HasStieltjesIntegral.unique
@@ -226,6 +226,44 @@ theorem stieltjesIntegral.integral_symm : ∫⟨B⟩ x in b..a, f x ∂g = -∫�
   · exact (h_integ.hasStieltjesIntegral.symm.unique h_integ.symm.hasStieltjesIntegral).symm
   have h_integ_symm : ¬ StieltjesIntegrable b a B f g := by contrapose! h_integ; exact h_integ.symm
   simp [stieltjesIntegral, h_integ, h_integ_symm]
+
+theorem hasStieltjesIntegral'_congr {a b : ℝ} (hab : a < b)
+    (hf : Set.EqOn f₁ f₂ (Set.Icc a b)) (hg : Set.EqOn g₁ g₂ (Set.Icc a b)) :
+    HasStieltjesIntegral' a b B f₁ g₁ L ↔ HasStieltjesIntegral' a b B f₂ g₂ L := by
+  unfold HasStieltjesIntegral'
+  apply BoxIntegral.hasIntegral_congr
+  · intro x hx
+    simp only [hab, Icc_of_Ioc, Fin.isValue, Set.mem_setOf_eq] at hx ⊢
+    exact hf hx
+  intro J hJ
+  simp only [Set.mem_Iic, Box.le_Ioc_iff hab, Fin.isValue, BoxAdditiveMap.ofDiff_apply] at hJ ⊢
+  have := J.lower_lt_upper 0
+  congr 2 <;> exact hg (by grind)
+
+theorem hasStieltjesIntegral_congr {a b : ℝ}
+    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) (hg : Set.EqOn g₁ g₂ (Set.uIcc a b)) :
+    HasStieltjesIntegral a b B f₁ g₁ L ↔ HasStieltjesIntegral a b B f₂ g₂ L := by
+  rcases lt_trichotomy a b with hab | rfl | hab
+  · simp only [hab.le, Set.uIcc_of_le, hab, HasStieltjesIntegral.of_lt] at hf hg ⊢
+    exact hasStieltjesIntegral'_congr hab hf hg
+  · simp
+  simp only [HasStieltjesIntegral.symm_iff a b, hab.le, Set.uIcc_of_ge, hab,
+    HasStieltjesIntegral.of_lt] at hf hg ⊢
+  exact hasStieltjesIntegral'_congr hab hf hg
+
+theorem stieltjesIntegrable_congr {a b : ℝ}
+    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) (hg : Set.EqOn g₁ g₂ (Set.uIcc a b)) :
+    StieltjesIntegrable a b B f₁ g₁ ↔ StieltjesIntegrable a b B f₂ g₂ := by
+  simp only [StieltjesIntegrable, hasStieltjesIntegral_congr hf hg]
+
+theorem stieltjesIntegral_congr {a b : ℝ}
+    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) (hg : Set.EqOn g₁ g₂ (Set.uIcc a b)) :
+    ∫⟨B⟩ x in a..b, f₁ x ∂g₁ = ∫⟨B⟩ x in a..b, f₂ x ∂g₂ := by
+  by_cases! h : StieltjesIntegrable a b B (fun x ↦ f₁ x) g₁
+    <;> have h' := h <;> rw [stieltjesIntegrable_congr hf hg] at h'
+  · apply h.hasStieltjesIntegral.unique
+    simp [hasStieltjesIntegral_congr hf hg, h'.hasStieltjesIntegral]
+  simp [stieltjesIntegral, h, h']
 
 end Simple
 
