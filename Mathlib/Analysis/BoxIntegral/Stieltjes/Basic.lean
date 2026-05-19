@@ -1514,9 +1514,20 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
     HasStieltjesIntegral a b B f
       (fun x ↦ g ⌊x⌋)
       (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))) := by
+  by_cases! hB : ‖B‖ = 0
+  · simp_all
   rw [hasStieltjesIntegral_iff_lim_sum B hab]; intro ε hε
+  have short {π : TaggedPrepartition (Ioc a b)} (hπ : π.mesh_size ≤ 1) {J : Box (Fin 1)}
+    (hJ : J ∈ π) : ⌊J.upper 0⌋ = ⌊J.lower 0⌋ ∨ ⌊J.upper 0⌋ = ⌊J.lower 0⌋ + 1 := by
+    simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
+      TaggedPrepartition.mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right,
+      Fin.forall_fin_one, Fin.isValue] at hπ
+    replace hπ := Int.floor_mono (hπ J hJ)
+    have := Int.floor_mono (J.lower_lt_upper 0).le
+    rw [add_comm, Int.floor_add_one] at hπ; grind
   let M := ∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, ‖g n - g (n - 1)‖
-  by_cases! hM : M = 0
+  rcases lt_trichotomy M 0 with hM | hM | hM
+  · contrapose! hM; positivity
   · rw [Finset.sum_eq_zero_iff_of_nonneg (by intros; positivity)] at hM
     simp only [norm_eq_zero] at hM
     refine ⟨ 1, by norm_num, fun π _ _ hmesh ↦ ?_ ⟩
@@ -1525,14 +1536,7 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
         congr 1
         · apply Finset.sum_congr rfl; intro J hJ
           have : g ⌊J.upper 0⌋ - g ⌊J.lower 0⌋ = 0 := by
-            have : ⌊J.upper 0⌋ = ⌊J.lower 0⌋ ∨ ⌊J.upper 0⌋ = ⌊J.lower 0⌋ + 1 := by
-              simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
-                TaggedPrepartition.mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right,
-                Fin.forall_fin_one, Fin.isValue] at hmesh
-              replace hmesh := Int.floor_mono (hmesh J hJ)
-              have := Int.floor_mono (J.lower_lt_upper 0).le
-              rw [add_comm, Int.floor_add_one] at hmesh; grind
-            rcases this with h | h
+            rcases short hmesh hJ with h | h
             · simp [h]
             convert hM _ ?_
             · simp [h]
@@ -1545,7 +1549,43 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
         apply Finset.sum_congr rfl; intro n hn
         simp [hM n hn]
       _ < ε := by simp [hε]
-  sorry
+  let ε' := min (ε / (2*‖B‖*M)) 1
+  refine ⟨ NNReal.mk ε' (by positivity), show ε' > 0 by positivity, fun π hhen hpart hmesh ↦ ?_ ⟩
+  have hmesh' : π.mesh_size ≤ 1 := by grw [hmesh]; change ε' ≤ 1; simp [ε']
+  simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
+    TaggedPrepartition.mem_toPrepartition, NNReal.coe_mk, tsub_le_iff_right, Fin.forall_fin_one,
+    Fin.isValue] at hmesh
+  classical
+  let K : ℤ → Box (Fin 1) := fun n ↦ if h : ↑n ∈ Ioc a b then (hpart n h).choose else Ioc a b
+  have hK : ∀ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, K n ∈ π ∧ ↑n ∈ K n := by
+    intro n hn
+    replace hn : ↑n ∈ Ioc a b := by simpa [hab, Int.floor_lt, Int.le_floor] using hn
+    simp only [TaggedPrepartition.mem_toPrepartition, hn, ↓reduceDIte, K]
+    generalize_proofs h; exact h.choose_spec
+  calc
+    _ = dist (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, B (f (π.tag (K n) 0)) (g n - g (n - 1)))
+      (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))) := by
+      congr 1; convert (Finset.sum_of_injOn K ?_ ?_ ?_ ?_).symm
+      · sorry
+      · intro n hn; exact (hK n hn).1
+      · intro J hJ hJK
+        rcases short hmesh' hJ with h | h
+        · simp [h]
+        · contrapose! hJK
+          simp only [Finset.coe_Ioc, Set.mem_image]
+          use ⌊J.upper 0⌋
+          have : ⌊J.upper 0⌋ ∈ Finset.Ioc ⌊a⌋ ⌊b⌋ := by
+            sorry
+          refine ⟨ by grind, ?_ ⟩
+          replace := hK _ this
+          sorry
+      congr! 2 with n hn
+      · sorry
+      sorry
+    _ ≤ ‖B‖ * M * ε' := by
+      sorry
+    _ < ε := by
+      sorry
 
 theorem HasStieltjesIntegral.of_fun_Nat_floor_right {a b : ℝ} (hab : a < b) {f : ℝ → E}
 (hf : ContinuousOn f (Set.Icc a b)) (g : ℕ → F) :

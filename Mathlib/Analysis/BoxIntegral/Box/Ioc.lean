@@ -22,7 +22,7 @@ namespace BoxIntegral
 
 /-! ## Intervals -/
 
-variable {a b c d : ℝ}
+variable {a b c d : ℝ} 
 
 /-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(0, 1]` if `a = b`,
 and `(b, a]` if `a > b` (to give symmetry)).
@@ -31,25 +31,17 @@ Instances of `Box` are required to be non-empty, so one cannot use the empty set
 
 This is analogous to `Set.Ioc` or `Finset.Ioc`, but is a distinct type from those two types. -/
 noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
-  if h : a = b then
-    { lower := fun _ ↦ 0
-      upper := fun _ ↦ 1
-      lower_lt_upper := fun _ ↦ zero_lt_one }
-  else
-    { lower := fun _ ↦ min a b
-      upper := fun _ ↦ max a b
-      lower_lt_upper := fun _ ↦ by grind }
+  if h : a = b then ⟨ 0, 1, fun _ ↦ zero_lt_one ⟩
+  else ⟨ fun _ ↦ min a b, fun _ ↦ max a b, fun _ ↦ by grind ⟩
 
 lemma Ioc.of_lt (h : a < b) : Ioc a b = ⟨ fun _ ↦ a, fun _ ↦ b, fun _ ↦ h ⟩ := by
   simp [Ioc, h.ne, h.le]
 
 @[simp]
-lemma Ioc.upper (h : a < b) (i : Fin 1) : (Ioc a b).upper i = b := by
-  simp [h, of_lt]
+lemma Ioc.upper (h : a < b) (i : Fin 1) : (Ioc a b).upper i = b := by simp [h, of_lt]
 
 @[simp]
-lemma Ioc.lower (h : a < b) (i : Fin 1) : (Ioc a b).lower i = a := by
-  simp [h, of_lt]
+lemma Ioc.lower (h : a < b) (i : Fin 1) : (Ioc a b).lower i = a := by simp [h, of_lt]
 
 lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
   ext
