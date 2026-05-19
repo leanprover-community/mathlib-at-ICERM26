@@ -1507,6 +1507,18 @@ TODO: Stieltjes integration against a Heaviside function
 
 section Sums
 
+private lemma short {I J : Box (Fin 1)} {π : TaggedPrepartition I} (hπ : π.mesh_size ≤ 1)
+    (hJ : J ∈ π) : ⌊J.upper 0⌋ = ⌊J.lower 0⌋ ∨ ⌊J.upper 0⌋ = ⌊J.lower 0⌋ + 1 := by
+    simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
+      TaggedPrepartition.mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right,
+      Fin.forall_fin_one, Fin.isValue] at hπ
+    replace hπ := Int.floor_mono (hπ J hJ)
+    have := Int.floor_mono (J.lower_lt_upper 0).le
+    rw [add_comm, Int.floor_add_one] at hπ; grind
+
+private lemma coe_mem_Ioc_iff {n : ℤ} {a b : ℝ} : ↑n ∈ Set.Ioc a b ↔ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋  := by
+  simp [ Int.floor_lt, Int.le_floor]
+
 /-- When the integrator is a piecewise step function `fun x ↦ g ⌊x⌋` and the integrand
 `f` is continuous, the Stieltjes integral can be expressed as a sum over the integer points. -/
 theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : ℝ → E}
@@ -1517,14 +1529,6 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
   by_cases! hB : ‖B‖ = 0
   · simp_all
   rw [hasStieltjesIntegral_iff_lim_sum B hab]; intro ε hε
-  have short {π : TaggedPrepartition (Ioc a b)} (hπ : π.mesh_size ≤ 1) {J : Box (Fin 1)}
-    (hJ : J ∈ π) : ⌊J.upper 0⌋ = ⌊J.lower 0⌋ ∨ ⌊J.upper 0⌋ = ⌊J.lower 0⌋ + 1 := by
-    simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
-      TaggedPrepartition.mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right,
-      Fin.forall_fin_one, Fin.isValue] at hπ
-    replace hπ := Int.floor_mono (hπ J hJ)
-    have := Int.floor_mono (J.lower_lt_upper 0).le
-    rw [add_comm, Int.floor_add_one] at hπ; grind
   let M := ∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, ‖g n - g (n - 1)‖
   rcases lt_trichotomy M 0 with hM | hM | hM
   · contrapose! hM; positivity
@@ -1549,9 +1553,12 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
         apply Finset.sum_congr rfl; intro n hn
         simp [hM n hn]
       _ < ε := by simp [hε]
-  let ε' := min (ε / (2*‖B‖*M)) 1
-  refine ⟨ NNReal.mk ε' (by positivity), show ε' > 0 by positivity, fun π hhen hpart hmesh ↦ ?_ ⟩
-  have hmesh' : π.mesh_size ≤ 1 := by grw [hmesh]; change ε' ≤ 1; simp [ε']
+  let ε' := ε / (2 * ‖B‖ * M)
+  obtain ⟨ δ, hδ, hδf ⟩ :=  Metric.uniformContinuousOn_iff.mp
+    (isCompact_Icc.uniformContinuousOn_of_continuous hf) ε' (by positivity)
+  refine ⟨ NNReal.mk (min (δ / 2) 1) (by positivity), show min (δ / 2) 1 > 0 by positivity,
+    fun π hhen hpart hmesh ↦ ?_ ⟩
+  have hmesh' : π.mesh_size ≤ 1 := by grw [hmesh]; exact min_le_right (δ / 2) 1
   simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
     TaggedPrepartition.mem_toPrepartition, NNReal.coe_mk, tsub_le_iff_right, Fin.forall_fin_one,
     Fin.isValue] at hmesh
@@ -1566,7 +1573,13 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
     _ = dist (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, B (f (π.tag (K n) 0)) (g n - g (n - 1)))
       (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))) := by
       congr 1; convert (Finset.sum_of_injOn K ?_ ?_ ?_ ?_).symm
-      · sorry
+      · intro n hn m hm hnm
+        have h1 := (hK n hn).2
+        have h2 := (hK m hm).2
+        simp only [hnm, Box.mem_def, Pi.intCast_apply, Fin.forall_fin_one,
+          Fin.isValue, coe_mem_Ioc_iff, Finset.mem_Ioc] at h1 h2
+        have := short hmesh' (hK m hm).1
+        omega
       · intro n hn; exact (hK n hn).1
       · intro J hJ hJK
         rcases short hmesh' hJ with h | h
@@ -1582,10 +1595,22 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
       congr! 2 with n hn
       · sorry
       sorry
-    _ ≤ ‖B‖ * M * ε' := by
-      sorry
-    _ < ε := by
-      sorry
+    _ ≤ (‖B‖ * ε') * M := by
+      unfold M
+      grw [dist_eq_norm, ← Finset.sum_sub_distrib, norm_sum_le, Finset.mul_sum]
+      apply Finset.sum_le_sum; intro n hn
+      grw [← sub_apply, ← map_sub, le_opNorm, le_opNorm]
+      gcongr
+      simp only [dist_eq_norm, Real.norm_eq_abs] at hδf
+      convert (hδf _ ?_ _ ?_ ?_).le
+      · simpa [hab] using π.tag_mem_Icc (K n)
+      · rw [← coe_mem_Ioc_iff] at hn; grind
+      specialize hK n hn
+      specialize hmesh (K n) hK.1
+      specialize hhen (K n) hK.1
+      simp [Box.Icc_def, abs_lt, Box.mem_def, Pi.le_def] at hK hhen ⊢
+      grind
+    _ < ε := by unfold ε'; field_simp; grind
 
 theorem HasStieltjesIntegral.of_fun_Nat_floor_right {a b : ℝ} (hab : a < b) {f : ℝ → E}
 (hf : ContinuousOn f (Set.Icc a b)) (g : ℕ → F) :
