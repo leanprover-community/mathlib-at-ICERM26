@@ -452,7 +452,7 @@ linear in each of the inputs `f`, `g`, `B`.
 -/
 
 variable {a b : ℝ} {B B₁ B₂ : E →L[ℝ] F →L[ℝ] G} {f f₁ f₂ : ℝ → E} {g g₁ g₂ : ℝ → F} {L L₁ L₂ : G}
-    {M M₁ M₂ : E}
+    {M M₁ M₂ : E} {ι : Type*} {s : Finset ι}
 
 /-! ### In the integrand -/
 
@@ -625,6 +625,42 @@ theorem stieltjesIntegral_smul_left
     ∫⟨B⟩ x in a..b, (c • f) x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g :=
   (h.hasStieltjesIntegral.smul_left c).stieltjesIntegral_eq
 
+theorem HasStieltjesIntegral.finset_sum_left {f : ι → ℝ → E} {L : ι → G}
+    (h : ∀ i ∈ s, HasStieltjesIntegral a b B (f i) g (L i)) :
+    HasStieltjesIntegral a b B (∑ i ∈ s, f i) g (∑ i ∈ s, L i) := by
+  classical
+  revert h
+  refine Finset.induction_on s ?_ ?_
+  · simp
+  intro j s hjs hind h
+  specialize hind (by aesop)
+  specialize h j (by aesop)
+  simp only [hjs, not_false_eq_true, sum_insert]
+  exact h.add_left hind
+
+theorem HasRiemannIntegral.finset_sum {f : ι → ℝ → E} {L : ι → E}
+    (h : ∀ i ∈ s, HasRiemannIntegral a b (f i) (L i)) :
+    HasRiemannIntegral a b (∑ i ∈ s, f i) (∑ i ∈ s, L i) :=
+  HasStieltjesIntegral.finset_sum_left h
+
+theorem StieltjesIntegrable.finset_sum_left {f : ι → ℝ → E}
+    (h : ∀ i ∈ s, StieltjesIntegrable a b B (f i) g) :
+    StieltjesIntegrable a b B (∑ i ∈ s, f i) g :=
+  (HasStieltjesIntegral.finset_sum_left
+    (fun i hi ↦ (h i hi).hasStieltjesIntegral)).stieltjesIntegrable
+
+theorem RiemannIntegrable.finset_sum {f : ι → ℝ → E}
+    (h : ∀ i ∈ s, RiemannIntegrable a b (f i)) :
+    RiemannIntegrable a b (∑ i ∈ s, f i) := StieltjesIntegrable.finset_sum_left h
+
+@[simp]
+theorem stieltjesIntegral_finset_sum_left {f : ι → ℝ → E}
+    (h : ∀ i ∈ s, StieltjesIntegrable a b B (f i) g) :
+    ∫⟨B⟩ x in a..b, (∑ i ∈ s, f i) x ∂g = ∑ i ∈ s, ∫⟨B⟩ x in a..b, f i x ∂g :=
+  (HasStieltjesIntegral.finset_sum_left
+    (fun i hi ↦ (h i hi).hasStieltjesIntegral)).stieltjesIntegral_eq
+
+
 /-! ### In the integrator -/
 
 private theorem HasStieltjesIntegral'.const_right (c : F) :
@@ -784,6 +820,32 @@ theorem stieltjesIntegral_smul_right
     ∫⟨B⟩ x in a..b, f x ∂(c • g) = c • ∫⟨B⟩ x in a..b, f x ∂g :=
   (h.hasStieltjesIntegral.smul_right c).stieltjesIntegral_eq
 
+theorem HasStieltjesIntegral.finset_sum_right {g : ι → ℝ → F} {L : ι → G}
+    (h : ∀ i ∈ s, HasStieltjesIntegral a b B f (g i) (L i)) :
+    HasStieltjesIntegral a b B f (∑ i ∈ s, g i) (∑ i ∈ s, L i) := by
+  classical
+  revert h
+  refine Finset.induction_on s ?_ ?_
+  · simp
+  intro j s hjs hind h
+  specialize hind (by aesop)
+  specialize h j (by aesop)
+  simp only [hjs, not_false_eq_true, sum_insert]
+  exact h.add_right hind
+
+theorem StieltjesIntegrable.finset_sum_right {g : ι → ℝ → F}
+    (h : ∀ i ∈ s, StieltjesIntegrable a b B f (g i)) :
+    StieltjesIntegrable a b B f (∑ i ∈ s, g i) :=
+  (HasStieltjesIntegral.finset_sum_right
+    (fun i hi ↦ (h i hi).hasStieltjesIntegral)).stieltjesIntegrable
+
+@[simp]
+theorem stieltjesIntegral_finset_sum_right {g : ι → ℝ → F}
+    (h : ∀ i ∈ s, StieltjesIntegrable a b B f (g i)) :
+    ∫⟨B⟩ x in a..b, f x ∂(∑ i ∈ s, g i) = ∑ i ∈ s, ∫⟨B⟩ x in a..b, f x ∂(g i) :=
+  (HasStieltjesIntegral.finset_sum_right
+    (fun i hi ↦ (h i hi).hasStieltjesIntegral)).stieltjesIntegral_eq
+
 /-! ### In the bilinear form -/
 
 private theorem HasStieltjesIntegral'.zero_bil : HasStieltjesIntegral' a b 0 f g (0 : G) := by
@@ -912,6 +974,32 @@ theorem stieltjesIntegral_smul_bil
     (h : StieltjesIntegrable a b B f g) (c : ℝ) :
     ∫⟨c • B⟩ x in a..b, f x ∂g = c • ∫⟨B⟩ x in a..b, f x ∂g :=
   (h.hasStieltjesIntegral.smul_bil c).stieltjesIntegral_eq
+
+theorem HasStieltjesIntegral.finset_sum_bil {B : ι → E →L[ℝ] F →L[ℝ] G} {L : ι → G}
+    (h : ∀ i ∈ s, HasStieltjesIntegral a b (B i) f g (L i)) :
+    HasStieltjesIntegral a b (∑ i ∈ s, B i) f g (∑ i ∈ s, L i) := by
+  classical
+  revert h
+  refine Finset.induction_on s ?_ ?_
+  · simp
+  intro j s hjs hind h
+  specialize hind (by aesop)
+  specialize h j (by aesop)
+  simp only [hjs, not_false_eq_true, sum_insert]
+  exact h.add_bil hind
+
+theorem StieltjesIntegrable.finset_sum_bil {B : ι → E →L[ℝ] F →L[ℝ] G}
+    (h : ∀ i ∈ s, StieltjesIntegrable a b (B i) f g) :
+    StieltjesIntegrable a b (∑ i ∈ s, B i) f g :=
+  (HasStieltjesIntegral.finset_sum_bil
+    (fun i hi ↦ (h i hi).hasStieltjesIntegral)).stieltjesIntegrable
+
+@[simp]
+theorem stieltjesIntegral_finset_sum_bil {B : ι → E →L[ℝ] F →L[ℝ] G}
+    (h : ∀ i ∈ s, StieltjesIntegrable a b (B i) f g) :
+    ∫⟨∑ i ∈ s, B i⟩ x in a..b, f x ∂g = ∑ i ∈ s, ∫⟨B i⟩ x in a..b, f x ∂g :=
+  (HasStieltjesIntegral.finset_sum_bil
+    (fun i hi ↦ (h i hi).hasStieltjesIntegral)).stieltjesIntegral_eq
 
 end Linearity
 
@@ -1091,7 +1179,7 @@ variable {φ : ℝ → ℝ} {f : ℝ → E} {g : ℝ → F} {L : G} {a b : ℝ} 
 /-- The Riemann-Stieltjes integral is unchanged after composing with a strictly monotone
 continuous function.
 
-TODO: establish a similar theorem for strictly antitone continuous functions. One may wish
+TODO: establish a similar theorem for negation, and then strictly antitone continuous functions. One may wish
 to golf this proof first. -/
 theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
   (hmono : StrictMonoOn φ (Set.Icc a b))
