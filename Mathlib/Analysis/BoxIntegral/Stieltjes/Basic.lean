@@ -156,12 +156,12 @@ theorem eq_dropLast_add
     (π : TaggedDivision) (hN : 0 < π.N) (f g : ℝ → ℝ) :
       π.RiemannStieltjesSum f g =
       π.dropLast.RiemannStieltjesSum f g +
-      f (π.tag ⟨π.N - 1, by omega⟩) *
-        (g (π.x (Fin.last π.N)) - g (π.x ⟨π.N - 1, by omega⟩)) := by
+      f (π.tag ⟨π.N - 1, by lia⟩) *
+        (g (π.x (Fin.last π.N)) - g (π.x ⟨π.N - 1, by lia⟩)) := by
   rcases π with ⟨⟨N, x⟩, tag⟩
   dsimp [RiemannStieltjesSum, dropLast] at hN ⊢
   cases N with
-  | zero => omega
+  | zero => lia
   | succ n =>
       rw [Fin.sum_univ_castSucc]
       congr
@@ -193,10 +193,10 @@ theorem removeDuplicates
     rw [TaggedDivision.removeDuplicates.of_N_eq_zero π h0]
   | step π hN ih =>
     intro f g
-    have h0 : ¬π.N = 0 := by omega
-    let y := π.x ⟨π.N - 1, by omega⟩
+    have h0 : ¬π.N = 0 := by lia
+    let y := π.x ⟨π.N - 1, by lia⟩
     let z := π.x (Fin.last π.N)
-    let t := π.tag ⟨π.N - 1, by omega⟩
+    let t := π.tag ⟨π.N - 1, by lia⟩
     let σ := π.dropLast.removeDuplicates
     have hσ_last : σ.x (Fin.last σ.N) = y := by
       dsimp [σ]
@@ -354,7 +354,7 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
   let i : ℝ → ℕ := fun x ↦ ⌈N * (x - a) / (b - a)⌉₊
   have hipos {x : ℝ} (hx : a < x) : 0 < i x := by positivity
   have hi {x : ℝ} (hx' : x ≤ b) : i x ≤ N := by simp [i]; field_simp; linarith
-  have hi_sub {x : ℝ} (hx : a < x) : i x - 1 + 1 = i x := by have := hipos hx; omega
+  have hi_sub {x : ℝ} (hx : a < x) : i x - 1 + 1 = i x := by have := hipos hx; lia
   classical
   let π : Bool → TaggedPrepartition (Ioc a b) := fun p ↦ {
     boxes := (range N).image box
@@ -402,21 +402,17 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
       apply Box.upper_mem_Icc
     simp [π] at hJ; tauto
   have hpart (p : Bool) : (π p).IsPartition := by
-    intro x hx
-    simp only [hab, mem_Ioc, isValue] at hx
-    refine ⟨ box (i (x 0) - 1), ?_, ?_ ⟩
-    · simp only [isValue, Prepartition.mem_mk, mem_image, mem_range, π]
-      exact ⟨ i (x 0) - 1, by have := hi hx.2; grind, by rfl ⟩
-    convert hmem hx.1 hx.2
+    intro x hx; simp only [hab, mem_Ioc, isValue] at hx
+    refine ⟨ box (i (x 0) - 1), ?_, by convert hmem hx.1 hx.2 ⟩
+    simp only [isValue, Prepartition.mem_mk, mem_image, mem_range, π]
+    exact ⟨ i (x 0) - 1, by have := hi hx.2; grind, by rfl ⟩
   have hmesh (p : Bool) : (π p).mesh_size ≤ δ := by
     simp only [mesh_size_le_iff, mem_boxes, mem_toPrepartition, tsub_le_iff_right,
       forall_fin_one, isValue]
-    intro J hJ;
-    simp only [mem_image, mem_range, mem_mk, Prepartition.mem_mk, π] at hJ
+    intro J hJ; simp only [mem_image, mem_range, mem_mk, Prepartition.mem_mk, π] at hJ
     obtain ⟨ i, hi, rfl ⟩ := hJ
     simp only [isValue, box_upper, zdiff, box_lower, N]
-    nth_rw 1 [add_comm]; gcongr; field_simp
-    grw [← Nat.le_ceil]; field_simp; norm_num
+    nth_rw 1 [add_comm]; gcongr; field_simp; grw [← Nat.le_ceil]; field_simp; norm_num
   specialize hi hx'
   specialize hipos hx
   specialize hi_sub hx
@@ -430,12 +426,11 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
         convert sum_eq_single (box (i x - 1)) ?_ ?_ using 1
         · have : ∃ a < N, box a = box (i x - 1) := ⟨ i x - 1, by lia, rfl ⟩
           simp [← smul_sub, this]
-        · intro I hI hIi
-          simp only [mem_image, mem_range] at hI;
+        · intro I hI hIi; simp only [mem_image, mem_range] at hI
           obtain ⟨ j, hj, rfl ⟩ := hI
           simp [hIi]
         simp only [mem_image, mem_range, not_exists, not_and, isValue, ↓reduceIte]
-        intro h; specialize h (i x - 1) (by lia); simp at h
+        intro h; simpa using h (i x - 1) (by lia)
     _ ≤ 2 := by
       grw [dist_triangle_right _ _ L, h (π true) (hhen true) (hpart true) (hmesh true),
         h (π false) (hhen false) (hpart false) (hmesh false)]
@@ -444,14 +439,9 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
     simp [box_upper, box_lower, zdiff]
   simp only [isValue, h, norm_smul, norm_div, Real.norm_eq_abs, RCLike.norm_natCast] at this
   grw [← this, box_upper]
-  have : ‖f (z (i x))‖₊ ≤ (range (N + 1)).sup F := by
-    apply le_sup (f := F) (b := i x)
-    simp [hi]
-  rw [← NNReal.coe_le_coe] at this
-  grw [← this]
-  simp [hi_sub, abs_of_pos hab']
-  field_simp
-  apply norm_le_insert'
+  have : ‖f (z (i x))‖₊ ≤ (range (N + 1)).sup F := le_sup (f := F) (b := i x) (by simp [hi])
+  rw [← NNReal.coe_le_coe] at this; grw [← this]
+  simp [hi_sub, abs_of_pos hab']; field_simp; apply norm_le_insert'
 
 section Linearity
 
@@ -1565,7 +1555,7 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f :
         have h2 := (hK m hm).2
         simp only [hnm, coe_mem_Box_iff, Finset.mem_Ioc] at h1 h2
         have := short hmesh' (hK m hm).1
-        omega
+        lia
       · intro n hn; exact (hK n hn).1
       · intro J hJ hJK; rcases short hmesh' hJ with h | h
         · simp [h]
@@ -1574,14 +1564,14 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f :
           replace hJ := π.le_of_mem hJ
           simp only [Box.le_Ioc_iff hab, isValue, Finset.mem_Ioc] at hJ ⊢
           have := floor_le hJ
-          omega
+          lia
         refine ⟨ ⌊J.upper 0⌋, by grind, ?_ ⟩
         apply π.eq_of_mem_of_mem (hK _ this).1 hJ (hK _ this).2
         simp [Box.mem_fin_one, h, ← Int.lt_floor_iff]
       congr! 3 with n hn <;> have := short hmesh' (hK n hn).1
       <;> have := (hK n hn).2
       <;> simp only [coe_mem_Box_iff, Finset.mem_Ioc] at this
-      <;> omega
+      <;> lia
     _ ≤ (‖B‖ * ε') * M := by
       unfold M
       grw [dist_eq_norm, ← sum_sub_distrib, norm_sum_le, mul_sum]
