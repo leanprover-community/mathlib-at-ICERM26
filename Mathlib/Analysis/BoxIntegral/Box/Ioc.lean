@@ -24,14 +24,14 @@ namespace BoxIntegral
 
 variable {a b c d : ℝ}
 
-/-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(0, 1]` if `a = b`,
+/-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(-1, 1]` if `a = b`,
 and `(b, a]` if `a > b` (to give symmetry)).
 
 Instances of `Box` are required to be non-empty, so one cannot use the empty set as the junk case.
 
 This is analogous to `Set.Ioc` or `Finset.Ioc`, but is a distinct type from those two types. -/
 noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
-  if h : a = b then ⟨ 0, 1, fun _ ↦ zero_lt_one ⟩
+  if h : a = b then ⟨ -1, 1, fun _ ↦ by norm_num ⟩
   else ⟨ fun _ ↦ min a b, fun _ ↦ max a b, fun _ ↦ by grind ⟩
 
 lemma Ioc.of_lt (h : a < b) : Ioc a b = ⟨ fun _ ↦ a, fun _ ↦ b, fun _ ↦ h ⟩ := by
@@ -103,7 +103,7 @@ lemma Box.disjoint_iff {J J' : Box (Fin 1)} :
   use min J.upper J'.upper
   simp [Box.mem_def, h]
 
-/-! ## Mapping an interval -/
+/-! ## Mapping or reflecting an interval -/
 
 variable (φ : ℝ → ℝ)
 
@@ -113,6 +113,7 @@ noncomputable def Ioc.comp (J : Box (Fin 1)) := Ioc (φ (J.lower 0)) (φ (J.uppe
 lemma Ioc.comp_apply (hab : a < b) : Ioc.comp φ (Ioc a b) = Ioc (φ a) (φ b) := by
   simp [comp, hab]
 
+noncomputable def Ioc.reflect (J : Box (Fin 1)) := Ioc (-J.upper 0) (-J.lower 0)
 
 
 end BoxIntegral
