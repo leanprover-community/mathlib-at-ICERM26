@@ -20,12 +20,9 @@ public import Mathlib.Analysis.Calculus.ContDiff.Deriv
 public import Mathlib.Analysis.Calculus.Deriv.Linear
 public import Mathlib.Analysis.Calculus.Deriv.Mul
 
-
-set_option linter.style.longFile 2700
-
 /-! # Riemann–Stieltjes integral
 
-In this file we establish fundamental properties of Riemann–Stieltjes integral
+In this file we establish basic properties of Riemann–Stieltjes integral
 `∫⟨B⟩ x in a..b, f x ∂g` defined in `Analysis.BoxIntegral.Stieltjes.Defs`.
 
 ## Main theorems
@@ -37,20 +34,11 @@ of the Riemann--Stieltjes integral.
   the ordering of `a`, `b`, `c`.
 * `BoxIntegral.exists_of_continuousOn_of_boundedVariationOn` (Theorem A.1): if `f` is continuous
   and `g` has bounded variation on `[a, b]`, then the Riemann–Stieltjes integral exists.
-* `BoxIntegral.stieltjesIntegral.by_parts` (Theorem A.2): if `∫⟨B⟩ x in a..b, f x ∂g` exists, then
-  so does `∫⟨B⟩ x in a..b, g x ∂f`, and the two are related by the integration by parts identity
-  `∫⟨B⟩ x in a..b, g x ∂f = B (f b) (g b) - B (f a) (g a) - ∫⟨B⟩ x in a..b, f x ∂g`.
 * `BoxIntegral.variation_of_derivative` (Theorem A.3(a)) and
   `BoxIntegral.integral_of_derivative` (Theorem A.3(b)): when `g` is `C¹`, the total variation
   and the Riemann–Stieltjes integral can be computed by `g′`.
 * `BoxIntegral.integral_le_integral_of_variation` (Theorem A.4): a norm bound on the integral
   in terms of the variation of `g`.
-* `BoxIntegral.stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable`: the Riemann-Stieltjes
-integral `∫⟨lsmul ℝ ℝ⟩ x in a..b, f x ∂id` agrees with the interval integral
-`∫ x in a..b, f x` when `f` is Riemann integrable.
-* `BoxIntegral.stieltjesIntegral_of_fun_floor_right`: `∫⟨B⟩ x in a..b, f x ∂(g ⌊·⌋)` is equal to
-`∑ n in Finset.Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))` when `f` is continuous.  Similarly with
-the `⌊·⌋₊` function.
 
 ## AI usage
 
@@ -72,6 +60,7 @@ existing Mathlib examples and style guides.
 * Interpretation of `ofDiff` as a measure (assuming monotonicity)
 * Interpretation of `ofDiff` as a signed measure (assuming bounded variation).  This requires
 the development of signed measures in Mathlib
+* Comparison/monotonicity theorems
 
 ## Tags
 
@@ -375,20 +364,10 @@ theorem stieltjesIntegral_add_left
       = ∫⟨B⟩ x in a..b, f₁ x ∂g + ∫⟨B⟩ x in a..b, f₂ x ∂g :=
     (h₁.hasStieltjesIntegral.add_left h₂.hasStieltjesIntegral).stieltjesIntegral_eq
 
-private theorem HasStieltjesIntegral'.smul_left (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
-    HasStieltjesIntegral' a b B (c • f) g (c • L) :=
-  HasIntegral.smul h c
-
 theorem HasStieltjesIntegral.smul_left (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
     HasStieltjesIntegral a b B (c • f) g (c • L) := by
-  rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab] at h ⊢
-    apply h.smul_left
-  · simp_all
-  rw [symm_iff] at h ⊢
-  simp only [hab, of_lt] at h ⊢
-  convert h.smul_left _ using 1
-  norm_num
+  convert h.map (φ := .lsmul ℝ ℝ c) (ψ := .id ℝ F) (Ψ := .lsmul ℝ ℝ c) ?_ using 1
+  simp
 
 theorem HasRiemannIntegral.smul (h : HasRiemannIntegral a b f M) (c : ℝ) :
     HasRiemannIntegral a b (c • f) (c • M) :=
@@ -458,15 +437,10 @@ theorem stieltjesIntegral_sub_left
 theorem HasStieltjesIntegral.finset_sum_left {f : ι → ℝ → E} {L : ι → G}
     (h : ∀ i ∈ s, HasStieltjesIntegral a b B (f i) g (L i)) :
     HasStieltjesIntegral a b B (∑ i ∈ s, f i) g (∑ i ∈ s, L i) := by
-  classical
-  revert h
-  refine Finset.induction_on s ?_ ?_
-  · simp
-  intro j s hjs hind h
-  specialize hind (by aesop)
-  specialize h j (by aesop)
+  revert h; classical
+  refine s.induction_on (by simp) (fun j s hjs hind h ↦ ?_)
   simp only [hjs, not_false_eq_true, sum_insert]
-  exact h.add_left hind
+  exact (h j (by aesop)).add_left (hind (by aesop))
 
 theorem HasRiemannIntegral.finset_sum {f : ι → ℝ → E} {L : ι → E}
     (h : ∀ i ∈ s, HasRiemannIntegral a b (f i) (L i)) :
@@ -560,23 +534,10 @@ theorem stieltjesIntegral_add_right
       = ∫⟨B⟩ x in a..b, f x ∂g₁ + ∫⟨B⟩ x in a..b, f x ∂g₂ :=
     (h₁.hasStieltjesIntegral.add_right h₂.hasStieltjesIntegral).stieltjesIntegral_eq
 
-private theorem HasStieltjesIntegral'.smul_right (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
-    HasStieltjesIntegral' a b B f (c • g) (c • L) := by
-  unfold HasStieltjesIntegral' at h ⊢
-  have heq : (B.flip <| (c • g) ·) = c • (B.flip <| g ·) := by ext; simp
-  rw [heq, BoxIntegral.BoxAdditiveMap.ofDiff_smul]
-  exact h.smul_vol c
-
 theorem HasStieltjesIntegral.smul_right (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
     HasStieltjesIntegral a b B f (c • g) (c • L) := by
-  rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab] at h ⊢
-    apply h.smul_right
-  · simp_all
-  rw [symm_iff] at h ⊢
-  simp only [hab, of_lt] at h ⊢
-  convert h.smul_right _ using 1
-  norm_num
+  convert h.map (φ := .id ℝ E) (ψ := .lsmul ℝ ℝ c) (Ψ := .lsmul ℝ ℝ c) ?_ using 1
+  simp
 
 theorem StieltjesIntegrable.smul_right (h : StieltjesIntegrable a b B f g) (c : ℝ) :
     StieltjesIntegrable a b B f (c • g) :=
@@ -623,15 +584,10 @@ theorem stieltjesIntegral_sub_right
 theorem HasStieltjesIntegral.finset_sum_right {g : ι → ℝ → F} {L : ι → G}
     (h : ∀ i ∈ s, HasStieltjesIntegral a b B f (g i) (L i)) :
     HasStieltjesIntegral a b B f (∑ i ∈ s, g i) (∑ i ∈ s, L i) := by
-  classical
-  revert h
-  refine Finset.induction_on s ?_ ?_
-  · simp
-  intro j s hjs hind h
-  specialize hind (by aesop)
-  specialize h j (by aesop)
+  revert h; classical
+  refine s.induction_on (by simp) (fun j s hjs hind h ↦ ?_)
   simp only [hjs, not_false_eq_true, sum_insert]
-  exact h.add_right hind
+  exact (h j (by aesop)).add_right (hind (by aesop))
 
 theorem StieltjesIntegrable.finset_sum_right {g : ι → ℝ → F}
     (h : ∀ i ∈ s, StieltjesIntegrable a b B f (g i)) :
@@ -690,23 +646,10 @@ theorem HasStieltjesIntegral.add_bil
   convert h₁.add_bil h₂ using 1
   abel
 
-private theorem HasStieltjesIntegral'.smul_bil (h : HasStieltjesIntegral' a b B f g L) (c : ℝ) :
-    HasStieltjesIntegral' a b (c • B) f g (c • L) := by
-  unfold HasStieltjesIntegral' at h ⊢
-  have heq : ((c • B).flip <| g ·) = c • (B.flip <| g ·) := by ext; simp
-  rw [heq, BoxIntegral.BoxAdditiveMap.ofDiff_smul]
-  exact h.smul_vol c
-
 theorem HasStieltjesIntegral.smul_bil (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
     HasStieltjesIntegral a b (c • B) f g (c • L) := by
-  rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab] at h ⊢
-    apply h.smul_bil
-  · simp_all
-  rw [symm_iff] at h ⊢
-  simp only [hab, of_lt] at h ⊢
-  convert h.smul_bil _ using 1
-  norm_num
+  convert h.map (φ := .id ℝ E) (ψ := .id ℝ F) (Ψ := .lsmul ℝ ℝ c) ?_ using 1
+  simp
 
 theorem StieltjesIntegrable.smul_bil (h : StieltjesIntegrable a b B f g) (c : ℝ) :
     StieltjesIntegrable a b (c • B) f g :=
@@ -748,15 +691,10 @@ theorem stieltjesIntegral_sub_bil
 theorem HasStieltjesIntegral.finset_sum_bil {B : ι → E →L[ℝ] F →L[ℝ] G} {L : ι → G}
     (h : ∀ i ∈ s, HasStieltjesIntegral a b (B i) f g (L i)) :
     HasStieltjesIntegral a b (∑ i ∈ s, B i) f g (∑ i ∈ s, L i) := by
-  classical
-  revert h
-  refine Finset.induction_on s ?_ ?_
-  · simp
-  intro j s hjs hind h
-  specialize hind (by aesop)
-  specialize h j (by aesop)
+  revert h; classical
+  refine s.induction_on (by simp) (fun j s hjs hind h ↦ ?_)
   simp only [hjs, not_false_eq_true, sum_insert]
-  exact h.add_bil hind
+  exact (h j (by aesop)).add_bil (hind (by aesop))
 
 theorem StieltjesIntegrable.finset_sum_bil {B : ι → E →L[ℝ] F →L[ℝ] G}
     (h : ∀ i ∈ s, StieltjesIntegrable a b (B i) f g) :
@@ -772,7 +710,6 @@ theorem stieltjesIntegral_finset_sum_bil {B : ι → E →L[ℝ] F →L[ℝ] G}
     (fun i hi ↦ (h i hi).hasStieltjesIntegral)).stieltjesIntegral_eq
 
 end Linearity
-
 
 section Subinterval
 
@@ -890,6 +827,7 @@ theorem stieltjesIntegral.add_adjacent (h : StieltjesIntegrable a c B f g)
 is well-defined in `a..c`. -/
 
 end Split
+
 /-! ## Main theorems -/
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
@@ -1089,61 +1027,6 @@ theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[�
     (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (‖f ·‖)
       (fun x ↦ (eVariationOn g (.Icc a x)).toReal) L') :
     ‖L‖ ≤ ‖B‖ * L' := by sorry
-
-def boxLexKey (J : Box (Fin 1)) : ℝ ×ₗ ℝ :=
-  toLex (J.lower 0, J.upper 0)
-
-lemma boxLexKey_injective : Function.Injective boxLexKey := by
-  intro J K h
-  ext x
-  have h_lower : J.lower 0 = K.lower 0 := by
-    have := congrArg (fun p : ℝ ×ₗ ℝ ↦ (ofLex p).1) h
-    simpa [boxLexKey] using this
-  have h_upper : J.upper 0 = K.upper 0 := by
-    have := congrArg (fun p : ℝ ×ₗ ℝ ↦ (ofLex p).2) h
-    simpa [boxLexKey] using this
-  simp [Box.mem_def, Fin.forall_fin_one, h_lower, h_upper]
-
-instance instIsTransBoxLexKey :
-    IsTrans (Box (Fin 1)) (fun J K ↦ boxLexKey J ≤ boxLexKey K) :=
-  ⟨fun _ _ _ h₁ h₂ ↦ le_trans h₁ h₂⟩
-
-instance instIsAntisymmBoxLexKey :
-    IsAntisymm (Box (Fin 1)) (fun J K ↦ boxLexKey J ≤ boxLexKey K) :=
-  ⟨fun _ _ h₁ h₂ ↦ boxLexKey_injective (le_antisymm h₁ h₂)⟩
-
-instance instIsTotalBoxLexKey :
-    IsTotal (Box (Fin 1)) (fun J K ↦ boxLexKey J ≤ boxLexKey K) :=
-  ⟨fun _ _ ↦ le_total _ _⟩
-
-instance instIsReflBoxLexKey :
-    IsRefl (Box (Fin 1)) (fun J K ↦ boxLexKey J ≤ boxLexKey K) :=
-  ⟨fun _ ↦ le_rfl⟩
-
-
-/-- Disjoint one-dimensional boxes have disjoint underlying real half-open intervals. -/
-lemma disjoint_Ioc_of_disjoint_box {J K : Box (Fin 1)}
-    (h : Disjoint (J : Set (Fin 1 → ℝ)) K) :
-    Disjoint (Set.Ioc (J.lower 0) (J.upper 0)) (Set.Ioc (K.lower 0) (K.upper 0)) := by
-  rw [Set.disjoint_left]
-  intro x hxJ hxK
-  have hxJ' : (fun _ : Fin 1 ↦ x) ∈ J := by
-    simpa [Box.mem_def, Fin.forall_fin_one] using hxJ
-  have hxK' : (fun _ : Fin 1 ↦ x) ∈ K := by
-    simpa [Box.mem_def, Fin.forall_fin_one] using hxK
-  exact h.le_bot ⟨hxJ', hxK'⟩
-
-/-- If two disjoint one-dimensional boxes are ordered by lower endpoint, then the first lies to the
-left of the second. -/
-lemma upper_le_lower_of_disjoint_box_of_lower_le {J K : Box (Fin 1)}
-    (hdisj : Disjoint (J : Set (Fin 1 → ℝ)) K) (hlower : J.lower 0 ≤ K.lower 0) :
-    J.upper 0 ≤ K.lower 0 := by
-  have hd := disjoint_Ioc_of_disjoint_box hdisj
-  have h := (Set.Ioc_disjoint_Ioc).1 hd
-  rw [max_eq_right hlower] at h
-  rcases min_le_iff.mp h with hju | hku
-  · exact hju
-  · exact (K.lower_lt_upper 0).not_ge hku |>.elim
 
 omit [NormedSpace ℝ F] in
 /-- The sum of variations over a list of ordered one-dimensional boxes is bounded by the

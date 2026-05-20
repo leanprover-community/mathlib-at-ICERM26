@@ -10,6 +10,7 @@ was conducted.
 module
 
 public import Mathlib.Analysis.BoxIntegral.Box.Basic
+public import Mathlib.Data.Prod.Lex
 
 /-! # Ioc intervals as boxes
 
@@ -68,6 +69,11 @@ lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
 lemma Box.mem_fin_one (x : Fin 1 → ℝ) (J : Box (Fin 1)) :
   x ∈ J ↔ J.lower 0 < x 0 ∧ x 0 ≤ J.upper 0 := by
   simp [Box.mem_def]
+
+lemma Box.congr_fin_one (J K : Box (Fin 1)) :
+  J = K ↔ J.lower 0 = K.lower 0 ∧ J.upper 0 = K.upper 0 := by
+  refine ⟨ by grind, fun ⟨ hlow, hup ⟩ ↦ ?_ ⟩
+  ext x; simp [Box.mem_fin_one, hlow, hup]
 
 @[simp]
 lemma mem_Ioc (hab : a < b) (x : Fin 1 → ℝ) : x ∈ Ioc a b ↔ a < x 0 ∧ x 0 ≤ b := by
@@ -150,5 +156,47 @@ lemma Ioc.reflect_eq : reflect (Ioc a b) = Ioc (-b) (-a) := by
   · simp [reflect, hab]
   · simp [reflect, Ioc]; aesop
   simp [reflect, hab, symm]
+
+def boxLexKey (J : Box (Fin 1)) : ℝ ×ₗ ℝ :=
+  toLex (J.lower 0, J.upper 0)
+
+lemma boxLexKey_injective : Function.Injective boxLexKey := by
+  intro J K h
+  simpa [boxLexKey, Box.congr_fin_one] using h
+
+instance instIsTransBoxLexKey :
+    IsTrans (Box (Fin 1)) (fun J K ↦ boxLexKey J ≤ boxLexKey K) :=
+  ⟨fun _ _ _ ↦ le_trans⟩
+
+instance instIsAntisymmBoxLexKey :
+    Std.Antisymm (fun J K ↦ boxLexKey J ≤ boxLexKey K) :=
+  ⟨fun _ _ h₁ h₂ ↦ boxLexKey_injective (le_antisymm h₁ h₂)⟩
+
+instance instIsTotalBoxLexKey :
+    Std.Total (fun J K ↦ boxLexKey J ≤ boxLexKey K) :=
+  ⟨fun _ _ ↦ le_total _ _⟩
+
+instance instIsReflBoxLexKey :
+    Std.Refl (fun J K ↦ boxLexKey J ≤ boxLexKey K) :=
+  ⟨fun _ ↦ le_rfl⟩
+
+/-- Disjoint one-dimensional boxes have disjoint underlying real half-open intervals. -/
+lemma disjoint_Ioc_of_disjoint_box {J K : Box (Fin 1)}
+    (h : Disjoint J.toSet K) :
+    Disjoint (Set.Ioc (J.lower 0) (J.upper 0)) (Set.Ioc (K.lower 0) (K.upper 0)) := by
+  rw [Set.disjoint_left]
+  intro x hxJ hxK
+  let x' : Fin 1 → ℝ := fun _ ↦ x
+  exact h.le_bot ⟨show x' ∈ J by simpa [Box.mem_def] using hxJ,
+    by simpa [Box.mem_def] using hxK⟩
+
+/-- If two disjoint one-dimensional boxes are ordered by lower endpoint, then the first lies to the
+left of the second. -/
+lemma upper_le_lower_of_disjoint_box_of_lower_le {J K : Box (Fin 1)}
+    (hdisj : Disjoint J.toSet K) (hlower : J.lower 0 ≤ K.lower 0) :
+    J.upper 0 ≤ K.lower 0 := by
+  have := disjoint_Ioc_of_disjoint_box hdisj
+  have := K.lower_lt_upper 0
+  grind [Set.Ioc_disjoint_Ioc]
 
 end BoxIntegral
