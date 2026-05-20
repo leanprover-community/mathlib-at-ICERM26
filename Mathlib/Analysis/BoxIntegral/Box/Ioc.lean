@@ -37,11 +37,28 @@ noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
 lemma Ioc.of_lt (h : a < b) : Ioc a b = ⟨ fun _ ↦ a, fun _ ↦ b, fun _ ↦ h ⟩ := by
   simp [Ioc, h.ne, h.le]
 
+lemma Ioc.of_gt (h : b < a) : Ioc a b = ⟨ fun _ ↦ b, fun _ ↦ a, fun _ ↦ h ⟩ := by
+  simp [Ioc, h.ne.symm, h.le]
+
+lemma Ioc.of_eq : Ioc a a = ⟨ fun _ ↦ -1, fun _ ↦ 1, fun _ ↦ by norm_num ⟩ := by
+  simp [Ioc]; aesop
+
 @[simp]
 lemma Ioc.upper (h : a < b) (i : Fin 1) : (Ioc a b).upper i = b := by simp [h, of_lt]
 
 @[simp]
 lemma Ioc.lower (h : a < b) (i : Fin 1) : (Ioc a b).lower i = a := by simp [h, of_lt]
+
+@[simp]
+lemma Ioc.upper_gt (h : b < a) (i : Fin 1) : (Ioc a b).upper i = a := by simp [h, of_gt]
+
+@[simp]
+lemma Ioc.lower_gt (h : b < a) (i : Fin 1) : (Ioc a b).lower i = b := by simp [h, of_gt]
+
+lemma Ioc.symm : Ioc a b = Ioc b a := by
+  by_cases! h : a = b
+  · simp [h]
+  simp [Ioc]; grind
 
 lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc (J.lower 0) (J.upper 0) := by
   ext
@@ -110,10 +127,28 @@ variable (φ : ℝ → ℝ)
 noncomputable def Ioc.comp (J : Box (Fin 1)) := Ioc (φ (J.lower 0)) (φ (J.upper 0))
 
 @[simp]
-lemma Ioc.comp_apply (hab : a < b) : Ioc.comp φ (Ioc a b) = Ioc (φ a) (φ b) := by
+lemma Ioc.comp_apply (hab : a < b) : comp φ (Ioc a b) = Ioc (φ a) (φ b) := by
   simp [comp, hab]
 
 noncomputable def Ioc.reflect (J : Box (Fin 1)) := Ioc (-J.upper 0) (-J.lower 0)
 
+@[simp]
+lemma Ioc.reflect_upper (J : Box (Fin 1)) : (reflect J).upper 0 = -J.lower 0 := by
+  simp [reflect]
+
+@[simp]
+lemma Ioc.reflect_lower (J : Box (Fin 1)) : (reflect J).lower 0 = -J.upper 0 := by
+  simp [reflect]
+
+@[simp]
+lemma Ioc.reflect_reflect (J : Box (Fin 1)) : reflect (reflect J) = J := by
+  ext; simp [reflect, Box.mem_fin_one]
+
+@[simp]
+lemma Ioc.reflect_eq : reflect (Ioc a b) = Ioc (-b) (-a) := by
+  rcases lt_trichotomy a b with (hab | rfl | hab)
+  · simp [reflect, hab]
+  · simp [reflect, Ioc]; aesop
+  simp [reflect, hab, symm]
 
 end BoxIntegral
