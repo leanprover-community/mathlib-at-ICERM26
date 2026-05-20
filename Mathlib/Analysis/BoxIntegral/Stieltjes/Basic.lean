@@ -43,11 +43,9 @@ of the Riemann--Stieltjes integral.
 * `BoxIntegral.stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable`: the Riemann-Stieltjes
 integral `∫⟨lsmul ℝ ℝ⟩ x in a..b, f x ∂id` agrees with the interval integral
 `∫ x in a..b, f x` when `f` is Riemann integrable.
-* `BoxIntegral.sum_eq_integral_nat_floor` and `BoxIntegral.sum_eq_integral_int_floor`: relate
-  sums `∑ f n` to Riemann–Stieltjes integrals against the floor function.
-* `BoxIntegral.sum_eq_integral_natSummatory_le` / `_lt` : relate sums `∑ B (f n) (g n)` to
-  Riemann–Stieltjes integrals against the right- or left-continuous summatory function
-  `x ↦ ∑ n ≤ x, g n` (resp. `x ↦ ∑ n < x, g n`).
+* `BoxIntegral.stieltjesIntegral_of_fun_floor_right`: `∫⟨B⟩ x in a..b, f x ∂(g ⌊·⌋)` is equal to
+`∑ n in Finset.Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))` when `f` is continuous.  Similarly with
+the `⌊·⌋₊` function.
 
 ## AI usage
 
@@ -1631,11 +1629,17 @@ theorem StieltjesIntegrable.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f : 
   (HasStieltjesIntegral.of_fun_floor_right B hab hf g).stieltjesIntegrable
 
 @[simp]
-theorem stieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
+theorem stieltjesIntegral_of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
 (hf : ContinuousOn f (Set.Icc a b)) (g : ℤ → F) :
     ∫⟨B⟩ x in a..b, f x ∂(g ⌊·⌋) =
     ∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1)) :=
   (HasStieltjesIntegral.of_fun_floor_right B hab hf g).stieltjesIntegral_eq
+
+/-- A quick application: telescoping series -/
+theorem HasStieltjesIntegral.sum_sub_eq {a b : ℝ} (hab : a ≤ b) (g : ℤ → F) :
+    ∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, (g n - g (n - 1)) = g ⌊b⌋ - g ⌊a⌋ := by
+  have hf : ContinuousOn (fun _ ↦ (1 : ℝ)) (Set.Icc a b) := by fun_prop
+  convert (stieltjesIntegral_of_fun_floor_right (lsmul ℝ ℝ) hab hf g).symm using 1 <;> simp
 
 /-- When the integrator is a piecewise step function `fun x ↦ g ⌊x⌋₊` and the integrand
 `f` is continuous, the Stieltjes integral can be expressed as a sum over the natural
@@ -1673,11 +1677,17 @@ theorem StieltjesIntegrable.of_fun_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {
   (HasStieltjesIntegral.of_fun_Nat_floor_right B hab hf g).stieltjesIntegrable
 
 @[simp]
-theorem stieltjesIntegral.of_fun_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
+theorem stieltjesIntegral_of_fun_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
 (hf : ContinuousOn f (Set.Icc a b)) (g : ℕ → F) :
     ∫⟨B⟩ x in a..b, f x ∂(g ⌊·⌋₊) =
     ∑ n ∈ Finset.Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n - g (n - 1)) :=
   (HasStieltjesIntegral.of_fun_Nat_floor_right B hab hf g).stieltjesIntegral_eq
+
+/-- A quick application: telescoping series -/
+theorem HasStieltjesIntegral.sum_sub_eq' {a b : ℝ} (hab : a ≤ b) (g : ℕ → F) :
+    ∑ n ∈ Finset.Ioc ⌊a⌋₊ ⌊b⌋₊, (g n - g (n - 1)) = g ⌊b⌋₊ - g ⌊a⌋₊ := by
+  have hf : ContinuousOn (fun _ ↦ (1 : ℝ)) (Set.Icc a b) := by fun_prop
+  convert (stieltjesIntegral_of_fun_Nat_floor_right (lsmul ℝ ℝ) hab hf g).symm using 1 <;> simp
 
 /-- Sum of pairings `B (f n) (g n)` over natural `n ∈ (⌊a⌋, ⌊b⌋]`, expressed as a Stieltjes
 integral of `f` against the right-continuous summatory `x ↦ ∑ n ≤ x, g n`. -/
@@ -1717,7 +1727,7 @@ theorem HasStieltjesIntegral.of_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ
   simp
 
 @[simp]
-theorem stieltjesIntegral.of_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
+theorem stieltjesIntegral_of_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
     (hf : ContinuousOn f (Set.Icc a b)) :
     ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂(⌊·⌋) =
     ∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, f n :=
