@@ -1261,23 +1261,19 @@ private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → 
 bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
 private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
    {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab : a < b) (l : IntegrationParams)
-    (hf : ContinuousOn f (.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
+    (hf : ContinuousOn f (.Icc a b)) (hg : BoundedVariationOn g (.Icc a b)) :
     Integrable (Ioc a b) l
       (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (B.flip <| g ·)) := by
   let f' := fun x : Fin 1 → ℝ ↦ f (x 0)
   refine integrable_iff_cauchy_basis.2 fun ε hε ↦ ?_
-  let V : ℝ := (eVariationOn g (Set.Icc a b)).toReal
+  let V : ℝ := (eVariationOn g (.Icc a b)).toReal
   rcases exists_pos_mul_lt hε (‖B‖ * V) with ⟨η, hη, hηC⟩
   obtain ⟨δ, hδ, hδf⟩ := hf.metric_uniform η hη
-  let ρ : ℝ := δ / 4
-  let r : NNReal → (Fin 1 → ℝ) → Set.Ioi (0 : ℝ) := fun _ _ ↦ ⟨ρ, by grind⟩
-  refine ⟨r, fun _ _ _ ↦ by rfl, fun c₁ c₂ π₁ π₂ hπ₁ hpart₁ hπ₂ hpart₂ ↦ ?_⟩
+  refine ⟨fun _ _ ↦ ⟨δ/4, by grind⟩, fun _ _ _ ↦ by rfl, fun _ _ π₁ π₂ hπ₁ hpart₁ hπ₂ hpart₂ ↦ ?_⟩
   let vol := BoxAdditiveMap.ofDiff (B.flip <| g ·)
   let π := π₁.toPrepartition ⊓ π₂.toPrepartition
   let τ₁ := π₁.infPrepartition π₂.toPrepartition
   let τ₂ := π₂.infPrepartition π₁.toPrepartition
-  have hsub₁ : τ₁.IsSubordinate (r c₁) := hπ₁.isSubordinate.infPrepartition _
-  have hsub₂ : τ₂.IsSubordinate (r c₂) := hπ₂.isSubordinate.infPrepartition _
   have hdiff : integralSum f' vol π₁ - integralSum f' vol π₂ =
       ∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0))) := by
     simpa [vol, π, τ₁, τ₂] using integralSum_sub_partitions f' vol hpart₁ hpart₂
@@ -1287,11 +1283,12 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
     have := τ₁.tag_mem_Icc J
     have := τ₂.tag_mem_Icc J
     have hτ₁_upper : |τ₁.tag J 0 - J.upper 0| ≤ δ/4 := by
-      simpa [mem_closedBall, r, dist_pi_le_iff', Real.dist_eq, abs_sub_comm]
-        using hsub₁ J hJτ₁ J.upper_mem_Icc
+      simpa [mem_closedBall, dist_pi_le_iff', Real.dist_eq, abs_sub_comm]
+        using hπ₁.isSubordinate.infPrepartition _ J hJτ₁ J.upper_mem_Icc
     have hτ₂_upper : |J.upper 0 - τ₂.tag J 0| ≤ δ/4 := by
-      simpa [mem_closedBall, r, dist_pi_le_iff', Real.dist_eq]
-        using hsub₂ J (mem_infPrepartition_comm.mp hJτ₁) J.upper_mem_Icc
+      simpa [mem_closedBall, dist_pi_le_iff', Real.dist_eq]
+        using hπ₂.isSubordinate.infPrepartition _ J
+          (mem_infPrepartition_comm.mp hJτ₁) J.upper_mem_Icc
     grw [← map_sub, (vol J).le_opNorm]
     gcongr
     apply (hδf _ (by simp_all) _ (by simp_all) _).le
@@ -1299,7 +1296,7 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
   calc
     dist (integralSum f' vol π₁) (integralSum f' vol π₂)
       = ‖∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0)))‖ := by
-      simp only [dist_eq_norm, hdiff]
+      simp [dist_eq_norm, hdiff]
     _ ≤ (‖B‖ * V) * η := by
       grw [norm_sum_le, sum_le_sum hterm, ← sum_mul]; gcongr
       exact sum_norm_ofDiff_le_norm_mul_eVariationOn B g hg π
@@ -1308,8 +1305,8 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
 /-- Theorem A.1 of Montgomery-Vaughan: a continuous integrand and a bounded-variation integrator
 have a Riemann-Stieltjes integral. -/
 theorem exists_of_continuousOn_of_boundedVariationOn [CompleteSpace G] {a b : ℝ}
-    (f : ℝ → E) (g : ℝ → F) (hab : a < b)
-    (hf : ContinuousOn f (Set.Icc a b)) (hg : BoundedVariationOn g (Set.Icc a b)) :
+    {f : ℝ → E} {g : ℝ → F} (hab : a < b)
+    (hf : ContinuousOn f (.Icc a b)) (hg : BoundedVariationOn g (.Icc a b)) :
     StieltjesIntegrable a b B f g := by
   obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn B
     hab IntegrationParams.Riemann hf hg
@@ -1349,8 +1346,7 @@ theorem stieltjesIntegral.of_const (c : E) (g : ℝ → F) :
 
 /-- given an interval [a,b], if c,d ∈ [a,b], then |c - d| < b -a -/
 lemma dist_mem_Icc_le {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
-  (hn : n ∈ Set.Icc a b) : |m - n| ≤ b - a := by
-  grind [Real.dist_eq]
+  (hn : n ∈ Set.Icc a b) : |m - n| ≤ b - a := by grind [Real.dist_eq]
 
 /-- Lemma for a vector valued MVT with error since MVT is false for a general
 funcion in higher dimensions, but is true up to some error for higher dimensions.
@@ -1361,17 +1357,17 @@ b' - a' < δ, we have that for all c ∈ [a',b'] that
 ‖g(b')-g(a')‖ ≤ ‖g'(c)‖ * (b' - a') + ε * (b' - a')
 -/
 lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
-  (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
+  (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hε : 0 < ε)
   : ∃ δ > 0, ∀ a' ∈ Set.Icc a b, ∀ b' ∈ Set.Icc a b,
   |b' - a'| < δ → ∀ c ∈ Set.uIcc a' b', dist (g b' -g a')
-    ((b' - a') • (derivWithin g (Set.Icc a b)) c) ≤ ε * |b' - a'| := by
-  set g' := derivWithin g (Set.Icc a b)
+    ((b' - a') • (derivWithin g (.Icc a b)) c) ≤ ε * |b' - a'| := by
+  set g' := derivWithin g (.Icc a b)
   have hderiv_cont := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) le_rfl
   obtain ⟨δ, hδ_pos, hδ_prop⟩ := hderiv_cont.metric_uniform ε (by positivity)
-  refine ⟨δ, hδ_pos, fun a' ha' b' hb' h_b'_sub_a'_lt_δ c hc ↦ ?_⟩
+  refine ⟨δ, hδ_pos, fun a' _ b' _ _ c hc ↦ ?_⟩
   by_cases! ha'b' : a' = b'
   · simp [ha'b']
-  have hIcc_subset : Set.uIcc a' b' ⊆ Set.Icc a b := by intro; simp [Set.mem_uIcc]; grind
+  have hIcc_subset : Set.uIcc a' b' ⊆ .Icc a b := by intro; simp [Set.mem_uIcc]; grind
   have h_ftc := calc
      g b' - g a' = ∫ x in a'..b', g' c + (g' x - g' c) := by
       rw [← integral_derivWithin_uIcc_of_contDiffOn_uIcc (hg.mono hIcc_subset)]
@@ -1406,10 +1402,10 @@ fact that this will imply that f is bounded. However, for the MVT statement, we 
 bounded.
 -/
 lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : ℝ → F} {a b ε : ℝ}
-  (B : E →L[ℝ] F →L[ℝ] G) (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hε : 0 < ε)
+  (B : E →L[ℝ] F →L[ℝ] G) (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hε : 0 < ε)
   (f_bounded : ∃ M > 0, ∀ x ∈ Set.Icc a b, ‖f x‖ < M) : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b,
   a' < b' → b' - a' < δ → ∀ c ∈ Set.Icc a' b', ‖B (f c) (g b' -g a')‖
-    ≤ ‖B (f c) (derivWithin g (Set.Icc a b) c)‖ * (b' - a') + ε * (b' - a') := by
+    ≤ ‖B (f c) (derivWithin g (.Icc a b) c)‖ * (b' - a') + ε * (b' - a') := by
   by_cases! hB : B = 0
   · use 1; simp only [gt_iff_lt, zero_lt_one, ge_iff_le, Set.mem_Icc, hB, zero_apply, norm_zero,
     zero_mul, zero_add, and_imp, true_and]; intros; positivity
@@ -1417,18 +1413,16 @@ lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : �
   have hB_norm_pos : 0 < ‖B‖ := norm_pos_iff.mpr hB
   obtain ⟨ δ, hδ_pos, hδ_prop⟩ := MVT_with_error hab hg (show 0 < ε / (‖B‖ * M) by positivity)
   use δ, hδ_pos
-  intros a' ha' b' hb' h_a'_lt_b' h_b'_sub_a'_lt_δ c hc
+  intros a' _ b' _ h_a'b' _ c hc
   specialize hδ_prop a' (by grind) b' (by grind) (by grind) c
-    (by simpa [Set.uIcc_of_lt h_a'_lt_b'] using hc)
+    (by simpa [Set.uIcc_of_lt h_a'b'] using hc)
   rw [dist_eq_norm] at hδ_prop
   have : |b'-a'| = b' - a' := abs_of_pos (by positivity)
   calc
-    _ = ‖B (f c) ((b' - a') • derivWithin g (Set.Icc a b) c)
-      + B (f c) (g b' - g a' - (b' - a') • derivWithin g (Set.Icc a b) c)‖ := by
-      simp only [map_sub, map_smul, add_sub_cancel]
-    _ ≤ ‖B (f c) ((b' - a') • derivWithin g (Set.Icc a b) c)‖
-      + ‖B (f c) (g b' - g a' - (b' - a') • derivWithin g (Set.Icc a b) c)‖ := by
-       apply norm_add_le
+    _ = ‖B (f c) ((b' - a') • derivWithin g (.Icc a b) c)
+      + B (f c) (g b' - g a' - (b' - a') • derivWithin g (.Icc a b) c)‖ := by simp
+    _ ≤ ‖B (f c) ((b' - a') • derivWithin g (.Icc a b) c)‖
+      + ‖B (f c) (g b' - g a' - (b' - a') • derivWithin g (.Icc a b) c)‖ := by apply norm_add_le
     _ ≤ _ := by
       simp only [map_smul, norm_smul, Real.norm_eq_abs, this, mul_comm,
         add_le_add_iff_left]
@@ -1439,13 +1433,13 @@ lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : �
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
 theorem variation_of_derivative {a b : ℝ} {g : ℝ → F} (hab : a < b)
-    (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) :
-    (eVariationOn g (Set.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
+    (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
+    (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
 theorem integral_of_derivative {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab : a < b)
-    (hg : ContDiffOn ℝ 1 g (Set.Icc a b))
+    (hg : ContDiffOn ℝ 1 g (.Icc a b))
     (hf : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
 
@@ -1454,10 +1448,10 @@ theorem integral_of_derivative {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab 
 provided that both integrals exist. -/
 theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
     {f : ℝ → E} {g : ℝ → F} {L : G} {L' : ℝ}
-    (hab : a < b) (hg : BoundedVariationOn g (Set.Icc a b))
+    (hab : a < b) (hg : BoundedVariationOn g (.Icc a b))
     (hfg : HasStieltjesIntegral a b B f g L)
-    (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (fun x ↦ ‖f x‖)
-      (fun x ↦ (eVariationOn g (Set.Icc a x)).toReal) L') :
+    (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (‖f ·‖)
+      (fun x ↦ (eVariationOn g (.Icc a x)).toReal) L') :
     ‖L‖ ≤ ‖B‖ * L' := by sorry
 
 /-! ### Connection to standard integrals -/
@@ -1466,12 +1460,12 @@ theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[�
 `[a, b]` and `f` is Riemann integrable, the Stieltjes integral of `f` against `g` equals the
 Riemann integral of `B (f x) (g' x)`. -/
 theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' {f : ℝ → E} {g : ℝ → F} {a b : ℝ}
-    (hab : a < b) (hg : ContDiffOn ℝ 1 g (Set.Icc a b)) (hf : RiemannIntegrable a b f) :
+    (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hf : RiemannIntegrable a b f) :
     ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) :=
   (integral_of_derivative B hab hg hf).stieltjesIntegral_eq
 
 theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g : ℝ → F} {a b : ℝ}
-    (hg : ContDiffOn ℝ 1 g (Set.Icc (min a b) (max a b)))
+    (hg : ContDiffOn ℝ 1 g (.Icc (min a b) (max a b)))
     (hf : RiemannIntegrable (min a b) (max a b) f) :
     ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) := by
   rcases lt_trichotomy a b with hab | rfl | hba
@@ -1497,8 +1491,6 @@ TODO: Stieltjes integration against a Heaviside function
 -/
 
 section Sums
-
-open Prepartition TaggedPrepartition
 
 private lemma short {I J : Box (Fin 1)} {π : TaggedPrepartition I} (hπ : π.mesh_size ≤ 1)
     (hJ : J ∈ π) : ⌊J.upper 0⌋ = ⌊J.lower 0⌋ ∨ ⌊J.upper 0⌋ = ⌊J.lower 0⌋ + 1 := by
