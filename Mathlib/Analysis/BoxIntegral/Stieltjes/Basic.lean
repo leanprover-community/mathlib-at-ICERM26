@@ -284,7 +284,7 @@ theorem taggedSum_eq_integralSum {N : ℕ} {a b : ℝ} (hab : a < b)
 
 end mynamespace
 
-open BoxIntegral ContinuousLinearMap
+open ContinuousLinearMap
 
 namespace BoxIntegral
 
@@ -1092,6 +1092,8 @@ section Change
 
 /-! ## Change of variables -/
 
+open Prepartition TaggedPrepartition
+
 variable {φ : ℝ → ℝ} {f : ℝ → E} {g : ℝ → F} {L : G} {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
 
 /-- Move to Mathlib.Topology.Order.IntermediateValue -/
@@ -1120,8 +1122,8 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
   have hmono' := hmono.monotoneOn
   have hinv := (Set.BijOn.of_strictMonoOn_continuousOn hab.le hcont hmono).invOn_invFunOn
   set ψ := Function.invFunOn φ (Set.Icc a b)
-  simp only [hφab, hasStieltjesIntegral_iff_lim_sum, gt_iff_lt, Prepartition.mesh_size_le_iff,
-    Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition, tsub_le_iff_right,
+  simp only [hφab, hasStieltjesIntegral_iff_lim_sum, gt_iff_lt, mesh_size_le_iff,
+    mem_boxes, mem_toPrepartition, tsub_le_iff_right,
     Fin.forall_fin_one, Fin.isValue, map_sub, hab, Function.comp_apply] at h ⊢
   peel h with ε hε h
   obtain ⟨ δ', hδ', h ⟩ := h
@@ -1135,15 +1137,14 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
   let π' : TaggedPrepartition (Ioc (φ a) (φ b)) := {
     boxes := π.boxes.image (Ioc.comp φ)
     le_of_mem' J' hJ' := by
-      simp only [Finset.mem_image, Prepartition.mem_boxes,
-        TaggedPrepartition.mem_toPrepartition] at hJ'
+      simp only [Finset.mem_image, mem_boxes, mem_toPrepartition] at hJ'
       obtain ⟨ J, hJπ, rfl ⟩ := hJ'
       rw [J.eq_Ioc]
       simp only [Fin.isValue, Box.lower_lt_upper, Ioc.comp_apply, Ioc.le_Ioc_iff hφab (h2 hJπ)]
       and_intros <;> apply hmono' <;> grind
     pairwiseDisjoint I' hI' J' hJ' hdisj := by
-      simp only [Finset.coe_image, Set.mem_image, SetLike.mem_coe, Prepartition.mem_boxes,
-        TaggedPrepartition.mem_toPrepartition, Function.onFun] at hI' hJ' ⊢
+      simp only [Finset.coe_image, Set.mem_image, SetLike.mem_coe, mem_boxes,
+        mem_toPrepartition, Function.onFun] at hI' hJ' ⊢
       obtain ⟨ I, hIπ, rfl ⟩ := hI'
       obtain ⟨ J, hJπ, rfl ⟩ := hJ'
       have h : I ≠ J := by grind
@@ -1161,7 +1162,7 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
   have hhen' : π'.IsHenstock := by
     intro J' hJ'
     simp only [Fin.isValue, TaggedPrepartition.mem_mk, Prepartition.mem_mk, Finset.mem_image,
-      Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition, Box.Icc_def, Set.mem_Icc,
+      mem_boxes, mem_toPrepartition, Box.Icc_def, Set.mem_Icc,
       Pi.le_def, Fin.forall_fin_one, π'] at hJ' ⊢
     obtain ⟨ J, hJπ, rfl ⟩ := hJ'
     specialize h1 hJπ
@@ -1174,13 +1175,13 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
     exact ⟨ hmono' h1.1 (by simp [h3]) h4.1, hmono' (by simp [h3]) h1.2 h4.2 ⟩
   have hpart' : π'.IsPartition := by
     intro x' hx'
-    simp only [Box.mem_def, hφab, Ioc.lower, Ioc.upper, Set.mem_Ioc, Fin.forall_fin_one,
-      Fin.isValue, TaggedPrepartition.mem_toPrepartition] at hx' ⊢
+    simp only [Box.mem_fin_one, hφab, Ioc.lower, Ioc.upper,
+      Fin.isValue, mem_toPrepartition] at hx' ⊢
     have := hsurj (show x' 0 ∈ Set.Icc (φ a) (φ b) by grind)
     simp only [Fin.isValue, Set.mem_image, Set.mem_Icc] at this
     obtain ⟨ x, hx, hxx' ⟩ := this
     simp only [Fin.isValue, ← hxx', TaggedPrepartition.mem_mk, Prepartition.mem_mk,
-      Finset.mem_image, Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition,
+      Finset.mem_image, mem_boxes, mem_toPrepartition,
       exists_exists_and_eq_and, π'] at hx' ⊢
     have : a < x := by grind
     obtain ⟨ J, hJπ, hxJ ⟩ := hpart (fun _ ↦ x) (by simp [mem_Ioc, hab, this, hx])
@@ -1192,7 +1193,7 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
   have hmesh' : ∀ J' ∈ π', J'.upper 0 ≤ δ' + J'.lower 0 := by
     intro J' hJ'
     simp only [Fin.isValue, TaggedPrepartition.mem_mk, Prepartition.mem_mk, Finset.mem_image,
-      Prepartition.mem_boxes, TaggedPrepartition.mem_toPrepartition, π'] at hJ'
+      mem_boxes, mem_toPrepartition, π'] at hJ'
     obtain ⟨ J, hJπ, rfl ⟩ := hJ'
     specialize h1 hJπ
     specialize h2 hJπ
@@ -1203,7 +1204,7 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a < b)
       grind
     apply hδf _ h1.1 _ h1.2
     specialize hmesh J hJπ
-    simp [Real.dist_eq] at hmesh ⊢
+    simp at hmesh ⊢
     grind
   convert h π' hhen' hpart' hmesh' using 2
   have : ∀ J ∈ π, J = Ioc.comp ψ (Ioc.comp φ J) := by
@@ -1297,15 +1298,16 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
     have hJτ₂ : J ∈ τ₂ := TaggedPrepartition.mem_infPrepartition_comm.mp hJτ₁
     have := τ₁.tag_mem_Icc J
     have := τ₂.tag_mem_Icc J
-    have hτ₁_upper : dist (τ₁.tag J) J.upper ≤ ρ := by
-      simpa [Metric.mem_closedBall, r, ρ, dist_comm] using hsub₁ J hJτ₁ J.upper_mem_Icc
-    have hτ₂_upper : dist J.upper (τ₂.tag J) ≤ ρ := by
-      simpa [Metric.mem_closedBall, r, ρ] using hsub₂ J hJτ₂ J.upper_mem_Icc
-    grw [← map_sub, (vol J).le_opNorm, ← dist_eq_norm]
+    have hτ₁_upper : |τ₁.tag J 0 - J.upper 0| ≤ δ/4 := by
+      simpa [Metric.mem_closedBall, r, dist_pi_le_iff', Real.dist_eq, abs_sub_comm]
+        using hsub₁ J hJτ₁ J.upper_mem_Icc
+    have hτ₂_upper : |J.upper 0 - τ₂.tag J 0| ≤ δ/4 := by
+      simpa [Metric.mem_closedBall, r, dist_pi_le_iff', Real.dist_eq]
+        using hsub₂ J hJτ₂ J.upper_mem_Icc
+    grw [← map_sub, (vol J).le_opNorm]
     gcongr
     apply le_of_lt (hδf _ (by simp_all) _ (by simp_all) _)
-    grw [dist_le_pi_dist, dist_triangle _ J.upper _]
-    unfold ρ at *; linarith
+    linarith [abs_sub_le (τ₁.tag J 0) (J.upper 0) (τ₂.tag J 0)]
   calc
     dist (integralSum f' vol π₁) (integralSum f' vol π₂)
       = ‖∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0)))‖ := by
@@ -1513,21 +1515,25 @@ TODO: Stieltjes integration against a Heaviside function
 
 section Sums
 
+open Prepartition TaggedPrepartition
+
 private lemma short {I J : Box (Fin 1)} {π : TaggedPrepartition I} (hπ : π.mesh_size ≤ 1)
     (hJ : J ∈ π) : ⌊J.upper 0⌋ = ⌊J.lower 0⌋ ∨ ⌊J.upper 0⌋ = ⌊J.lower 0⌋ + 1 := by
-    simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
-      TaggedPrepartition.mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right,
+    simp only [mesh_size_le_iff, mem_boxes, mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right,
       Fin.forall_fin_one, Fin.isValue] at hπ
     replace hπ := Int.floor_mono (hπ J hJ)
     have := Int.floor_mono (J.lower_lt_upper 0).le
     rw [add_comm, Int.floor_add_one] at hπ; grind
 
 private lemma coe_mem_Ioc_iff {n : ℤ} {a b : ℝ} : ↑n ∈ Set.Ioc a b ↔ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋  := by
-  simp [ Int.floor_lt, Int.le_floor]
+  simp [Int.floor_lt, Int.le_floor]
+
+private lemma coe_mem_Box_iff {n : ℤ} {J : Box (Fin 1)} :
+  ↑n ∈ J ↔ n ∈ Finset.Ioc ⌊J.lower 0⌋ ⌊J.upper 0⌋ := by
+  simp [Box.mem_def, Int.floor_lt, Int.le_floor]
 
 private lemma floor_le {a b x y : ℝ} (h : a ≤ x ∧ y ≤ b) : ⌊a⌋ ≤ ⌊x⌋ ∧ ⌊y⌋ ≤ ⌊b⌋ :=
   ⟨Int.floor_mono h.1, Int.floor_mono h.2⟩
-
 
 /-- When the integrator is a piecewise step function `fun x ↦ g ⌊x⌋` and the integrand
 `f` is continuous, the Stieltjes integral can be expressed as a sum over the integer points. -/
@@ -1554,7 +1560,7 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
             · simp [h]
             convert hM _ ?_
             · simp [h]
-            have := π.le_of_mem hJ
+            have := π.le_of_mem' J hJ
             simp only [Box.le_Ioc_iff hab, Fin.isValue] at this
             have := floor_le this
             grind
@@ -1567,15 +1573,13 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
   refine ⟨ NNReal.mk (min (δ / 2) 1) (by positivity), show min (δ / 2) 1 > 0 by positivity,
     fun π hhen hpart hmesh ↦ ?_ ⟩
   have hmesh' : π.mesh_size ≤ 1 := by grw [hmesh]; exact min_le_right (δ / 2) 1
-  simp only [Prepartition.mesh_size_le_iff, Prepartition.mem_boxes,
-    TaggedPrepartition.mem_toPrepartition, NNReal.coe_mk, tsub_le_iff_right, Fin.forall_fin_one,
-    Fin.isValue] at hmesh
+  replace hmesh : ∀ J ∈ π, J.upper 0 ≤ min (δ / 2) 1 + J.lower 0 := by simpa [-le_inf_iff] using hmesh
   classical
   let K : ℤ → Box (Fin 1) := fun n ↦ if h : ↑n ∈ Ioc a b then (hpart n h).choose else Ioc a b
   have hK : ∀ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, K n ∈ π ∧ ↑n ∈ K n := by
     intro n hn
     replace hn : ↑n ∈ Ioc a b := by simpa [hab, Int.floor_lt, Int.le_floor] using hn
-    simp only [TaggedPrepartition.mem_toPrepartition, hn, ↓reduceDIte, K]
+    simp only [mem_toPrepartition, hn, ↓reduceDIte, K]
     generalize_proofs h; exact h.choose_spec
   calc
     _ = dist (∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, B (f (π.tag (K n) 0)) (g n - g (n - 1)))
@@ -1584,32 +1588,24 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
       · intro n hn m hm hnm
         have h1 := (hK n hn).2
         have h2 := (hK m hm).2
-        simp only [hnm, Box.mem_def, Pi.intCast_apply, Fin.forall_fin_one,
-          Fin.isValue, coe_mem_Ioc_iff, Finset.mem_Ioc] at h1 h2
+        simp only [hnm, coe_mem_Box_iff, Finset.mem_Ioc] at h1 h2
         have := short hmesh' (hK m hm).1
         omega
       · intro n hn; exact (hK n hn).1
-      · intro J hJ hJK
-        rcases short hmesh' hJ with h | h
+      · intro J hJ hJK; rcases short hmesh' hJ with h | h
         · simp [h]
-        · contrapose! hJK
-          simp only [Finset.coe_Ioc, Set.mem_image]
-          use ⌊J.upper 0⌋
-          have : ⌊J.upper 0⌋ ∈ Finset.Ioc ⌊a⌋ ⌊b⌋ := by
-            replace hJ := π.le_of_mem hJ
-            simp only [Box.le_Ioc_iff hab, Fin.isValue, Finset.mem_Ioc] at hJ ⊢
-            have := floor_le hJ
-            omega
-          refine ⟨ by grind, ?_ ⟩
-          replace := hK _ this
-          apply π.eq_of_mem_of_mem this.1 hJ this.2
-          simp only [Fin.isValue, Box.mem_def, Pi.intCast_apply, Set.mem_Ioc, Fin.forall_fin_one,
-            Int.floor_le, and_true]
-          simp [h]
+        contrapose! hJK
+        have : ⌊J.upper 0⌋ ∈ Finset.Ioc ⌊a⌋ ⌊b⌋ := by
+          replace hJ := π.le_of_mem hJ
+          simp only [Box.le_Ioc_iff hab, Fin.isValue, Finset.mem_Ioc] at hJ ⊢
+          have := floor_le hJ
+          omega
+        refine ⟨ ⌊J.upper 0⌋, by grind, ?_ ⟩
+        apply π.eq_of_mem_of_mem (hK _ this).1 hJ (hK _ this).2
+        simp [Box.mem_fin_one, h, ← Int.lt_floor_iff]
       congr! 3 with n hn <;> have := short hmesh' (hK n hn).1
       <;> have := (hK n hn).2
-      <;> simp only [Box.mem_def, Pi.intCast_apply, Fin.forall_fin_one,
-          Fin.isValue, coe_mem_Ioc_iff, Finset.mem_Ioc] at this
+      <;> simp only [coe_mem_Box_iff, Finset.mem_Ioc] at this
       <;> omega
     _ ≤ (‖B‖ * ε') * M := by
       unfold M
@@ -1623,7 +1619,7 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a < b) {f : �
       specialize hK n hn
       specialize hmesh (K n) hK.1
       specialize hhen (K n) hK.1
-      simp [Box.Icc_def, abs_lt, Box.mem_def, Pi.le_def] at hK hhen ⊢
+      simp [mem_Icc_fin_one, abs_lt, Box.mem_fin_one] at hK hhen ⊢
       grind
     _ < ε := by unfold ε'; field_simp; grind
 
