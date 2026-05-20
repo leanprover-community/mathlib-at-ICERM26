@@ -221,6 +221,11 @@ theorem stieltjesIntegral.of_eq : ∫⟨B⟩ x in a..a, f x ∂g = 0 := by
   rw [← HasStieltjesIntegral.of_eq_iff_zero a B f g]
   apply Exists.choose_spec
 
+@[simp]
+theorem stieltjesIntegral.of_not_integrable (h : ¬ StieltjesIntegrable a b B f g) :
+    ∫⟨B⟩ x in a..b, f x ∂g = 0 := by
+  simp [stieltjesIntegral, h]
+
 theorem stieltjesIntegral.integral_symm : ∫⟨B⟩ x in b..a, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
   by_cases h_integ : StieltjesIntegrable a b B f g
   · exact (h_integ.hasStieltjesIntegral.symm.unique h_integ.symm.hasStieltjesIntegral).symm
