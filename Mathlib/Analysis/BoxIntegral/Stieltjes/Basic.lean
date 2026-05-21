@@ -844,7 +844,8 @@ end Split
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → F)
-    (hg : BoundedVariationOn g (.Icc a b))
+    (hab : a < b)
+    (hg : BoundedVariationOn g (Set.Icc a b))
     (π : Prepartition (Ioc a b)) :
     ∑ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (B.flip <| g ·)) J‖ ≤
       ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
@@ -856,22 +857,69 @@ private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → 
     change ‖B.flip (g (J.upper 0)) - B.flip (g (J.lower 0))‖ ≤ _
     rw [← map_sub, ← opNorm_flip B]
     exact (B.flip).le_opNorm (g (J.upper 0) - g (J.lower 0))
-
   -- Step 2: Apply bound term-wise to sum and cancel operator norm
   refine (Finset.sum_le_sum h_term).trans ?_
   rw [← Finset.mul_sum]
   gcongr
-
-  -- Step 3: Upgrade to ENNReal and convert vector norms cleanly to `edist`
+  -- Step 3: Upgrade to ENNReal and convert vector norms to `edist`
   have h_sum_eq : ∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖ =
       (ENNReal.ofReal (∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖)).toReal :=
     (ENNReal.toReal_ofReal (Finset.sum_nonneg fun _ _ ↦ norm_nonneg _)).symm
   rw [h_sum_eq]
-  refine ENNReal.toReal_mono (by exact hg) ?_
+  refine ENNReal.toReal_mono hg ?_
   rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _)]
   simp_rw [← dist_eq_norm, ← edist_dist]
-
-  sorry
+  -- Step 4: The sum argument.
+  -- Induct on cardinality and detach leftmost box; using `Icc_add_Icc` additivity from eVariation
+  -- API.
+  -- TODO(bmgeorgiev): Golfing
+  classical
+  suffices h : ∀ (n : ℕ) (c d : ℝ) (S : Finset (Box (Fin 1))),
+      S.card = n → c ≤ d →
+      (∀ J ∈ S, c ≤ J.lower 0 ∧ J.upper 0 ≤ d) →
+      (↑S : Set _).Pairwise
+        (Function.onFun Disjoint ((↑) : Box (Fin 1) → Set (Fin 1 → ℝ))) →
+      ∑ J ∈ S, edist (g (J.upper 0)) (g (J.lower 0)) ≤ eVariationOn g (Set.Icc c d) by
+    exact h π.boxes.card a b π.boxes rfl hab.le
+      (fun J hJ ↦ (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)) π.pairwiseDisjoint
+  intro n
+  induction n with
+  | zero =>
+    intro c d S hScard _ _ _
+    rw [Finset.card_eq_zero] at hScard
+    subst hScard
+    simp
+  | succ n ih =>
+    intro c d S hScard _ hbd hdj
+    obtain ⟨J, hJS, hJ_min⟩ :=
+      S.exists_min_image (fun K ↦ K.lower 0) (Finset.card_pos.mp (by omega))
+    have hJ_bd := hbd J hJS
+    have hJ_lt : J.lower 0 < J.upper 0 := J.lower_lt_upper 0
+    -- The minimality of `J.lower 0` together with disjointness puts every other
+    -- box strictly to the right of `J`.
+    have hRight : ∀ K ∈ S.erase J, J.upper 0 ≤ K.lower 0 := by
+      intro K hKerase
+      have hKS : K ∈ S := Finset.mem_of_mem_erase hKerase
+      have hKne : K ≠ J := (Finset.mem_erase.mp hKerase).1
+      rcases Box.disjoint_iff.mp (hdj hJS hKS hKne.symm) with h | h
+      · exact h
+      · exact absurd (h.trans (hJ_min K hKS)) (not_le.mpr (K.lower_lt_upper 0))
+    have IH := ih (J.upper 0) d (S.erase J)
+      (by rw [Finset.card_erase_of_mem hJS, hScard]; omega) hJ_bd.2
+      (fun K hK ↦ ⟨hRight K hK, (hbd K (Finset.mem_of_mem_erase hK)).2⟩)
+      (hdj.mono (Finset.coe_subset.mpr (Finset.erase_subset _ _)))
+    rw [← Finset.add_sum_erase _ _ hJS]
+    calc edist (g (J.upper 0)) (g (J.lower 0)) +
+          ∑ K ∈ S.erase J, edist (g (K.upper 0)) (g (K.lower 0))
+        ≤ eVariationOn g (Set.Icc (J.lower 0) (J.upper 0)) +
+            eVariationOn g (Set.Icc (J.upper 0) d) :=
+          add_le_add (eVariationOn.edist_le g (Set.right_mem_Icc.mpr hJ_lt.le)
+            (Set.left_mem_Icc.mpr hJ_lt.le)) IH
+      _ = eVariationOn g (Set.Icc (J.lower 0) d) := by
+          simpa using
+            eVariationOn.Icc_add_Icc (s := Set.univ) g hJ_lt.le hJ_bd.2 (Set.mem_univ _)
+      _ ≤ eVariationOn g (Set.Icc c d) :=
+          eVariationOn.mono g (Set.Icc_subset_Icc hJ_bd.1 le_rfl)
 
 /-- Continuous integrand and a
 bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
@@ -914,8 +962,9 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
       = ‖∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0)))‖ := by
       simp [dist_eq_norm, hdiff]
     _ ≤ (‖B‖ * V) * η := by
-      grw [norm_sum_le, sum_le_sum hterm, ← sum_mul]; gcongr
-      exact sum_norm_ofDiff_le_norm_mul_eVariationOn B g hg π
+      grw [norm_sum_le, Finset.sum_le_sum hterm, ← Finset.sum_mul]
+      gcongr
+      exact sum_norm_ofDiff_le_norm_mul_eVariationOn B g hab hg π
     _ ≤ ε := by grind
 
 /-- Theorem A.1 of Montgomery-Vaughan: a continuous integrand and a bounded-variation integrator
