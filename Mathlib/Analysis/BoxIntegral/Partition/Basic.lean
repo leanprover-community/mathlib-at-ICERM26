@@ -166,7 +166,7 @@ theorem bot_boxes : (⊥ : Prepartition I).boxes = ∅ := rfl
 theorem injOn_setOf_mem_Icc_setOf_lower_eq (x : ι → ℝ) :
     InjOn (fun J : Box ι => { i | J.lower i = x i }) { J | J ∈ π ∧ x ∈ Box.Icc J } := by
   rintro J₁ ⟨h₁, hx₁⟩ J₂ ⟨h₂, hx₂⟩ (H : { i | J₁.lower i = x i } = { i | J₂.lower i = x i })
-  suffices ∀ i, (Ioc (J₁.lower i) (J₁.upper i) ∩ Ioc (J₂.lower i) (J₂.upper i)).Nonempty by
+  suffices ∀ i, (Set.Ioc (J₁.lower i) (J₁.upper i) ∩ Set.Ioc (J₂.lower i) (J₂.upper i)).Nonempty by
     choose y hy₁ hy₂ using this
     exact π.eq_of_mem_of_mem h₁ h₂ hy₁ hy₂
   intro i
@@ -611,12 +611,6 @@ theorem mesh_size_le_iff {I : Box ι} (π : Prepartition I) (ε : NNReal) :
   · have : B.upper i - B.lower i ≤ ε := h B i hB
     linarith
   · linarith [h B hB i]
-
-/-- In one dimension, the mesh size simplifies to the longest length of an interval
-in the partition. -/
-theorem mesh_size_of_fin_one {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_size
-    = π.boxes.sup (fun B ↦ NNReal.mk (B.upper 0 - B.lower 0) (by linarith [B.lower_lt_upper 0]))
-    := by simp [mesh_size]; congr
 
 end Mesh
 

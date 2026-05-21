@@ -101,7 +101,7 @@ theorem coe_splitUpper : (splitUpper I i x : Set (ι → ℝ)) = ↑I ∩ { y | 
   classical
   rw [splitUpper, coe_mk']
   ext y
-  simp only [mem_univ_pi, mem_Ioc, mem_inter_iff, mem_coe, mem_setOf_eq, forall_and,
+  simp only [mem_univ_pi, Set.mem_Ioc, mem_inter_iff, mem_coe, mem_setOf_eq, forall_and,
     forall_update_iff I.lower fun j z => z < y j, max_lt_iff, and_assoc (a := x < y i),
     and_forall_ne (p := fun j => lower I j < y j) i, mem_def]
   exact and_comm

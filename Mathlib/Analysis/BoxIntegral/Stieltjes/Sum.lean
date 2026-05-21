@@ -174,7 +174,7 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f :
       specialize hK n hn
       specialize hmesh (K n) hK.1
       specialize hhen (K n) hK.1
-      simp [mem_Icc_fin_one, abs_lt, Box.mem_fin_one] at hK hhen ⊢
+      simp [abs_lt] at hK hhen ⊢
       grind
     _ < ε := by unfold ε'; field_simp; grind
 

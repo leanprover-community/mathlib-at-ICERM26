@@ -242,7 +242,7 @@ theorem hasStieltjesIntegral'_congr {a b : ℝ} (hab : a < b)
     exact hf hx
   intro J hJ
   simp only [Set.mem_Iic, Box.le_Ioc_iff hab, Fin.isValue, BoxAdditiveMap.ofDiff_apply] at hJ ⊢
-  have := J.lower_lt_upper 0
+  have := J.lower_lt_upper₁
   congr 2 <;> exact hg (by grind)
 
 theorem hasStieltjesIntegral_congr {a b : ℝ}

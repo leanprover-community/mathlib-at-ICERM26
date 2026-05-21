@@ -151,7 +151,7 @@ lemma ofDiff_lsmul_eq_volume {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ
     ofDiff (fun x : ℝ ↦ (ContinuousLinearMap.lsmul ℝ ℝ : ℝ →L[ℝ] E →L[ℝ] E) x) =
       (BoxAdditiveMap.volume : (Fin 1) →ᵇᵃ E →L[ℝ] E) := by
   ext
-  simp [volume_apply]
+  simp [volume_apply, Box.upper₁, Box.lower₁]
   module
 
 end BoxAdditiveMap

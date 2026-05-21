@@ -220,30 +220,30 @@ lemma sub_apply {ι : Type*} {I₀ : WithTop (Box ι)} (f g : ι →ᵇᵃ[I₀]
 /-! ## The differential `ofDiff` of a function on `ℝ` -/
 
 /-- The box-additive "differential" sending a function `g : ℝ → M` to the box-additive map on
-`Box (Fin 1)` defined by `J ↦ g (J.upper 0) - g (J.lower 0)`, bundled as an
+`Box (Fin 1)` defined by `J ↦ g J.upper₁ - g J.lower₁`, bundled as an
 `AddMonoidHom`. -/
 def ofDiff : (ℝ → M) →+ ((Fin 1) →ᵇᵃ M) where
   toFun g := ofMapSplitAdd
-    (fun J : Box (Fin 1) ↦ g (J.upper 0) - g (J.lower 0)) ⊤
+    (fun J : Box (Fin 1) ↦ g J.upper₁ - g J.lower₁) ⊤
     (by
       intro I _ i x hx
       fin_cases i
       rw [Box.splitLower_def hx, Box.splitUpper_def hx]
-      simp [Option.elim'])
+      simp [Option.elim', upper₁, lower₁])
   map_zero' := by
     ext J
-    change (0 : ℝ → M) (J.upper 0) - (0 : ℝ → M) (J.lower 0) = (0 : (Fin 1) →ᵇᵃ M) J
+    change (0 : ℝ → M) J.upper₁ - (0 : ℝ → M) J.lower₁ = (0 : (Fin 1) →ᵇᵃ M) J
     simp
   map_add' g h := by
     ext J
-    change (g + h) (J.upper 0) - (g + h) (J.lower 0) =
-      (g (J.upper 0) - g (J.lower 0)) + (h (J.upper 0) - h (J.lower 0))
+    change (g + h) (J.upper₁) - (g + h) (J.lower₁) =
+      (g (J.upper₁) - g (J.lower₁)) + (h (J.upper₁) - h (J.lower₁))
     simp [Pi.add_apply]
     abel
 
 @[simp]
 lemma ofDiff_apply (g : ℝ → M) (J : Box (Fin 1)) :
-    ofDiff g J = g (J.upper 0) - g (J.lower 0) := rfl
+    ofDiff g J = g J.upper₁ - g J.lower₁ := rfl
 
 @[simp]
 lemma ofDiff_smul {R : Type*} [Monoid R] [DistribMulAction R M]
@@ -272,7 +272,7 @@ lemma ofDiff_eq_zero_iff {g : ℝ → M} : ofDiff g = 0 ↔ ∀ x y, g x = g y :
     · rfl
     · exact (key hgt).symm
   · ext J
-    simp [ofDiff_apply, h (J.upper 0) (J.lower 0), sub_self]
+    simp [ofDiff_apply, h J.upper₁ J.lower₁, sub_self]
 
 /-- `ofDiff` commutes with `BoxAdditiveMap.map` along an `AddMonoidHom`: postcomposing the
 differential `ofDiff g` by `φ : M →+ N` is the same as taking the differential of `φ ∘ g`. -/

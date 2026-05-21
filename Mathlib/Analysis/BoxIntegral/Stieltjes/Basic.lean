@@ -98,13 +98,25 @@ variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 
+
+/-- In one dimension, the mesh size simplifies to the longest length of an interval
+in the partition. -/
+theorem mesh_size₁ {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_size
+    = π.boxes.sup (fun B ↦ NNReal.mk (B.upper₁ - B.lower₁) (by linarith [B.lower_lt_upper₁]))
+    := by simp [mesh_size]; congr
+
+@[simp]
+theorem mesh_size_le_iff₁ {I : Box (Fin 1)} (π : Prepartition I) (ε : NNReal) :
+    π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, B.upper₁ - B.lower₁ ≤ ε := by
+  simp [mesh_size_le_iff, Box.upper₁, Box.lower₁]
+
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
 theorem hasStieltjesIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
     HasStieltjesIntegral a b B f g L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
-     dist (∑ x ∈ π.boxes, ((B (f (π.tag x 0))) (g (x.upper 0) - g (x.lower 0)))) L < ε := by
+     dist (∑ x ∈ π.boxes, ((B (f (π.tag x 0))) (g x.upper₁ - g x.lower₁))) L < ε := by
   simp [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral',
     HasIntegral_Riemann_iff, integralSum]
 
@@ -112,7 +124,7 @@ theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E)
     HasRiemannIntegral a b f L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
-     dist (∑ x ∈ π.boxes, ((x.upper 0) - (x.lower 0)) • (f (π.tag x 0))) L < ε :=
+     dist (∑ x ∈ π.boxes, ((x.upper₁ - x.lower₁) • (f (π.tag x 0)))) L < ε :=
   hasStieltjesIntegral_iff_lim_sum _ hab _ _ _
 
 /-- A Riemann integrable function on a closed interval is bounded. -/
@@ -132,8 +144,8 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
   have zmono (n : ℕ) : z n < z (n + 1) := by simp only [zdiff, lt_add_iff_pos_right]; positivity
   have zmono' : Monotone z := by intro i j hij; unfold z; grw [hij]
   let box : ℕ → Box (Fin 1) := fun n ↦ Ioc (z n) (z (n + 1))
-  have box_upper (i : ℕ) : (box i).upper 0 = z (i + 1) := by simp [box, Ioc.upper (zmono i)]
-  have box_lower (i : ℕ) : (box i).lower 0 = z i := by simp [box, Ioc.lower (zmono i)]
+  have box_upper (i : ℕ) : (box i).upper₁ = z (i + 1) := by simp [box, Ioc.upper₁ (zmono i)]
+  have box_lower (i : ℕ) : (box i).lower₁ = z i := by simp [box, Ioc.lower₁ (zmono i)]
   have box_le {i : ℕ} (hi : i < N) : box i ≤ Ioc a b := by
     simp only [hab, zmono i, Ioc_le_Ioc_iff, box]
     simp only [← z0, ← zN]
@@ -156,7 +168,7 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
       simp only [coe_image, coe_range, Set.mem_image, Set.mem_Iio] at hI hJ
       obtain ⟨ i, hi, rfl ⟩ := hI
       obtain ⟨ j, hj, rfl ⟩ := hJ
-      simp only [Function.onFun, Box.disjoint_iff, isValue, box_upper, box_lower]
+      simp only [Function.onFun, Box.disjoint_iff₁, box_upper, box_lower]
       rcases lt_trichotomy i j with hlt | rfl | hgt
       · left; exact zmono' (by lia)
       · simp at hdisj
@@ -198,25 +210,24 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
     simp only [isValue, Prepartition.mem_mk, mem_image, mem_range, π]
     exact ⟨ i (x 0) - 1, by have := hi hx.2; grind, by rfl ⟩
   have hmesh (p : Bool) : (π p).mesh_size ≤ δ := by
-    simp only [mesh_size_le_iff, mem_boxes, mem_toPrepartition, tsub_le_iff_right,
-      forall_fin_one, isValue]
+    simp only [mesh_size_le_iff₁, mem_boxes, mem_toPrepartition, tsub_le_iff_right]
     intro J hJ; simp only [mem_image, mem_range, mem_mk, Prepartition.mem_mk, π] at hJ
     obtain ⟨ i, hi, rfl ⟩ := hJ
-    simp only [isValue, box_upper, zdiff, box_lower, N]
+    simp only [box_upper, zdiff, box_lower, N]
     nth_rw 1 [add_comm]; gcongr; field_simp; grw [← Nat.le_ceil]; field_simp; norm_num
   specialize hi hx'
   specialize hipos hx
   specialize hi_sub hx
-  have : ‖((box (i x - 1)).upper 0 - (box (i x - 1)).lower 0) • (f x - f ((box (i x - 1)).upper 0))‖
+  have : ‖((box (i x - 1)).upper₁ - (box (i x - 1)).lower₁) • (f x - f (box (i x - 1)).upper₁)‖
     ≤ 2 := calc
-    _ = dist (∑ x ∈ (π true).boxes, (x.upper 0 - x.lower 0) • f ((π true).tag x 0))
-      (∑ x ∈ (π false).boxes, (x.upper 0 - x.lower 0) • f ((π false).tag x 0)) := by
+    _ = dist (∑ x ∈ (π true).boxes, (x.upper₁ - x.lower₁) • f ((π true).tag x 0))
+      (∑ x ∈ (π false).boxes, (x.upper₁ - x.lower₁) • f ((π false).tag x 0)) := by
         simp only [isValue, true_and, Bool.false_eq_true, false_and, ↓reduceIte, dist_eq_norm,
           ← sum_sub_distrib, π]
         congr; symm
         convert sum_eq_single (box (i x - 1)) ?_ ?_ using 1
         · have : ∃ a < N, box a = box (i x - 1) := ⟨ i x - 1, by lia, rfl ⟩
-          simp [← smul_sub, this]
+          simp [← smul_sub, this, Box.upper₁, Box.lower₁]
         · intro I hI hIi; simp only [mem_image, mem_range] at hI
           obtain ⟨ j, hj, rfl ⟩ := hI
           simp [hIi]
@@ -226,9 +237,9 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
       grw [dist_triangle_right _ _ L, h (π true) (hhen true) (hpart true) (hmesh true),
         h (π false) (hhen false) (hpart false) (hmesh false)]
       norm_num
-  have h : ((box (i x - 1)).upper 0 - (box (i x - 1)).lower 0) = (b - a) / N := by
+  have h : ((box (i x - 1)).upper₁ - (box (i x - 1)).lower₁) = (b - a) / N := by
     simp [box_upper, box_lower, zdiff]
-  simp only [isValue, h, norm_smul, norm_div, Real.norm_eq_abs, RCLike.norm_natCast] at this
+  simp only [h, norm_smul, norm_div, Real.norm_eq_abs, RCLike.norm_natCast] at this
   grw [← this, box_upper]
   have : ‖f (z (i x))‖₊ ≤ (range (N + 1)).sup F := le_sup (f := F) (b := i x) (by simp [hi])
   rw [← NNReal.coe_le_coe] at this; grw [← this]
@@ -1028,107 +1039,71 @@ theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[�
       (fun x ↦ (eVariationOn g (.Icc a x)).toReal) L') :
     ‖L‖ ≤ ‖B‖ * L' := by sorry
 
+section Sorted
+
 omit [NormedSpace ℝ F] in
 /-- The sum of variations over a list of ordered one-dimensional boxes is bounded by the
 variation over their union. -/
 lemma list_sum_eVariationOn_Icc_le_iUnion (g : ℝ → F) :
     ∀ L : List (Box (Fin 1)),
       L.Pairwise (fun J K ↦ J.upper 0 ≤ K.lower 0) →
-      (L.map fun J ↦ eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).sum ≤
-        eVariationOn g {x | ∃ J ∈ L, x ∈ Set.Icc (J.lower 0) (J.upper 0)}
+      (L.map fun J ↦ eVariationOn g J.Icc₁).sum ≤ eVariationOn g {x | ∃ J ∈ L, x ∈ J.Icc₁ }
   | [], _ => by simp
   | J :: L, hpair => by
       rw [List.pairwise_cons] at hpair
       rcases hpair with ⟨hhead, htail⟩
       have ih := list_sum_eVariationOn_Icc_le_iUnion g L htail
-      let Utail : Set ℝ := {x | ∃ K ∈ L, x ∈ Set.Icc (K.lower 0) (K.upper 0)}
-      have hleft : ∀ x ∈ Set.Icc (J.lower 0) (J.upper 0), ∀ y ∈ Utail, x ≤ y := by
-        intro x hx y hy
-        rcases hy with ⟨K, hK, hyK⟩
-        exact hx.2.trans ((hhead K hK).trans hyK.1)
-      have hU : Set.Icc (J.lower 0) (J.upper 0) ∪ Utail =
-          {x | ∃ K ∈ J :: L, x ∈ Set.Icc (K.lower 0) (K.upper 0)} := by
-        ext x
-        simp [Utail]
+      let Utail : Set ℝ := {x | ∃ K ∈ L, x ∈ K.Icc₁}
+      have hleft : ∀ x ∈ J.Icc₁, ∀ y ∈ Utail, x ≤ y := by
+        rintro x hx y ⟨K, hK, hyK⟩; exact hx.2.trans ((hhead K hK).trans hyK.1)
+      have hU : J.Icc₁ ∪ Utail = {x | ∃ K ∈ J :: L, x ∈ K.Icc₁} := by ext x; simp [Utail]
       calc
-        (List.map (fun J ↦ eVariationOn g (Set.Icc (J.lower 0) (J.upper 0)))
-              (J :: L)).sum =
-            eVariationOn g (Set.Icc (J.lower 0) (J.upper 0)) +
-              (L.map fun J ↦ eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).sum := by
-          simp
-        _ ≤ eVariationOn g (Set.Icc (J.lower 0) (J.upper 0)) + eVariationOn g Utail := by
+        _ = eVariationOn g J.Icc₁ + (L.map fun J ↦ eVariationOn g J.Icc₁).sum := by simp
+        _ ≤ eVariationOn g J.Icc₁ + eVariationOn g Utail := by
           simpa [add_comm, add_left_comm, add_assoc] using add_le_add_left ih _
-        _ ≤ eVariationOn g (Set.Icc (J.lower 0) (J.upper 0) ∪ Utail) :=
-          eVariationOn.add_le_union g hleft
-        _ = eVariationOn g {x | ∃ K ∈ J :: L,
-              x ∈ Set.Icc (K.lower 0) (K.upper 0)} := by
-          rw [hU]
+        _ ≤ eVariationOn g (J.Icc₁ ∪ Utail) := eVariationOn.add_le_union g hleft
+        _ = _ := by rw [hU]
 
 /-- Sorting the boxes of a one-dimensional prepartition by lower endpoint puts each box to the
 left of all later boxes. -/
 lemma sorted_boxes_pairwise_upper_le_lower {I : Box (Fin 1)} (π : Prepartition I) :
-    (π.boxes.sort (fun J K ↦ boxLexKey J ≤ boxLexKey K)).Pairwise
-      (fun J K ↦ J.upper 0 ≤ K.lower 0) := by
-  let L := π.boxes.sort (fun J K ↦ boxLexKey J ≤ boxLexKey K)
-  have hsort : L.Pairwise (fun J K ↦ boxLexKey J ≤ boxLexKey K) := Finset.pairwise_sort _ _
-  have hnodup : L.Nodup := Finset.sort_nodup _ _
+    (π.boxes.sort Box.lex_le).Pairwise (fun J K ↦ J.upper 0 ≤ K.lower 0) := by
+  set L := π.boxes.sort Box.lex_le
   rw [List.pairwise_iff_get]
   intro i j hij
-  have hlex : boxLexKey (L.get i) ≤ boxLexKey (L.get j) := hsort.rel_get_of_lt hij
-  have hlower : (L.get i).lower 0 ≤ (L.get j).lower 0 :=
-    Prod.Lex.monotone_fst _ _ hlex
-  have hne : L.get i ≠ L.get j := by
-    exact fun h ↦ (Nat.ne_of_lt hij) (Fin.val_eq_of_eq ((hnodup.get_inj_iff).1 h))
-  have hmemi : L.get i ∈ π.boxes := by
-    exact (Finset.mem_sort (fun J K ↦ boxLexKey J ≤ boxLexKey K)).1 (List.get_mem L i)
-  have hmemj : L.get j ∈ π.boxes := by
-    exact (Finset.mem_sort (fun J K ↦ boxLexKey J ≤ boxLexKey K)).1 (List.get_mem L j)
-  exact upper_le_lower_of_disjoint_box_of_lower_le (π.disjoint_coe_of_mem hmemi hmemj hne)
-    hlower
-
-lemma Icc_subset_of_box_le_Ioc {J : Box (Fin 1)} (hab : a < b) (hJ : J ≤ Ioc a b) :
-    Set.Icc (J.lower 0) (J.upper 0) ⊆ Set.Icc a b := by
-  have hla : a ≤ J.lower 0 := by
-    simpa [Ioc.lower hab] using Box.antitone_lower hJ 0
-  have hub : J.upper 0 ≤ b := by
-    simpa [Ioc.upper hab] using Box.monotone_upper hJ 0
-  intro x hx
-  exact ⟨hla.trans hx.1, hx.2.trans hub⟩
+  have hne : L.get i ≠ L.get j :=
+    fun h ↦ Nat.ne_of_lt hij <| val_eq_of_eq ((π.boxes.sort_nodup Box.lex_le).get_inj_iff.1 h)
+  exact upper_le_lower_of_disjoint_box_of_lower_le (π.disjoint_coe_of_mem
+    ((Finset.mem_sort Box.lex_le).1 (L.get_mem i))
+    ((Finset.mem_sort Box.lex_le).1 (L.get_mem j)) hne)
+    (Prod.Lex.monotone_fst _ _ ((π.boxes.pairwise_sort Box.lex_le).rel_get_of_lt hij))
 
 omit [NormedSpace ℝ F] in
 /-- The total variation over the boxes of a one-dimensional prepartition is bounded by the
 variation on the ambient interval. -/
-lemma sum_eVariationOn_Icc_le_eVariationOn (g : ℝ → F) (hab : a < b)
-    (π : Prepartition (Ioc a b)) :
-    ∑ J ∈ π.boxes, eVariationOn g (Set.Icc (J.lower 0) (J.upper 0)) ≤
-      eVariationOn g (Set.Icc a b) := by
-  let L := π.boxes.sort (fun J K ↦ boxLexKey J ≤ boxLexKey K)
-  have hpair : L.Pairwise (fun J K ↦ J.upper 0 ≤ K.lower 0) :=
-    sorted_boxes_pairwise_upper_le_lower π
-  have hlist := list_sum_eVariationOn_Icc_le_iUnion g L hpair
-  have hsub : {x | ∃ J ∈ L, x ∈ Set.Icc (J.lower 0) (J.upper 0)} ⊆ Set.Icc a b := by
-    intro x hx
-    rcases hx with ⟨J, hJL, hxJ⟩
-    have hJπ : J ∈ π.boxes :=
-      (Finset.mem_sort (fun J K ↦ boxLexKey J ≤ boxLexKey K)).1 hJL
-    exact Icc_subset_of_box_le_Ioc a b hab (π.le_of_mem hJπ) hxJ
+lemma sum_eVariationOn_Icc_le_eVariationOn (g : ℝ → F) (hab : a < b) (π : Prepartition (Ioc a b)) :
+    ∑ J ∈ π.boxes, eVariationOn g J.Icc₁ ≤ eVariationOn g (Set.Icc a b) := by
+  let L := π.boxes.sort Box.lex_le
   calc
-    ∑ J ∈ π.boxes, eVariationOn g (Set.Icc (J.lower 0) (J.upper 0)) =
-        (L.map fun J ↦ eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).sum := by
-      rw [← Multiset.sum_coe, ← Multiset.map_coe, Finset.sort_eq]
-      rfl
-    _ ≤ eVariationOn g {x | ∃ J ∈ L, x ∈ Set.Icc (J.lower 0) (J.upper 0)} := hlist
-    _ ≤ eVariationOn g (Set.Icc a b) := eVariationOn.mono g hsub
+    _ = (L.map fun J ↦ eVariationOn g J.Icc₁).sum := by
+      rw [← Multiset.sum_coe, ← Multiset.map_coe, Finset.sort_eq]; rfl
+    _ ≤ eVariationOn g {x | ∃ J ∈ L, x ∈ J.Icc₁ } :=
+      list_sum_eVariationOn_Icc_le_iUnion g L (sorted_boxes_pairwise_upper_le_lower π)
+    _ ≤ _ := by
+      apply eVariationOn.mono g
+      rintro x ⟨J, hJL, hxJ⟩
+      exact Icc_subset_of_box_le_Ioc hab (π.le_of_mem ((Finset.mem_sort Box.lex_le).1 hJL)) hxJ
+
+end Sorted
 
 omit [NormedSpace ℝ F] in
 /-- Real-valued form of `sum_eVariationOn_Icc_le_eVariationOn` under finite total variation. -/
 lemma sum_eVariationOn_Icc_toReal_le_eVariationOn (g : ℝ → F) (hab : a < b)
     (hg : BoundedVariationOn g (Set.Icc a b)) (π : Prepartition (Ioc a b)) :
-    ∑ J ∈ π.boxes, (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal ≤
+    ∑ J ∈ π.boxes, (eVariationOn g J.Icc₁).toReal ≤
       (eVariationOn g (Set.Icc a b)).toReal := by
-  have hfin : ∀ J ∈ π.boxes, eVariationOn g (Set.Icc (J.lower 0) (J.upper 0)) ≠ ⊤ := by
-    intro J hJ
-    exact hg.mono (Icc_subset_of_box_le_Ioc a b hab (π.le_of_mem hJ))
+  have hfin : ∀ J ∈ π.boxes, eVariationOn g J.Icc₁ ≠ ⊤ :=
+    fun J hJ ↦ hg.mono (Icc_subset_of_box_le_Ioc hab (π.le_of_mem hJ))
   rw [← ENNReal.toReal_sum hfin]
   exact ENNReal.toReal_mono hg (sum_eVariationOn_Icc_le_eVariationOn a b g hab π)
 
