@@ -1077,6 +1077,11 @@ theorem integral_of_derivative {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab 
     (hf : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
 
+theorem integrable_of_bounded_variation {a b : ℝ} {f : ℝ → E} (hab : a < b)
+    (hg : BoundedVariationOn f (.Icc a b)) :
+    RiemannIntegrable a b f := by
+  sorry
+
 /-- Theorem A.4. Suppose that g has bounded variation, and put g∗(x) = Varₐˣ g. Then
 ‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dg∗(x),
 provided that both integrals exist. -/
