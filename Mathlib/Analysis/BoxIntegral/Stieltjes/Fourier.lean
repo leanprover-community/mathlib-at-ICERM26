@@ -65,7 +65,7 @@ lemma hasDerivAt_E {ξ : ℝ} (hξ : ξ ≠ 0) : HasDerivAt (E ξ) (e ξ x) x :=
   simp
 
 @[simp]
-lemma deriv_E {ξ : ℝ} (hξ : ξ ≠ 0) : deriv (E ξ) = e ξ := by ext x; exact (hasDerivAt_E x hξ).deriv
+lemma deriv_E {ξ : ℝ} (hξ : ξ ≠ 0) : deriv (E ξ) = e ξ := by ext; exact (hasDerivAt_E _ hξ).deriv
 
 theorem intervalIntegral_e_eq_primitive_sub {ξ : ℝ} (hξ : ξ ≠ 0) :
     ∫ x in a..b, e ξ x = E ξ b - E ξ a :=
@@ -113,8 +113,7 @@ theorem hasStieltjesIntegral_E
 /-- The ordinary Fourier integral over a finite interval is the Stieltjes integral against the
 Fourier antiderivative, up to the boundary term supplied by integration by parts. -/
 theorem interval_fourierIntegral_eq_boundary_sub_stieltjes
-    {g : ℝ → ℂ} (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0)
-    (hg : BoundedVariationOn g (.Icc a b)) :
+    {g : ℝ → ℂ} (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0) (hg : BoundedVariationOn g (.Icc a b)) :
     (∫ x in a..b, e ξ x * g x) =
       g b * E ξ b -
         g a * E ξ a -
@@ -128,9 +127,7 @@ theorem interval_fourierIntegral_eq_boundary_sub_stieltjes
 
 theorem tendsto_fourier_boundary_zero_of_tendsto
     {g : ℝ → ℂ} (hg_top : atTop.Tendsto g (nhds 0)) (hg_bot : atBot.Tendsto g (nhds 0)) (ξ : ℝ) :
-    atTop.Tendsto
-      (fun R ↦ g R * E ξ R - g (-R) * E ξ (-R))
-      (nhds 0) := by
+    atTop.Tendsto (fun R ↦ g R * E ξ R - g (-R) * E ξ (-R)) (nhds 0) := by
   simpa using (hg_top.zero_mul_isBoundedUnder_le
       (isBoundedUnder_norm_E_atTop ξ id)).sub
     ((hg_bot.comp tendsto_neg_atTop_atBot).zero_mul_isBoundedUnder_le
@@ -270,7 +267,6 @@ lemma fourier_bounded_variation
   intro ξ hξ
   obtain ⟨L, _, hb, hc⟩ := fourier_tendsto_stieltjesPrimitive_of_boundedVariation hg1 hg2 hξ
   simpa [hb] using hc
-
 
 end
 end FourierStieltjes
@@ -448,7 +444,8 @@ end FourierStieltjes
   --   have hvarsum :
   --       ∑ J ∈ π.boxes, (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal ≤ V := by
   --     unfold V
-  --     apply sum_eVariationOn_Icc_toReal_le_eVariationOn (a := a) (b := b) g hab hg π.toPrepartition
+  --     apply sum_eVariationOn_Icc_toReal_le_eVariationOn (a := a) (b := b) g hab hg
+  --       π.toPrepartition
   --   have hv : 2 * ρ * V ≤ ε := by
   --     unfold ρ
   --     calc
