@@ -31,6 +31,8 @@ def Box.upper₁ (J : Box (Fin 1)) : ℝ := J.upper 0
 
 lemma Box.lower_lt_upper₁ (J : Box (Fin 1)) : J.lower₁ < J.upper₁ := J.lower_lt_upper 0
 
+lemma Box.lower_le_upper₁ (J : Box (Fin 1)) : J.lower₁ ≤ J.upper₁ := J.lower_le_upper 0
+
 def Box.toSet₁ (J : Box (Fin 1)) : Set ℝ := Set.Ioc J.lower₁ J.upper₁
 
 @[simp]
