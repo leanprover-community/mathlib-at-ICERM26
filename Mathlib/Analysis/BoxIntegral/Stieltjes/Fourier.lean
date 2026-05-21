@@ -14,6 +14,8 @@ public import Mathlib.Analysis.Complex.RealDeriv
 public import Mathlib.Analysis.Fourier.FourierTransform
 public import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 public import Mathlib.MeasureTheory.Integral.IntegralEqImproper
+public import Mathlib.Topology.EMetricSpace.BoundedVariation
+public import Mathlib.MeasureTheory.Function.L1Space.Integrable
 
 /-! # Fourier transform estimates via the Riemann–Stieltjes integral
 
@@ -25,13 +27,55 @@ In this file we obtain estimates on Fourier transforms via the Riemann–Stieltj
 @[expose] public section
 
 
--- TODO: find a namespace
-
-section FourierStieltjes
-
 open BoxIntegral ContinuousLinearMap TaggedPrepartition Prepartition
 open scoped FourierTransform
 open Filter Complex MeasureTheory intervalIntegral
+
+section Asymptotic
+
+variable {E : Type*} [NormedAddCommGroup E] [CompleteSpace E] {f : ℝ → E}
+
+lemma atTop_limUnder_of_integrable_boundedVariationOn
+    (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) : atTop.limUnder f = 0 := by
+  have hlim := hf2.tendsto_atTop_limUnder
+  set L := atTop.limUnder f
+  by_contra! hL
+  have hpos : 0 < ‖L‖/2 := by positivity
+  simp only [Metric.tendsto_nhds, gt_iff_lt, eventually_atTop, ge_iff_le] at hlim
+  obtain ⟨ R, hR ⟩ := hlim (‖L‖/2) hpos
+  have : Set.Ici R ⊆ {x | ‖L‖ / 2 < ‖f x‖} := by
+    peel hR with x hx hR
+    simp only [Set.mem_setOf_eq, dist_eq_norm] at hR ⊢
+    linarith [norm_le_norm_add_norm_sub (f x) L]
+  exact (hf1.measure_norm_gt_lt_top hpos).ne (measure_mono_top this (by simp))
+
+lemma tendsto_zero_atTop_of_integrable_boundedVariationOn
+    (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) : atTop.Tendsto f (nhds 0) :=
+  (atTop_limUnder_of_integrable_boundedVariationOn hf1 hf2) ▸ hf2.tendsto_atTop_limUnder
+
+lemma atBot_limUnder_of_integrable_boundedVariationOn
+    (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) : atBot.limUnder f = 0 := by
+  have hlim := hf2.tendsto_atBot_limUnder
+  set L := atBot.limUnder f
+  by_contra! hL
+  have hpos : 0 < ‖L‖/2 := by positivity
+  simp only [Metric.tendsto_nhds, gt_iff_lt, eventually_atBot] at hlim
+  obtain ⟨ R, hR ⟩ := hlim (‖L‖/2) hpos
+  have : Set.Iic R ⊆ {x | ‖L‖ / 2 < ‖f x‖} := by
+    peel hR with x hx hR
+    simp only [Set.mem_setOf_eq, dist_eq_norm] at hR ⊢
+    linarith [norm_le_norm_add_norm_sub (f x) L]
+  exact (hf1.measure_norm_gt_lt_top hpos).ne (measure_mono_top this (by simp))
+
+lemma tendsto_zero_atBot_of_integrable_boundedVariationOn
+    (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) : atBot.Tendsto f (nhds 0) :=
+  (atBot_limUnder_of_integrable_boundedVariationOn hf1 hf2) ▸ hf2.tendsto_atBot_limUnder
+
+end Asymptotic
+
+-- TODO: find a namespace
+
+section FourierStieltjes
 
 variable {a b : ℝ} (ξ x : ℝ)
 
@@ -133,89 +177,6 @@ theorem tendsto_fourier_boundary_zero_of_tendsto
     ((hg_bot.comp tendsto_neg_atTop_atBot).zero_mul_isBoundedUnder_le
       (isBoundedUnder_norm_E_atTop ξ _))
 
--- TODO: generalized to arbitrary normed vector spaces (including both R and C) using the
--- existing BoundedVariation API on limits at infinity
-
-lemma tendsto_zero_atTop_of_integrable_boundedVariationOn_real
-    {f : ℝ → ℝ} (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) :
-    atTop.Tendsto f (nhds 0) := by
-  let V : ℝ := (eVariationOn f .univ).toReal
-  let p : ℝ → ℝ := fun x ↦ variationOnFromTo f .univ 0 x
-  let q : ℝ → ℝ := fun x ↦ variationOnFromTo f .univ 0 x - f x
-  have hloc : LocallyBoundedVariationOn f .univ := hf2.locallyBoundedVariationOn
-  have hp_mono : Monotone p :=
-    monotone_iff_forall_lt.mpr (fun _ _ _ ↦
-    monotoneOn_univ.mp (variationOnFromTo.monotoneOn hloc trivial) (by linarith))
-  have hq_mono : Monotone q :=
-    monotoneOn_univ.mp (variationOnFromTo.sub_self_monotoneOn hloc trivial)
-  have hp_bound_point : ∀ x, p x ≤ V := by
-    intro x
-    by_cases hx : 0 ≤ x
-    · unfold p V
-      rw [variationOnFromTo.eq_of_le f .univ hx]
-      exact ENNReal.toReal_mono (by simpa using hf2) (eVariationOn.mono f (fun ⦃_⦄ _ ↦ trivial))
-    · unfold p V
-      push Not at hx
-      simp only [variationOnFromTo.eq_of_ge f .univ hx.le, Set.univ_inter]
-      have : 0 ≤ (eVariationOn f (.Icc x 0)).toReal := ENNReal.toReal_nonneg
-      calc
-         _ ≤ (eVariationOn f (.Icc x 0)).toReal := by linarith
-         _ ≤ _ :=
-          ENNReal.toReal_mono (by simpa using hf2) (eVariationOn.mono f (fun ⦃_⦄ _ ↦ trivial))
-  have hp_tend : atTop.Tendsto p (nhds (⨆ x, p x)) :=
-    tendsto_atTop_ciSup hp_mono ⟨ V, mem_upperBounds.mpr (by simpa using hp_bound_point) ⟩
-  have hq_tend : atTop.Tendsto q (nhds (⨆ x, q x)) := by
-    refine tendsto_atTop_ciSup hq_mono ⟨V + (V - f 0), ?_ ⟩
-    rintro y ⟨x,rfl⟩
-    unfold q
-    have : f 0 - f x ≤ V := hf2.sub_le trivial trivial
-    linarith [hp_bound_point x]
-  have hf_tend : atTop.Tendsto f (nhds ((⨆ x, p x) - (⨆ x, q x))) := by
-    convert hp_tend.sub hq_tend using 1
-    ext; dsimp [p, q]; ring
-  have hzero : ((⨆ x, p x) - (⨆ x, q x)) = 0 := by
-    refine IntegrableAtFilter.eq_zero_of_tendsto (hf1.integrableAtFilter atTop) ?_ hf_tend
-    intro s hs; rcases mem_atTop_sets.1 hs with ⟨b, hb⟩
-    rw [← top_le_iff, ← Real.volume_Ici]
-    exact measure_mono hb
-  simpa [hzero] using hf_tend
-
-lemma tendsto_zero_atBot_of_integrable_boundedVariationOn_real
-    {f : ℝ → ℝ} (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) :
-    atBot.Tendsto f (nhds 0) := by
-  have hcomp_bv : eVariationOn (f ∘ Neg.neg) .univ ≠ ⊤ := by
-    rw [eVariationOn.comp_eq_of_antitoneOn f Neg.neg (fun x _ y _ hxy ↦ neg_le_neg hxy)]
-    have himage : Set.range (Neg.neg : ℝ → ℝ) = .univ := by
-      ext x; exact ⟨ fun _ ↦ trivial, fun _ ↦ ⟨-x, by simp⟩ ⟩
-    simpa [himage] using hf2
-  simpa [Function.comp_def] using (tendsto_zero_atTop_of_integrable_boundedVariationOn_real
-    (((Measure.measurePreserving_neg volume).integrable_comp_emb measurableEmbedding_neg).2 hf1)
-      hcomp_bv).comp tendsto_neg_atBot_atTop
-
-lemma tendsto_complex_zero_of_re_im {ι : Type*} {l : Filter ι} {g : ι → ℂ}
-    (hre : l.Tendsto (reCLM ∘ g) (nhds 0)) (him : l.Tendsto (imCLM ∘ g) (nhds 0)) :
-    l.Tendsto g (nhds 0) := by
-  simpa using (equivRealProdCLM.symm.continuous.tendsto' (0, 0) (equivRealProdCLM.symm (0, 0))
-    rfl).comp (hre.prodMk_nhds him)
-
-lemma tendsto_zero_atTop_of_integrable_boundedVariationOn_complex
-    {g : ℝ → ℂ} (hg1 : Integrable g) (hg2 : BoundedVariationOn g .univ) :
-    atTop.Tendsto g (nhds 0) :=
-  tendsto_complex_zero_of_re_im
-    (tendsto_zero_atTop_of_integrable_boundedVariationOn_real (reCLM.integrable_comp hg1)
-      (reCLM.lipschitz.comp_boundedVariationOn hg2))
-    (tendsto_zero_atTop_of_integrable_boundedVariationOn_real (imCLM.integrable_comp hg1)
-      (imCLM.lipschitz.comp_boundedVariationOn hg2))
-
-lemma tendsto_zero_atBot_of_integrable_boundedVariationOn_complex
-    {g : ℝ → ℂ} (hg1 : Integrable g) (hg2 : BoundedVariationOn g .univ) :
-    atBot.Tendsto g (nhds 0) :=
-  tendsto_complex_zero_of_re_im
-    (tendsto_zero_atBot_of_integrable_boundedVariationOn_real (reCLM.integrable_comp hg1)
-      (reCLM.lipschitz.comp_boundedVariationOn hg2))
-    (tendsto_zero_atBot_of_integrable_boundedVariationOn_real (imCLM.integrable_comp hg1)
-      (imCLM.lipschitz.comp_boundedVariationOn hg2))
-
 theorem tendsto_fourier_boundary_zero
     {g : ℝ → ℂ} (hg1 : MeasureTheory.Integrable g)
     (hg2 : BoundedVariationOn g .univ) (ξ : ℝ) :
@@ -223,8 +184,8 @@ theorem tendsto_fourier_boundary_zero
       (fun R ↦ g R * E ξ R - g (-R) * E ξ (-R))
       (nhds 0) :=
   tendsto_fourier_boundary_zero_of_tendsto
-    (tendsto_zero_atTop_of_integrable_boundedVariationOn_complex hg1 hg2)
-    (tendsto_zero_atBot_of_integrable_boundedVariationOn_complex hg1 hg2) ξ
+    (tendsto_zero_atTop_of_integrable_boundedVariationOn hg1 hg2)
+    (tendsto_zero_atBot_of_integrable_boundedVariationOn hg1 hg2) ξ
 
 lemma integrable_e_mul
     {g : ℝ → ℂ} (hg : Integrable g) (ξ : ℝ) :
