@@ -87,7 +87,8 @@ theorem norm_stieltjesIntegral_E_le
   calc
     _ ≤ ‖(mul ℝ ℂ)‖ * (|ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) * (eVariationOn g (.Icc a b)).toReal) := by
       apply integral_le_integral_of_variation hab hg
-        (exists_of_continuousOn_of_boundedVariationOn _ hab (by fun_prop) hg).hasStieltjesIntegral
+        (StieltjesIntegrable.of_continuousOn_of_boundedVariationOn _
+          hab (by fun_prop) hg).hasStieltjesIntegral
       simp only [E, inv_neg, mul_inv_rev, inv_I, neg_mul, mul_neg, neg_neg, Complex.norm_mul,
         norm_inv, norm_real, Real.norm_eq_abs, norm_I, Real.pi_nonneg, abs_of_nonneg, norm_ofNat,
         one_mul, norm_e, mul_one]
@@ -119,9 +120,8 @@ theorem interval_fourierIntegral_eq_boundary_sub_stieltjes
         g a * E ξ a -
           ∫⟨mul ℝ ℂ⟩ x in a..b, E ξ x ∂g := by
   have hInt : StieltjesIntegrable a b (mul ℝ ℂ) (E ξ) g :=
-    exists_of_continuousOn_of_boundedVariationOn _ hab (by fun_prop) hg
-  rw [(hasStieltjesIntegral_E
-      hab hξ (integrable_of_bounded_variation hab hg)).stieltjesIntegral_eq.symm,
+    .of_continuousOn_of_boundedVariationOn _ hab (by fun_prop) hg
+  rw [(hasStieltjesIntegral_E hab hξ (hg.riemannIntegrable hab.le)).stieltjesIntegral_eq.symm,
       stieltjesIntegral.by_parts hInt]
   simp [mul_comm]
 
@@ -132,6 +132,9 @@ theorem tendsto_fourier_boundary_zero_of_tendsto
       (isBoundedUnder_norm_E_atTop ξ id)).sub
     ((hg_bot.comp tendsto_neg_atTop_atBot).zero_mul_isBoundedUnder_le
       (isBoundedUnder_norm_E_atTop ξ _))
+
+-- TODO: generalized to arbitrary normed vector spaces (including both R and C) using the
+-- existing BoundedVariation API on limits at infinity
 
 lemma tendsto_zero_atTop_of_integrable_boundedVariationOn_real
     {f : ℝ → ℝ} (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) :
@@ -349,7 +352,11 @@ end FourierStieltjes
 --     g J.lower_le_upper₁ (hg.mono (by grind)) ξ)
 
 
-
+-- theorem hasStieltjesIntegral_E
+--     {g : ℝ → ℂ} (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0)
+--     (hg : RiemannIntegrable a b g) :
+--     HasStieltjesIntegral a b (mul ℝ ℂ).flip g (E ξ)
+--       (∫ x in a..b, e ξ x * g x) := by
   -- rw [HasStieltjesIntegral.of_lt _ _ _ _ hab]
   -- refine BoxIntegral.hasIntegral_iff.2 fun ε hε ↦ ?_
   -- let V : ℝ := (eVariationOn g (.Icc a b)).toReal

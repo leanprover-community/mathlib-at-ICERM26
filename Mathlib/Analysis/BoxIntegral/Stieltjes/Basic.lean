@@ -57,9 +57,10 @@ existing Mathlib examples and style guides.
 * Develop a higher-dimensional Stieltjes integral (exists in the literature, but is rarely used)
 * Develop a Stieltjes integral based around `Ico` intervals rather than `Ioc` intervals
 * Other variants of Stieltjes integration, such as the Henstock-Stieltjes integral
-* Interpretation of `ofDiff` as a measure (assuming monotonicity)
-* Interpretation of `ofDiff` as a signed measure (assuming bounded variation).  This requires
-the development of signed measures in Mathlib
+* Interpretation of `ofDiff` as a measure (assuming Stieltjes measure): see
+  https://leanprover-community.github.io/mathlib4_docs/Mathlib/MeasureTheory/Measure/Stieltjes.html
+* Interpretation of `ofDiff` as a signed measure (assuming bounded variation and right continuity).
+This requires the development of signed measures in Mathlib
 * Comparison/monotonicity theorems
 
 ## Tags
@@ -969,7 +970,7 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
 
 /-- Theorem A.1 of Montgomery-Vaughan: a continuous integrand and a bounded-variation integrator
 have a Riemann-Stieltjes integral. -/
-theorem exists_of_continuousOn_of_boundedVariationOn [CompleteSpace G] {a b : ℝ}
+theorem StieltjesIntegrable.of_continuousOn_of_boundedVariationOn [CompleteSpace G] {a b : ℝ}
     {f : ℝ → E} {g : ℝ → F} (hab : a < b)
     (hf : ContinuousOn f (.Icc a b)) (hg : BoundedVariationOn g (.Icc a b)) :
     StieltjesIntegrable a b B f g := by
@@ -977,6 +978,13 @@ theorem exists_of_continuousOn_of_boundedVariationOn [CompleteSpace G] {a b : �
     hab IntegrationParams.Riemann hf hg
   use L
   simp [HasStieltjesIntegral, HasStieltjesIntegral', hab.ne, hab, hL]
+
+theorem RiemannIntegrable.of_continuousOn [CompleteSpace E] {a b : ℝ} {f : ℝ → E}
+    (hab : a < b) (hf : ContinuousOn f (.Icc a b)) :
+    RiemannIntegrable a b f := by
+  apply StieltjesIntegrable.of_continuousOn_of_boundedVariationOn _ hab hf _
+  convert (MonotoneOn.locallyBoundedVariationOn (s := .Icc a b) _) a b _ _ <;> try grind
+  intro x hx y hy hxy; simpa using hxy
 
 /-- given an interval [a,b], if c,d ∈ [a,b], then |c - d| < b -a -/
 lemma dist_mem_Icc_le {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
@@ -1076,11 +1084,6 @@ theorem integral_of_derivative {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab 
     (hg : ContDiffOn ℝ 1 g (.Icc a b))
     (hf : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
-
-theorem integrable_of_bounded_variation {a b : ℝ} {f : ℝ → E} (hab : a < b)
-    (hg : BoundedVariationOn f (.Icc a b)) :
-    RiemannIntegrable a b f := by
-  sorry
 
 /-- Theorem A.4. Suppose that g has bounded variation, and put g∗(x) = Varₐˣ g. Then
 ‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dg∗(x),

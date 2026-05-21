@@ -24,8 +24,47 @@ In this file we establish how integration by parts API for the Riemann–Stieltj
 open scoped BigOperators
 open BoxIntegral
 
+
+/-! ## Helper lemmas
+
+These should be upstreamed to Mathlib eventually.
+-/
+
+@[simp]
+theorem BoundedVariationOn.subsingleton {α : Type*} [LinearOrder α] {E : Type*}
+    [PseudoEMetricSpace E] (f : α → E) {s : Set α} (hs : s.Subsingleton) :
+  BoundedVariationOn f s := by
+    simp [BoundedVariationOn, hs]
+
+theorem MonotoneOn.boundedVariationOn {a b : ℝ} {f : ℝ → ℝ}
+    (hf : MonotoneOn f (.Icc a b)) :
+    BoundedVariationOn f (.Icc a b) := by
+  rcases lt_trichotomy a b with (hab | rfl | hab)
+  · convert hf.locallyBoundedVariationOn a b _ _ <;> grind
+  · simp
+  simp [hab]
+
+theorem BoundedVariationOn.neg {α : Type*} [LinearOrder α] {E : Type*} [NormedAddCommGroup E]
+    [NormedSpace ℝ E] {f : α → E} {s : Set α} (hf : BoundedVariationOn f s) :
+    BoundedVariationOn (- f ·) s := by
+  have : LipschitzOnWith 1 (-· : E → E) .univ := by intro _ _ _ _; simp
+  exact LipschitzOnWith.comp_boundedVariationOn this (by aesop) hf
+
+theorem BoundedVariationOn.neg_iff {α : Type*} [LinearOrder α] {E : Type*} [NormedAddCommGroup E]
+    [NormedSpace ℝ E] (f : α → E) (s : Set α) :
+    BoundedVariationOn f s ↔ BoundedVariationOn (- f ·) s :=
+  ⟨fun hf ↦ hf.neg, fun hf ↦ by simpa using hf.neg⟩
+
+theorem AntitoneOn.boundedVariationOn {a b : ℝ} {f : ℝ → ℝ}
+    (hf : AntitoneOn f (.Icc a b)) :
+    BoundedVariationOn f (.Icc a b) := by
+  have : AntitoneOn (-· : ℝ → ℝ) .univ  := by intro _ _ _ _; aesop
+  convert ((this.comp hf _).boundedVariationOn).neg using 1 <;> aesop
+
+
 namespace BoxIntegral.TaggedDivision
 
+/-! ## Partitions -/
 namespace DualPartition
 
 def x (π : TaggedDivision) : Fin (π.N + 2) → ℝ :=
@@ -231,6 +270,9 @@ theorem StieltjesIntegrable.by_parts {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
     (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable a b B.flip g f := ⟨_, h.hasStieltjesIntegral.by_parts⟩
 
+theorem StieltjesIntegrable.symm_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
+  : StieltjesIntegrable a b B f g ↔ StieltjesIntegrable a b B.flip g f := ⟨by_parts, by_parts⟩
+
 theorem stieltjesIntegral.by_parts {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
     (h : StieltjesIntegrable a b B f g) :
     ∫⟨B.flip⟩ x in a..b, g x ∂f = B (f b) (g b) - B (f a) (g a) - ∫⟨B⟩ x in a..b, f x ∂g := by
@@ -250,5 +292,22 @@ theorem StieltjesIntegrable.of_const (c : E) (g : ℝ → F) :
 theorem stieltjesIntegral.of_const (c : E) (g : ℝ → F) :
     ∫⟨B⟩ _ in a..b, c ∂g = B c (g b) - B c (g a) :=
   (HasStieltjesIntegral.of_const B c g).stieltjesIntegral_eq
+
+theorem BoundedVariationOn.riemannIntegrable [CompleteSpace E] {a b : ℝ} {f : ℝ → E}
+    (hab : a ≤ b) (hf : BoundedVariationOn f (.Icc a b)) :
+    RiemannIntegrable a b f := by
+  rcases eq_or_lt_of_le hab with (rfl | hab)
+  · simp
+  unfold RiemannIntegrable
+  rw [StieltjesIntegrable.symm_right]
+  exact .of_continuousOn_of_boundedVariationOn _ hab (by fun_prop) hf
+
+theorem MonotoneOn.riemannIntegrable {a b : ℝ} {f : ℝ → ℝ} (hab : a ≤ b)
+    (hf : MonotoneOn f (.Icc a b)) :
+    RiemannIntegrable a b f := hf.boundedVariationOn.riemannIntegrable hab
+
+theorem AntitoneOn.riemannIntegrable {a b : ℝ} {f : ℝ → ℝ} (hab : a ≤ b)
+    (hf : AntitoneOn f (.Icc a b)) :
+    RiemannIntegrable a b f := hf.boundedVariationOn.riemannIntegrable hab
 
 end BoxIntegral

@@ -1063,7 +1063,7 @@ theorem HasIntegral.sum_of_isPartition [CompleteSpace F] {π : Prepartition I} (
   rw [hsum]
   exact hI.hasIntegral
 
-/-- Two-box specialization of `HasIntegral.sum_of_isPartition`.  -/
+/-- Two-box specialization of `HasIntegral.sum_of_isPartition`. -/
 theorem HasIntegral.split [CompleteSpace F] (i : ι) (x : ℝ) {J_lo J_hi : Box ι}
     (h_lower : I.splitLower i x = ↑J_lo) (h_upper : I.splitUpper i x = ↑J_hi)
     {vol : ι →ᵇᵃ E →L[ℝ] F} (hI : Integrable I l f vol) {y_lo y_hi : F}

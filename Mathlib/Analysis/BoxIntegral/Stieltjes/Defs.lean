@@ -241,7 +241,7 @@ theorem hasStieltjesIntegral'_congr {a b : ℝ} (hab : a < b)
     simp only [hab, Icc_of_Ioc, Fin.isValue, Set.mem_setOf_eq] at hx ⊢
     exact hf hx
   intro J hJ
-  simp only [Set.mem_Iic, Box.le_Ioc_iff hab, Fin.isValue, BoxAdditiveMap.ofDiff_apply] at hJ ⊢
+  simp only [Set.mem_Iic, Box.le_Ioc_iff hab, BoxAdditiveMap.ofDiff_apply] at hJ ⊢
   have := J.lower_lt_upper₁
   congr 2 <;> exact hg (by grind)
 
@@ -296,6 +296,9 @@ lemma RiemannIntegrable.def :
 
 lemma RiemannIntegrable.symm {a b : ℝ} {f : ℝ → E} (h : RiemannIntegrable a b f) :
     RiemannIntegrable b a f := StieltjesIntegrable.symm h
+
+@[simp]
+lemma RiemannIntegrable.of_eq : RiemannIntegrable a a f := StieltjesIntegrable.of_eq _ _ _ _
 
 theorem RiemannIntegrable.iff_integrable {a b : ℝ} (hab : a < b) :
     RiemannIntegrable a b f ↔
