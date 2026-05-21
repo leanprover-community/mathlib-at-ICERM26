@@ -9,7 +9,7 @@ was conducted.
 -/
 module
 
-public import Mathlib.Analysis.BoxIntegral.Stieltjes.Basic
+public import Mathlib.Analysis.BoxIntegral.Stieltjes.IntegrationByParts
 public import Mathlib.Analysis.Complex.RealDeriv
 public import Mathlib.Analysis.Fourier.FourierTransform
 public import Mathlib.Analysis.SpecialFunctions.ExpDeriv
@@ -24,16 +24,14 @@ In this file we obtain estimates on Fourier transforms via the Riemann–Stieltj
 
 @[expose] public section
 
-open BoxIntegral
-open ContinuousLinearMap TaggedPrepartition Metric
-open Prepartition hiding mem_mk
-open Finset hiding Ioc mem_mk
-open Fin hiding zero_lt_one
 
 -- TODO: find a namespace
 
 section FourierStieltjes
 
+open BoxIntegral ContinuousLinearMap
+open TaggedPrepartition
+open Prepartition hiding mem_mk
 open scoped FourierTransform
 open Filter Complex
 open MeasureTheory
@@ -41,115 +39,85 @@ open MeasureTheory
 variable {a b : ℝ}
 
 noncomputable def fourierKernel (ξ : ℝ) (x : ℝ) : ℂ :=
-  Complex.exp ((↑(-2 * Real.pi * x * ξ) : ℂ) * Complex.I)
-
+  exp ((↑(-2 * Real.pi * x * ξ) : ℂ) * I)
 
 noncomputable def fourierStieltjesPrimitive (ξ : ℝ) (x : ℝ) : ℂ :=
-  (-(2 * Real.pi * Complex.I * (ξ : ℂ)))⁻¹ * fourierKernel ξ x
+  (-(2 * Real.pi * I * (ξ : ℂ)))⁻¹ * fourierKernel ξ x
 
 @[simp]
-lemma norm_fourierKernel (ξ x : ℝ) : ‖fourierKernel ξ x‖ = 1 := by
-  unfold fourierKernel
-  apply Complex.norm_exp_ofReal_mul_I
+lemma norm_fourierKernel (ξ x : ℝ) : ‖fourierKernel ξ x‖ = 1 := by apply norm_exp_ofReal_mul_I
 
 @[fun_prop]
 lemma continuous_fourierKernel (ξ : ℝ) : Continuous (fourierKernel ξ) := by
-  unfold fourierKernel
-  fun_prop
+  unfold fourierKernel; fun_prop
 
 @[fun_prop]
 lemma continuous_fourierStieltjesPrimitive (ξ : ℝ) :
     Continuous (fourierStieltjesPrimitive ξ) := by
-  unfold fourierStieltjesPrimitive
-  fun_prop
-
+  unfold fourierStieltjesPrimitive; fun_prop
 noncomputable section
 
-lemma hasDerivAt_fourierKernel (ξ x : ℝ) :
-    HasDerivAt (fourierKernel ξ) /-Note that fourierKernel ξ is a definition-/
-      (fourierKernel ξ x * ((↑(-2 * Real.pi * ξ) : ℂ) * Complex.I)) x := by
-  unfold fourierKernel
+lemma hasDerivAt_fourierKernel (ξ x : ℝ) : HasDerivAt (fourierKernel ξ)
+    (fourierKernel ξ x * ((↑(-2 * Real.pi * ξ) : ℂ) * I)) x := by
   have ha : HasDerivAt (fun (x:ℝ) => (-2 * Real.pi * x :ℝ)) (-2*Real.pi : ℝ) x := by
     convert (hasDerivAt_const x ((-2 * Real.pi):ℝ)).mul (hasDerivAt_id x) using 1
     simp
   have h1 : HasDerivAt (fun (x:ℝ) => (-2 * Real.pi * x * ξ :ℝ)) (-2*Real.pi*ξ : ℝ) x := by
     convert ha.mul (hasDerivAt_const x (ξ:ℝ)) using 1
     simp
-  have h2 : HasDerivAt (fun (x:ℝ) => (((-2 * Real.pi * x * ξ) :ℝ):ℂ)) ((-2*Real.pi*ξ : ℝ) : ℂ) x := by
-    exact HasDerivAt.ofReal_comp h1
-  have h3 : HasDerivAt (fun y : ℝ => (↑(-2 * Real.pi * y * ξ) * Complex.I)) (↑(-2 * Real.pi * ξ) * Complex.I) x := by
-    exact HasDerivAt.mul_const h2 I
-  exact h3.cexp
-
-
+  exact (HasDerivAt.mul_const h1.ofReal_comp I).cexp
 
 lemma fourierStieltjes_den_ne_zero (ξ : ℝ) (hξ : ξ ≠ 0) :
-    (-(2 * Real.pi * Complex.I * (ξ : ℂ)) : ℂ) ≠ 0 := by
-  norm_num
-  apply hξ
+    (-(2 * Real.pi * I * (ξ : ℂ)) : ℂ) ≠ 0 := by norm_num [hξ]
 
 lemma hasDerivAt_fourierStieltjesPrimitive (ξ x : ℝ) (hξ : ξ ≠ 0) :
     HasDerivAt (fourierStieltjesPrimitive ξ) (fourierKernel ξ x) x := by
-  unfold fourierStieltjesPrimitive
-  convert (hasDerivAt_const x ((-(2 * ↑Real.pi * I * ↑ξ))⁻¹ : ℂ)).mul (hasDerivAt_fourierKernel ξ x) using 1
+  convert (hasDerivAt_const x ((-(2 * ↑Real.pi * I * ↑ξ))⁻¹ : ℂ)).mul
+    (hasDerivAt_fourierKernel ξ x) using 1
   unfold fourierKernel
-  field_simp [hξ, Real.pi_ne_zero, Complex.I_ne_zero]
+  field_simp [hξ, Real.pi_ne_zero, I_ne_zero]
   simp
-
-
-
-
 
 theorem intervalIntegral_fourierKernel_eq_primitive_sub (ξ : ℝ) (hξ : ξ ≠ 0) :
     (∫ x in a..b, fourierKernel ξ x) =
       fourierStieltjesPrimitive ξ b - fourierStieltjesPrimitive ξ a := by
   refine intervalIntegral.integral_eq_sub_of_hasDerivAt ?_ ?_
-  intro x hx
-  apply (hasDerivAt_fourierStieltjesPrimitive ξ x)
-  apply hξ
+  · intro x hx
+    apply (hasDerivAt_fourierStieltjesPrimitive ξ x)
+    apply hξ
   apply (continuous_fourierKernel ξ).intervalIntegrable a b
 
 lemma norm_fourierStieltjesPrimitive (ξ x : ℝ) :
     ‖fourierStieltjesPrimitive ξ x‖ =
-      ‖((2 * Real.pi * Complex.I * (ξ : ℂ))⁻¹ : ℂ)‖ := by
-  unfold fourierStieltjesPrimitive
-  simp
+      ‖((2 * Real.pi * I * (ξ : ℂ))⁻¹ : ℂ)‖ := by simp [fourierStieltjesPrimitive]
 
 
 lemma norm_fourier_denominator (ξ : ℝ) :
-    ‖(2 * Real.pi * Complex.I * (ξ : ℂ) : ℂ)‖ = 2 * Real.pi * ‖ξ‖ := by
+    ‖(2 * Real.pi * I * (ξ : ℂ) : ℂ)‖ = 2 * Real.pi * ‖ξ‖ := by
   calc
-    ‖(2 * Real.pi * Complex.I * (ξ : ℂ) : ℂ)‖ = 2 * ‖Real.pi‖ * 1 * ‖ξ‖ := by aesop
-    _ = 2 * Real.pi * 1 * ‖ξ‖ := by simp [abs_of_pos Real.pi_pos]
-    _ = 2 * Real.pi * ‖ξ‖ := by ring
+    _ = 2 * ‖Real.pi‖ * 1 * ‖ξ‖ := by aesop
+    _ = 2 * Real.pi * ‖ξ‖ := by simp [abs_of_pos Real.pi_pos]
 
 lemma norm_fourierStieltjesPrimitive_eq_inv_freq (ξ x : ℝ) :
     ‖fourierStieltjesPrimitive ξ x‖ = 1 / (2 * Real.pi * ‖ξ‖) := by
-  rw [norm_fourierStieltjesPrimitive]
-  simp
-  left
-  exact Real.pi_nonneg
+  simp [norm_fourierStieltjesPrimitive, Real.pi_nonneg]
 
-lemma isBoundedUnder_norm_fourierStieltjesPrimitive_atTop (ξ : ℝ) (hξ : ξ ≠ 0)
-    (φ : ℝ → ℝ) :
-    Filter.IsBoundedUnder (· ≤ ·) Filter.atTop
-      (fun R : ℝ => ‖fourierStieltjesPrimitive ξ (φ R)‖) := by
-  refine Filter.isBoundedUnder_of_eventually_le
-    (a := 1 / (2 * Real.pi * ‖ξ‖)) ?_
-  filter_upwards
-  intro a
+lemma isBoundedUnder_norm_fourierStieltjesPrimitive_atTop (ξ : ℝ) (φ : ℝ → ℝ) :
+    Filter.IsBoundedUnder (· ≤ ·) Filter.atTop (‖fourierStieltjesPrimitive ξ <| φ ·‖) := by
+  refine Filter.isBoundedUnder_of_eventually_le (a := 1 / (2 * Real.pi * ‖ξ‖)) ?_
+  filter_upwards; intro a
   simp [norm_fourierStieltjesPrimitive_eq_inv_freq ξ (φ a)]
 
 
 /-- Finite-interval Stieltjes estimate for the Fourier antiderivative. -/
 theorem norm_stieltjesIntegral_fourierStieltjesPrimitive_le
-    (g : ℝ → ℂ) (hab : a < b) (hg : BoundedVariationOn g (Set.Icc a b)) (ξ : ℝ) :
+    (g : ℝ → ℂ) (hab : a < b) (hg : BoundedVariationOn g (.Icc a b)) (ξ : ℝ) :
     ‖stieltjesIntegral a b (mul ℝ ℂ) (fourierStieltjesPrimitive ξ) g‖ ≤
-      ‖((2 * Real.pi * Complex.I * (ξ : ℂ))⁻¹ : ℂ)‖ *
-        (eVariationOn g (Set.Icc a b)).toReal := by
-  let C : ℝ := ‖((2 * Real.pi * Complex.I * (ξ : ℂ))⁻¹ : ℂ)‖
-  let V : ℝ := (eVariationOn g (Set.Icc a b)).toReal
-  let integralUntil : ℝ → ℝ := fun x => (eVariationOn g (Set.Icc a x)).toReal
+      ‖((2 * Real.pi * I * (ξ : ℂ))⁻¹ : ℂ)‖ *
+        (eVariationOn g (.Icc a b)).toReal := by
+  let C : ℝ := ‖((2 * Real.pi * I * (ξ : ℂ))⁻¹ : ℂ)‖
+  let V : ℝ := (eVariationOn g (.Icc a b)).toReal
+  let integralUntil : ℝ → ℝ := fun x => (eVariationOn g (.Icc a x)).toReal
   have hInt : StieltjesIntegrable a b (mul ℝ ℂ) (fourierStieltjesPrimitive ξ) g := by
     exact exists_of_continuousOn_of_boundedVariationOn
       (B := mul ℝ ℂ) hab (continuous_fourierStieltjesPrimitive ξ).continuousOn hg
@@ -167,8 +135,7 @@ theorem norm_stieltjesIntegral_fourierStieltjesPrimitive_le
         ((mul ℝ ℝ) C (integralUntil b) - (mul ℝ ℝ) C (integralUntil a)) :=
       HasStieltjesIntegral.of_const (B := mul ℝ ℝ) (a := a) (b := b) C integralUntil
     convert hconst using 1
-    unfold C fourierStieltjesPrimitive
-    simp
+    · simp [C, fourierStieltjesPrimitive]
     simp [C, V, integralUntil, hintegralUntil_a, mul_comm, mul_left_comm, mul_assoc]
   have hmain := by
     have h1' := integral_le_integral_of_variation (a := a) (b := b) (B := mul ℝ ℂ)
@@ -190,46 +157,33 @@ theorem norm_stieltjesIntegral_fourierStieltjesPrimitive_le
 
 
 lemma integrableOn_Icc_of_boundedVariationOn_real {f : ℝ → ℝ}
-    (hf : BoundedVariationOn f (Set.Icc a b)) :
-    MeasureTheory.IntegrableOn f (Set.Icc a b) := by
-  have ha : LocallyBoundedVariationOn f (Set.Icc a b) := hf.locallyBoundedVariationOn
-  rcases ha.exists_monotoneOn_sub_monotoneOn with ⟨p, q, hp, hq, hpq⟩
-  rw [hpq]
-  have h1 : MeasureTheory.IntegrableOn p (Set.Icc a b) := by
-    apply hp.integrableOn_isCompact isCompact_Icc
-  have h2 : MeasureTheory.IntegrableOn q (Set.Icc a b) := by
-    apply hq.integrableOn_isCompact isCompact_Icc
-  apply h1.sub h2
-
+    (hf : BoundedVariationOn f (.Icc a b)) :
+    MeasureTheory.IntegrableOn f (.Icc a b) := by
+  rcases hf.locallyBoundedVariationOn.exists_monotoneOn_sub_monotoneOn with ⟨p, q, hp, hq, rfl⟩
+  exact (hp.integrableOn_isCompact isCompact_Icc).sub (hq.integrableOn_isCompact isCompact_Icc)
 
 lemma integrableOn_Icc_of_boundedVariationOn_complex {g : ℝ → ℂ}
-    (hg : BoundedVariationOn g (Set.Icc a b)) :
-    MeasureTheory.IntegrableOn g (Set.Icc a b) := by
+    (hg : BoundedVariationOn g (.Icc a b)) :
+    MeasureTheory.IntegrableOn g (.Icc a b) := by
   unfold MeasureTheory.IntegrableOn
   rw [← MeasureTheory.Integrable.re_im_iff]
   constructor
   · simpa using
       integrableOn_Icc_of_boundedVariationOn_real (a := a) (b := b)
-        (f := Complex.reCLM ∘ g) (Complex.reCLM.lipschitz.comp_boundedVariationOn hg)
+        (f := reCLM ∘ g) (reCLM.lipschitz.comp_boundedVariationOn hg)
   · simpa using
       integrableOn_Icc_of_boundedVariationOn_real (a := a) (b := b)
-        (f := Complex.imCLM ∘ g) (Complex.imCLM.lipschitz.comp_boundedVariationOn hg)
-
-
-
-
+        (f := imCLM ∘ g) (imCLM.lipschitz.comp_boundedVariationOn hg)
 
 lemma intervalIntegrable_fourierKernel_mul_of_boundedVariationOn
     (g : ℝ → ℂ) (hab : a ≤ b) (hg : BoundedVariationOn g (Set.Icc a b)) (ξ : ℝ) :
     IntervalIntegrable (fun x : ℝ ↦ fourierKernel ξ x * g x)
       MeasureTheory.volume a b := by
   rw [intervalIntegrable_iff_integrableOn_Icc_of_le hab]
-  have ha : MeasureTheory.IntegrableOn g (Set.Icc a b) :=
-    integrableOn_Icc_of_boundedVariationOn_complex (a := a) (b := b) hg
-  refine ha.continuousOn_mul ?_ ?_
+  refine (integrableOn_Icc_of_boundedVariationOn_complex (a := a) (b := b) hg).continuousOn_mul
+    ?_ isCompact_Icc
   unfold fourierKernel
   fun_prop
-  exact isCompact_Icc
 
 
 lemma norm_fourier_stieltjes_subinterval_error_le
@@ -261,77 +215,61 @@ lemma norm_fourier_stieltjes_subinterval_error_le
   have hpoint : ∀ x ∈ Set.uIoc u v, ‖fourierKernel ξ x * (g τ - g x)‖ ≤ V := by
     intro x hx
     have hxIoc : x ∈ Set.Ioc u v := by
-      rw[← Set.uIoc_of_le huv]
+      rw [← Set.uIoc_of_le huv]
       apply hx
     have hxIcc : x ∈ Set.Icc u v := by
       unfold Set.Icc
       rcases hxIoc with ⟨hxIoc1,hxIoc2⟩
-      constructor
-      exact le_of_lt hxIoc1
-      exact hxIoc2
+      exact ⟨le_of_lt hxIoc1, hxIoc2⟩
     have hdist := BoundedVariationOn.dist_le hg hτ hxIcc
     calc
-      ‖fourierKernel ξ x * (g τ - g x)‖ ≤ ‖fourierKernel ξ x‖ * ‖g τ - g x‖ :=
-        norm_mul_le _ _
+      _ ≤ ‖fourierKernel ξ x‖ * ‖g τ - g x‖ := norm_mul_le _ _
       _ = ‖g τ - g x‖ := by simp [norm_fourierKernel]
-      _ ≤ V := by
-        unfold V
-        rw[dist_eq_norm] at hdist
-        apply hdist
+      _ ≤ V := by simpa [V, dist_eq_norm] using hdist
   have hbound : ‖∫ (x : ℝ) in u..v, (fun x ↦ fourierKernel ξ x * (g τ - g x)) x‖ ≤ V * |v - u|  :=
     intervalIntegral.norm_integral_le_of_norm_le_const
       (a := u) (b := v) (C := V)
       (f := fun x : ℝ ↦ fourierKernel ξ x * (g τ - g x)) hpoint
-  have habs : |v - u| = v - u := by
-    simp [huv]
-  unfold V at hbound
-  rw [habs] at hbound
-  apply hbound
+  have habs : |v - u| = v - u := by simp [huv]
+  simpa [V, habs] using hbound
 
 lemma scalar_iUnion_boxes_eq_Ioc (hab : a < b)
     (π : TaggedPrepartition (Ioc a b)) (hπ : π.IsPartition) :
     (⋃ J ∈ π.boxes, Set.Ioc (J.lower 0) (J.upper 0)) = Set.Ioc a b := by
   ext x
   constructor
-  intro h
-  refine Set.mem_Ioc.mpr ?_
-  rcases Set.mem_iUnion.1 h with ⟨J,hJ⟩
+  · intro h
+    refine Set.mem_Ioc.mpr ?_
+    rcases Set.mem_iUnion.1 h with ⟨J,hJ⟩
   -- J is a one-dimensional interval
-  rcases Set.mem_iUnion.1 hJ with ⟨h1,h2c⟩
-  let J1 := J.lower 0
-  let J2 := J.upper 0
-  have h2 : x ∈ Set.Ioc J1 J2 := by
-    simpa [J1,J2] using h2c
+    rcases Set.mem_iUnion.1 hJ with ⟨h1,h2c⟩
+    let J1 := J.lower 0
+    let J2 := J.upper 0
+    have h2 : x ∈ Set.Ioc J1 J2 := by
+      simpa [J1,J2] using h2c
   -- J' is a re-interpretation of J as a subset of ℝ in some sense
-  have h1' : (fun (_ : Fin 1) => x) ∈ (J : Set (Fin 1 → ℝ)) := by
-    simp
-    simpa [Box.mem_def, Fin.forall_fin_one] using h2c
-  have h2' : (fun (_ : Fin 1) => x) ∈ (Ioc a b : Set (Fin 1 → ℝ)) := by
-    have hint : (J : Set (Fin 1 → ℝ)) ⊆ (Ioc a b : Set (Fin 1 → ℝ)) := by
-      simp
-      refine π.le_of_mem ?_
-      simp
-      apply h1
-    apply hint h1'
-  have hc := by
-    simpa [Box.mem_def, Fin.forall_fin_one, Ioc.lower hab, Ioc.upper hab] using h2'
-  constructor
-  apply hc.left
-  apply hc.right
+    have h1' : (fun (_ : Fin 1) => x) ∈ (J : Set (Fin 1 → ℝ)) := by
+      simpa using h2c
+    have h2' : (fun (_ : Fin 1) => x) ∈ (Ioc a b : Set (Fin 1 → ℝ)) := by
+      have hint : (J : Set (Fin 1 → ℝ)) ⊆ (Ioc a b : Set (Fin 1 → ℝ)) := by
+        simp only [Box.coe_subset_coe]
+        exact π.le_of_mem h1
+      apply hint h1'
+    have hc := by
+      simpa [hab] using h2'
+    constructor
+    · apply hc.left
+    apply hc.right
   intro h
   have h1 : (fun _ : Fin 1 => x) ∈ (Ioc a b : Set (Fin 1 → ℝ)) := by
-    simp
-    simpa [Box.mem_def, Fin.forall_fin_one, Ioc.lower hab, Ioc.upper hab]
+    simpa [hab] using h
   rcases hπ (fun _ : Fin 1 => x) h1 with ⟨w,ha,hb⟩
-  simp at *
+  simp only [Set.mem_Ioc, Box.mem_coe, Box.mem₁, Box.toSet₁_def, mem_toPrepartition, mem_boxes,
+    Fin.isValue, Set.mem_iUnion, exists_and_left, exists_prop] at *
   use w
-  have hbw : w.lower 0 < x ∧ x ≤ w.upper 0 := by
-    simpa [Box.mem_def, Fin.forall_fin_one] using hb
-  constructor
-  apply hbw.1
-  constructor
-  apply ha
-  apply hbw.2
+  have hbw : w.lower 0 < x ∧ x ≤ w.upper 0 := by simpa using hb
+  exact ⟨ hbw.1, ha, hbw.2 ⟩
+
 
 lemma intervalIntegral_eq_sum_partition_integrals
     (g : ℝ → ℂ) (hab : a < b) (hg : BoundedVariationOn g (Set.Icc a b))
@@ -350,29 +288,26 @@ lemma intervalIntegral_eq_sum_partition_integrals
         (Set.Ioc (J.lower 0) (J.upper 0)) MeasureTheory.volume := by
     intro J hJ
     have hgJ : BoundedVariationOn g (Set.Icc (J.lower 0) (J.upper 0)) := by
-      refine hg.mono ?_
       have ha' : a ≤ J.lower 0 ∧ J.upper 0 ≤ b := by
         have hJle : J ≤ Ioc a b := π.le_of_mem hJ
         constructor
         · simpa [Ioc.lower hab] using Box.antitone_lower hJle 0
         · simpa [Ioc.upper hab] using Box.monotone_upper hJle 0
-      refine Set.Icc_subset_Icc ?_ ?_
-      apply ha'.1
-      apply ha'.2
+      refine hg.mono (Set.Icc_subset_Icc ha'.1 ha'.2)
     have hJint := intervalIntegrable_fourierKernel_mul_of_boundedVariationOn
       (a := J.lower 0) (b := J.upper 0) g (J.lower_le_upper 0) hgJ ξ
     exact (intervalIntegrable_iff_integrableOn_Ioc_of_le (J.lower_le_upper 0)).1 hJint
   rw [intervalIntegral.integral_of_le hab.le]
   rw [← scalar_iUnion_boxes_eq_Ioc hab π hπ]
   rw [integral_biUnion_finset]
-  refine Finset.sum_congr ?_ ?_
-  rfl
-  intro x hx
-  rw[← intervalIntegral.integral_of_le]
-  refine x.lower_le_upper 0
-  intro i hi
-  exact measurableSet_Ioc
-  exact hpair
+  · refine Finset.sum_congr ?_ ?_
+    · rfl
+    intro x hx
+    rw [← intervalIntegral.integral_of_le]
+    refine x.lower_le_upper 0
+  · intro i hi
+    exact measurableSet_Ioc
+  · exact hpair
   exact hint
 
 
@@ -419,25 +354,22 @@ theorem hasStieltjesIntegral_fourierStieltjesPrimitive
           ∑ J ∈ π.boxes, term J := by
       unfold term integralSum H
       unfold vol
-      simp
-      rw[hsumInt]
+      simp only [flip_mul, BoxAdditiveMap.ofDiff_apply, Fin.isValue, coe_sub', Pi.sub_apply,
+        mul_apply', Finset.sum_sub_distrib]
+      rw [hsumInt]
       unfold H
-      simp [sub_mul, Finset.sum_sub_distrib]
+      simp [sub_mul, Finset.sum_sub_distrib, Box.upper₁, Box.lower₁]
     have hlen : ∀ J ∈ π.boxes, J.upper 0 - J.lower 0 ≤ 2 * ρ := by
       intro J hJ
       have hJmem : J ∈ π := by
         apply hJ
       have ha : dist (J.lower) (π.tag J) ≤ ρ := by
-        have hmem' : J.lower ∈ Metric.closedBall (π.tag J) ↑(r c (π.tag J)) := by
-          refine hπ.isSubordinate J ?_ ?_
-          apply hJ
-          exact Box.lower_mem_Icc J
+        have hmem' : J.lower ∈ Metric.closedBall (π.tag J) ↑(r c (π.tag J)) :=
+          hπ.isSubordinate J hJ (Box.lower_mem_Icc J)
         exact hmem'
       have hb : dist (π.tag J) (J.upper) ≤ ρ := by
-        have hmem'' : J.upper ∈ Metric.closedBall (π.tag J) ↑(r c (π.tag J)):= by
-          refine hπ.isSubordinate J ?_ ?_
-          apply hJmem
-          exact Box.upper_mem_Icc J
+        have hmem'' : J.upper ∈ Metric.closedBall (π.tag J) ↑(r c (π.tag J)):=
+          hπ.isSubordinate J hJ (Box.upper_mem_Icc J)
         exact Metric.mem_closedBall'.mp hmem''
       have hc : dist (J.lower 0) ((π.tag J) 0) ≤ ρ := by
         exact le_of_max_le_left ha
@@ -445,7 +377,8 @@ theorem hasStieltjesIntegral_fourierStieltjesPrimitive
         exact le_of_max_le_left hb
       have hdist : dist (J.lower 0) (J.upper 0) ≤ 2 * ρ := by
         calc
-          dist (J.lower 0) (J.upper 0) ≤ (dist (J.lower 0) ((π.tag J) 0)) + (dist ((π.tag J) 0) (J.upper 0)) := by apply dist_triangle _ _ _
+          dist (J.lower 0) (J.upper 0) ≤ (dist (J.lower 0) ((π.tag J) 0))
+            + (dist ((π.tag J) 0) (J.upper 0)) := by apply dist_triangle _ _ _
           _ ≤ ρ + ρ := by linarith [hc, hd]
           _ = 2 * ρ := by ring
       calc
@@ -462,24 +395,22 @@ theorem hasStieltjesIntegral_fourierStieltjesPrimitive
       have hτ : (π.tag J) 0 ∈ Set.Icc (J.lower 0) (J.upper 0) :=
         ⟨htagJ.1 0, htagJ.2 0⟩
       have hgJ : BoundedVariationOn g (Set.Icc (J.lower 0) (J.upper 0)) :=
-        hg.mono (Icc_subset_of_box_le_Ioc a b hab (π.le_of_mem hJ))
-      have hbase : ‖(fourierStieltjesPrimitive ξ (J.upper 0) - fourierStieltjesPrimitive ξ (J.lower 0)) * g (π.tag J 0) -
-      ∫ (x : ℝ) in J.lower 0..J.upper 0, fourierKernel ξ x * g x‖ ≤
-  (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal * (J.upper 0 - J.lower 0) := norm_fourier_stieltjes_subinterval_error_le
+        hg.mono (Icc_subset_of_box_le_Ioc hab (π.le_of_mem hJ))
+      have hbase : ‖(fourierStieltjesPrimitive ξ (J.upper 0) -
+        fourierStieltjesPrimitive ξ (J.lower 0)) * g (π.tag J 0) -
+        ∫ (x : ℝ) in J.lower 0..J.upper 0, fourierKernel ξ x * g x‖ ≤
+  (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal * (J.upper 0 - J.lower 0)
+    := norm_fourier_stieltjes_subinterval_error_le
         (g := g) (u := J.lower 0) (v := J.upper 0) (τ := (π.tag J) 0)
         (J.lower_le_upper 0) hτ hgJ ξ hξ
       calc
-        ‖term J‖ ≤
-            (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal *
+        _ ≤ (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal *
               (J.upper 0 - J.lower 0) := by
           unfold term P H K
           apply hbase
-        _ ≤ (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal * (2 * ρ) := by
-            refine mul_le_mul_of_nonneg_left ?_ ?_
-            apply hlen J
-            exact hJ
-            exact ENNReal.toReal_nonneg
-        _ = 2 * ρ * (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal := by ring
+        _ ≤ (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal * (2 * ρ) :=
+            mul_le_mul_of_nonneg_left (hlen J hJ) ENNReal.toReal_nonneg
+        _ = _ := by ring
     have hvarsum :
         ∑ J ∈ π.boxes, (eVariationOn g (Set.Icc (J.lower 0) (J.upper 0))).toReal ≤ V := by
       unfold V
@@ -487,7 +418,7 @@ theorem hasStieltjesIntegral_fourierStieltjesPrimitive
     have hv : 2 * ρ * V ≤ ε := by
       unfold ρ
       calc
-        2 * (ε / (4 * (V + 1))) * V = ε * (1/2) * (V / (V + 1)) := by
+        _ = ε * (1/2) * (V / (V + 1)) := by
           field_simp [show V + 1 ≠ 0 by linarith]
           ring
         _ ≤ ε * (V / (V + 1)) := by
@@ -533,13 +464,12 @@ theorem interval_fourierIntegral_eq_boundary_sub_stieltjes
         ∫⟨(mul ℝ ℂ).flip⟩ x in a..b, g x ∂ fourierStieltjesPrimitive ξ := by
     exact (hasStieltjesIntegral_fourierStieltjesPrimitive
       (a := a) (b := b) g hab ξ hξ hg).stieltjesIntegral_eq.symm
-  rw [hleft]
-  rw[hparts]
+  rw [hleft, hparts]
   simp [mul_comm]
 
 theorem tendsto_fourier_boundary_zero_of_tendsto
     (g : ℝ → ℂ) (hg_top : Filter.Tendsto g Filter.atTop (nhds 0))
-    (hg_bot : Filter.Tendsto g Filter.atBot (nhds 0)) (ξ : ℝ) (hξ : ξ ≠ 0) :
+    (hg_bot : Filter.Tendsto g Filter.atBot (nhds 0)) (ξ : ℝ) :
     Filter.Tendsto
       (fun R : ℝ =>
         g R * fourierStieltjesPrimitive ξ R -
@@ -549,14 +479,14 @@ theorem tendsto_fourier_boundary_zero_of_tendsto
       Filter.Tendsto (fun R : ℝ => g R * fourierStieltjesPrimitive ξ R)
         Filter.atTop (nhds 0) := by
     refine Filter.Tendsto.zero_mul_isBoundedUnder_le hg_top ?_
-    apply isBoundedUnder_norm_fourierStieltjesPrimitive_atTop ξ hξ id
+    apply isBoundedUnder_norm_fourierStieltjesPrimitive_atTop ξ id
   have hbot_zero : Filter.Tendsto (fun R : ℝ => g (-R)) Filter.atTop (nhds 0) :=
     hg_bot.comp Filter.tendsto_neg_atTop_atBot
   have hbot :
       Filter.Tendsto (fun R : ℝ => g (-R) * fourierStieltjesPrimitive ξ (-R))
         Filter.atTop (nhds 0) := by
     refine hbot_zero.zero_mul_isBoundedUnder_le ?_
-    apply isBoundedUnder_norm_fourierStieltjesPrimitive_atTop ξ hξ
+    apply isBoundedUnder_norm_fourierStieltjesPrimitive_atTop ξ
   simpa using htop.sub hbot
 
 lemma tendsto_zero_atTop_of_integrable_boundedVariationOn_real
@@ -570,38 +500,27 @@ lemma tendsto_zero_atTop_of_integrable_boundedVariationOn_real
   have hp_mono : Monotone p := by
     refine monotone_iff_forall_lt.mpr ?_
     intro a b h
-    unfold p
-    refine monotoneOn_univ.mp (variationOnFromTo.monotoneOn ?_ (?_)) ?_
-    exact hloc
-    exact trivial
-    linarith
-  have hq_mono : Monotone q := by
-    refine monotoneOn_univ.mp (variationOnFromTo.sub_self_monotoneOn ?_ (?_))
-    apply hloc
-    exact trivial
+    exact monotoneOn_univ.mp (variationOnFromTo.monotoneOn hloc trivial) (by linarith)
+  have hq_mono : Monotone q :=
+    monotoneOn_univ.mp (variationOnFromTo.sub_self_monotoneOn hloc trivial)
   have hp_bound_point : ∀ x, p x ≤ V := by
     intro x
     by_cases hx : 0 ≤ x
     · unfold p V
       rw [variationOnFromTo.eq_of_le f Set.univ hx]
-      refine ENNReal.toReal_mono ?_ (eVariationOn.mono f (?_))
-      -- ⊤ here referes to infinity
-      simpa using hf2
-      exact fun ⦃a⦄ a ↦ trivial
+      exact ENNReal.toReal_mono (by simpa using hf2) (eVariationOn.mono f (fun ⦃_⦄ _ ↦ trivial))
     · unfold p V
-      push_neg at hx
+      push Not at hx
       have hx' : x ≤ 0 := by exact le_of_lt hx
       rw [variationOnFromTo.eq_of_ge f Set.univ hx']
-      simp
+      simp only [Set.univ_inter, ge_iff_le]
       have ha : -(eVariationOn f (Set.Icc x 0)).toReal ≤ (eVariationOn f (Set.Icc x 0)).toReal := by
         have ha' : 0 ≤ (eVariationOn f (Set.Icc x 0)).toReal := by apply ENNReal.toReal_nonneg
         linarith
       calc
-         -(eVariationOn f (Set.Icc x 0)).toReal ≤ (eVariationOn f (Set.Icc x 0)).toReal := by apply ha
-         _ ≤ (eVariationOn f Set.univ).toReal := by
-          refine ENNReal.toReal_mono ?_ (eVariationOn.mono f (?_))
-          simpa using hf2
-          exact fun ⦃a⦄ a ↦ trivial
+         _ ≤ (eVariationOn f (Set.Icc x 0)).toReal := by apply ha
+         _ ≤ _ :=
+          ENNReal.toReal_mono (by simpa using hf2) (eVariationOn.mono f (fun ⦃_⦄ _ ↦ trivial))
   have hp_bdd : BddAbove (Set.range p) := by
     use V
     refine mem_upperBounds.mpr ?_
@@ -611,10 +530,7 @@ lemma tendsto_zero_atTop_of_integrable_boundedVariationOn_real
     rintro y ⟨x,rfl⟩
     unfold q
     have hp : p x ≤ V := hp_bound_point x
-    have hf : f 0 - f x ≤ V := by
-      refine hf2.sub_le (?_) (?_)
-      exact trivial
-      exact trivial
+    have hf : f 0 - f x ≤ V := hf2.sub_le trivial trivial
     linarith
   have hp_tend : Filter.Tendsto p Filter.atTop (nhds (⨆ x, p x)) :=
     tendsto_atTop_ciSup hp_mono hp_bdd
@@ -629,11 +545,11 @@ lemma tendsto_zero_atTop_of_integrable_boundedVariationOn_real
   have hzero : ((⨆ x, p x) - (⨆ x, q x)) = 0 := by
     refine MeasureTheory.IntegrableAtFilter.eq_zero_of_tendsto
         (hf1.integrableAtFilter Filter.atTop) ?_ ?_
-    intro s hs
-    rcases Filter.mem_atTop_sets.1 hs with ⟨b, hb⟩
-    rw [← top_le_iff]
-    rw[← Real.volume_Ici]
-    exact MeasureTheory.measure_mono hb
+    · intro s hs
+      rcases Filter.mem_atTop_sets.1 hs with ⟨b, hb⟩
+      rw [← top_le_iff]
+      rw [← Real.volume_Ici]
+      exact MeasureTheory.measure_mono hb
     apply hf_tend
   simpa [hzero] using hf_tend
 
@@ -669,50 +585,49 @@ lemma tendsto_complex_zero_of_re_im {ι : Type*} {l : Filter ι} {g : ι → ℂ
   have hpair : Filter.Tendsto (fun x => Complex.equivRealProdCLM (g x))
       l (nhds ((0, 0) : ℝ × ℝ)) := by
     simpa using hre.prodMk_nhds him
-  have h : Tendsto (⇑equivRealProdCLM.symm) (nhds (0, 0)) (nhds (equivRealProdCLM.symm (0, 0))) := by
+  have h : Tendsto (⇑equivRealProdCLM.symm) (nhds (0, 0))
+    (nhds (equivRealProdCLM.symm (0, 0))) := by
     refine Continuous.tendsto' ?_ (0, 0) (equivRealProdCLM.symm (0, 0)) rfl
     exact ContinuousLinearEquiv.continuous equivRealProdCLM.symm
   simpa using h.comp hpair
 
 lemma tendsto_zero_atTop_of_integrable_boundedVariationOn_complex
     (g : ℝ → ℂ) (hg1 : MeasureTheory.Integrable g)
-    (hg2 : BoundedVariationOn g Set.univ) :
-    Filter.Tendsto g Filter.atTop (nhds 0) := by
+    (hg2 : BoundedVariationOn g .univ) :
+    atTop.Tendsto g (nhds 0) := by
     refine tendsto_complex_zero_of_re_im ?_ ?_
-    refine tendsto_zero_atTop_of_integrable_boundedVariationOn_real (⇑Complex.reCLM ∘ g) ?_ ?_
-    apply reCLM.integrable_comp hg1
-    apply reCLM.lipschitz.comp_boundedVariationOn hg2
-    refine tendsto_zero_atTop_of_integrable_boundedVariationOn_real (⇑Complex.imCLM ∘ g) ?_ ?_
-    apply imCLM.integrable_comp hg1
+    · refine tendsto_zero_atTop_of_integrable_boundedVariationOn_real (⇑reCLM ∘ g) ?_ ?_
+      · apply reCLM.integrable_comp hg1
+      apply reCLM.lipschitz.comp_boundedVariationOn hg2
+    refine tendsto_zero_atTop_of_integrable_boundedVariationOn_real (⇑imCLM ∘ g) ?_ ?_
+    · apply imCLM.integrable_comp hg1
     apply imCLM.lipschitz.comp_boundedVariationOn hg2
-
-
 
 lemma tendsto_zero_atBot_of_integrable_boundedVariationOn_complex
     (g : ℝ → ℂ) (hg1 : MeasureTheory.Integrable g)
-    (hg2 : BoundedVariationOn g Set.univ) :
-    Filter.Tendsto g Filter.atBot (nhds 0) := by
+    (hg2 : BoundedVariationOn g .univ) :
+    atBot.Tendsto g (nhds 0) := by
     refine tendsto_complex_zero_of_re_im ?_ ?_
-    refine tendsto_zero_atBot_of_integrable_boundedVariationOn_real (⇑Complex.reCLM ∘ g) ?_ ?_
-    apply reCLM.integrable_comp hg1
-    apply reCLM.lipschitz.comp_boundedVariationOn hg2
-    refine tendsto_zero_atBot_of_integrable_boundedVariationOn_real (⇑Complex.imCLM ∘ g) ?_ ?_
-    apply imCLM.integrable_comp hg1
+    · refine tendsto_zero_atBot_of_integrable_boundedVariationOn_real (⇑reCLM ∘ g) ?_ ?_
+      · apply reCLM.integrable_comp hg1
+      apply reCLM.lipschitz.comp_boundedVariationOn hg2
+    refine tendsto_zero_atBot_of_integrable_boundedVariationOn_real (⇑imCLM ∘ g) ?_ ?_
+    · apply imCLM.integrable_comp hg1
     apply imCLM.lipschitz.comp_boundedVariationOn hg2
 
 
 
 theorem tendsto_fourier_boundary_zero
     (g : ℝ → ℂ) (hg1 : MeasureTheory.Integrable g)
-    (hg2 : BoundedVariationOn g Set.univ) (ξ : ℝ) (hξ : ξ ≠ 0) :
-    Filter.Tendsto
+    (hg2 : BoundedVariationOn g .univ) (ξ : ℝ) :
+    atTop.Tendsto
       (fun R : ℝ =>
         g R * fourierStieltjesPrimitive ξ R -
           g (-R) * fourierStieltjesPrimitive ξ (-R))
-      Filter.atTop (nhds 0) := by
+      (nhds 0) := by
   exact tendsto_fourier_boundary_zero_of_tendsto g
     (tendsto_zero_atTop_of_integrable_boundedVariationOn_complex g hg1 hg2)
-    (tendsto_zero_atBot_of_integrable_boundedVariationOn_complex g hg1 hg2) ξ hξ
+    (tendsto_zero_atBot_of_integrable_boundedVariationOn_complex g hg1 hg2) ξ
 
 lemma integrable_fourierKernel_mul
     (g : ℝ → ℂ) (hg : MeasureTheory.Integrable g) (ξ : ℝ) :
@@ -741,8 +656,8 @@ theorem tendsto_interval_fourierKernel_integral
   have ha :
       Filter.Tendsto (fun R : ℝ => ∫ x in (-R)..R, fourierKernel ξ x * g x)
         Filter.atTop (nhds (∫ x : ℝ, fourierKernel ξ x * g x)) := by
-    refine intervalIntegral_tendsto_integral ?_ ?_ fun ⦃U⦄ a ↦ a
-    exact integrable_fourierKernel_mul g hg1 ξ
+    refine intervalIntegral_tendsto_integral ?_ ?_ fun ⦃_⦄ a ↦ a
+    · exact integrable_fourierKernel_mul g hg1 ξ
     exact tendsto_neg_atTop_atBot
   have hb : 𝓕 g ξ = ∫ x : ℝ, fourierKernel ξ x * g x := by
     rw[Real.fourier_real_eq_integral_exp_smul]
@@ -777,25 +692,23 @@ theorem fourier_tendsto_stieltjesPrimitive_of_boundedVariation
     have hc : ∫ (x : ℝ) in -R..R, fourierKernel ξ x * g x =
     g R * fourierStieltjesPrimitive ξ R - g (-R) * fourierStieltjesPrimitive ξ (-R) -
       stieltjesIntegral (-R) R (mul ℝ ℂ) (fourierStieltjesPrimitive ξ) g := by
-          refine interval_fourierIntegral_eq_boundary_sub_stieltjes (a := -R) (b := R) g ?_ ξ hξ ?_
+          refine interval_fourierIntegral_eq_boundary_sub_stieltjes (a := -R) (b := R) g ?_ ξ hξ hb
           simp
           linarith
-          exact hb
     simp [hc]
   have hI_tendsto : Filter.Tendsto I Filter.atTop (nhds (𝓕 g ξ)) := by
     unfold I
     exact tendsto_interval_fourierKernel_integral g hg1 ξ
   have hboundary_tendsto : Filter.Tendsto boundary Filter.atTop (nhds 0) := by
     unfold boundary
-    exact tendsto_fourier_boundary_zero g hg1 hg2 ξ hξ
+    exact tendsto_fourier_boundary_zero g hg1 hg2 ξ
   have hS_tendsto : Filter.Tendsto S Filter.atTop (nhds (-𝓕 g ξ)) := by
     unfold S
     refine Filter.Tendsto.congr' hS_eq.symm ?_
     simpa using hboundary_tendsto.sub hI_tendsto
-  refine ⟨?_,by simp, ?_⟩
-  apply hS_tendsto
+  refine ⟨hS_tendsto, by simp, ?_⟩
   let C : ℝ := ‖((2 * Real.pi * Complex.I * (ξ : ℂ))⁻¹ : ℂ)‖
-  let V : ℝ := (eVariationOn g Set.univ).toReal
+  let V : ℝ := (eVariationOn g .univ).toReal
   have hS_bound_eventually : ∀ᶠ R in Filter.atTop, ‖S R‖ ≤ C * V := by
     filter_upwards [Filter.eventually_ge_atTop (1 : ℝ)] with R hR
     unfold S C V
@@ -808,16 +721,12 @@ theorem fourier_tendsto_stieltjesPrimitive_of_boundedVariation
     have hd : ‖stieltjesIntegral (-R) R (mul ℝ ℂ) (fourierStieltjesPrimitive ξ) g‖ ≤
   ‖(2 * ↑Real.pi * Complex.I * ↑ξ)⁻¹‖ * (eVariationOn g (Set.Icc (-R) R)).toReal :=
       norm_stieltjesIntegral_fourierStieltjesPrimitive_le (a := -R) (b := R) g ha hb ξ
-    refine hd.trans ?_
-    refine mul_le_mul_of_nonneg_left ?_ ?_
-    apply hc
-    apply norm_nonneg
+    exact hd.trans (mul_le_mul_of_nonneg_left hc (norm_nonneg _))
   have hclosed : IsClosed {z : ℂ | ‖z‖ ≤ C * V} :=
     isClosed_le continuous_norm continuous_const
   have hf : ‖(-𝓕 g ξ)‖ ≤ C * V := by
     refine hclosed.mem_of_tendsto hS_tendsto ?_
     apply hS_bound_eventually
-  unfold C V at hf
   exact hf
 
 lemma fourier_bounded_variation
@@ -827,9 +736,7 @@ lemma fourier_bounded_variation
       ‖𝓕 g ξ‖ ≤ ‖(2 * ↑Real.pi * Complex.I * ↑ξ)⁻¹‖ * (eVariationOn g Set.univ).toReal := by
   intro ξ hξ
   obtain ⟨L, ha, hb, hc⟩ := fourier_tendsto_stieltjesPrimitive_of_boundedVariation g hg1 hg2 ξ hξ
-  calc
-    ‖𝓕 g ξ‖ = ‖L‖ := by simp[hb]
-    _ ≤ ‖(2 * ↑Real.pi * Complex.I * ↑ξ)⁻¹‖ * (eVariationOn g Set.univ).toReal := by apply hc
+  simpa [hb] using hc
 
 
 end
