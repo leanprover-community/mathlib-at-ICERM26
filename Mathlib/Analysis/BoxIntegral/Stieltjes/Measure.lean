@@ -31,10 +31,23 @@ variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E
 variable {a b : ℝ}
 
 theorem HasStieltjesIntegral.of_continuous_of_Stieltjes
-    {f : ℝ → E} {g : ℝ → ℝ} (hab : a < b)
+    {f : ℝ → E} (hab : a < b)
     (hf : ContinuousOn f (.Icc a b)) (g : StieltjesFunction ℝ) :
     HasStieltjesIntegral a b ((lsmul ℝ ℝ).flip) f (g : ℝ → ℝ) (∫ x in a..b, f x ∂g.measure) := by
   sorry
+
+theorem StieltjesIntegrable.of_continuous_of_Stieltjes
+    {f : ℝ → E} (hab : a < b)
+    (hf : ContinuousOn f (.Icc a b)) (g : StieltjesFunction ℝ) :
+    StieltjesIntegrable a b ((lsmul ℝ ℝ).flip) f (g : ℝ → ℝ) :=
+  (HasStieltjesIntegral.of_continuous_of_Stieltjes hab hf g).stieltjesIntegrable
+
+theorem stieltjesIntegral_of_continuous_of_Stieltjes
+    {f : ℝ → E} (hab : a < b)
+    (hf : ContinuousOn f (.Icc a b)) (g : StieltjesFunction ℝ) :
+    ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂(g : ℝ → ℝ) = ∫ x in a..b, f x ∂g.measure :=
+  (HasStieltjesIntegral.of_continuous_of_Stieltjes hab hf g).stieltjesIntegral_eq
+
 
 
 end BoxIntegral
