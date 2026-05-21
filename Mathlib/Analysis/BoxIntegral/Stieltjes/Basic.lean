@@ -852,18 +852,18 @@ private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → 
 
   -- Step 1: Bound each local subbox evaluation by the operator norm of B.flip
   have h_term : ∀ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (B.flip <| g ·)) J‖ ≤
-      ‖B‖ * ‖g (J.upper 0) - g (J.lower 0)‖ := by
+      ‖B‖ * ‖g J.upper₁ - g J.lower₁‖ := by
     intro J hJ
-    change ‖B.flip (g (J.upper 0)) - B.flip (g (J.lower 0))‖ ≤ _
+    change ‖B.flip (g J.upper₁) - B.flip (g J.lower₁)‖ ≤ _
     rw [← map_sub, ← opNorm_flip B]
-    exact (B.flip).le_opNorm (g (J.upper 0) - g (J.lower 0))
+    exact (B.flip).le_opNorm (g J.upper₁ - g J.lower₁)
   -- Step 2: Apply bound term-wise to sum and cancel operator norm
   refine (Finset.sum_le_sum h_term).trans ?_
   rw [← Finset.mul_sum]
   gcongr
   -- Step 3: Upgrade to ENNReal and convert vector norms to `edist`
-  have h_sum_eq : ∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖ =
-      (ENNReal.ofReal (∑ J ∈ π.boxes, ‖g (J.upper 0) - g (J.lower 0)‖)).toReal :=
+  have h_sum_eq : ∑ J ∈ π.boxes, ‖g J.upper₁ - g J.lower₁‖ =
+      (ENNReal.ofReal (∑ J ∈ π.boxes, ‖g J.upper₁ - g J.lower₁‖)).toReal :=
     (ENNReal.toReal_ofReal (Finset.sum_nonneg fun _ _ ↦ norm_nonneg _)).symm
   rw [h_sum_eq]
   refine ENNReal.toReal_mono hg ?_
@@ -876,10 +876,10 @@ private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → 
   classical
   suffices h : ∀ (n : ℕ) (c d : ℝ) (S : Finset (Box (Fin 1))),
       S.card = n → c ≤ d →
-      (∀ J ∈ S, c ≤ J.lower 0 ∧ J.upper 0 ≤ d) →
+      (∀ J ∈ S, c ≤ J.lower₁ ∧ J.upper₁ ≤ d) →
       (↑S : Set _).Pairwise
         (Function.onFun Disjoint ((↑) : Box (Fin 1) → Set (Fin 1 → ℝ))) →
-      ∑ J ∈ S, edist (g (J.upper 0)) (g (J.lower 0)) ≤ eVariationOn g (Set.Icc c d) by
+      ∑ J ∈ S, edist (g (J.upper₁)) (g (J.lower₁)) ≤ eVariationOn g (Set.Icc c d) by
     exact h π.boxes.card a b π.boxes rfl hab.le
       (fun J hJ ↦ (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)) π.pairwiseDisjoint
   intro n
@@ -892,30 +892,30 @@ private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → 
   | succ n ih =>
     intro c d S hScard _ hbd hdj
     obtain ⟨J, hJS, hJ_min⟩ :=
-      S.exists_min_image (fun K ↦ K.lower 0) (Finset.card_pos.mp (by omega))
+      S.exists_min_image (fun K ↦ K.lower₁) (Finset.card_pos.mp (by omega))
     have hJ_bd := hbd J hJS
-    have hJ_lt : J.lower 0 < J.upper 0 := J.lower_lt_upper 0
-    -- The minimality of `J.lower 0` together with disjointness puts every other
+    have hJ_lt : J.lower₁ < J.upper₁ := J.lower_lt_upper 0
+    -- The minimality of `J.lower₁` together with disjointness puts every other
     -- box strictly to the right of `J`.
-    have hRight : ∀ K ∈ S.erase J, J.upper 0 ≤ K.lower 0 := by
+    have hRight : ∀ K ∈ S.erase J, J.upper₁ ≤ K.lower₁ := by
       intro K hKerase
       have hKS : K ∈ S := Finset.mem_of_mem_erase hKerase
       have hKne : K ≠ J := (Finset.mem_erase.mp hKerase).1
-      rcases Box.disjoint_iff.mp (hdj hJS hKS hKne.symm) with h | h
+      rcases Box.disjoint_iff₁.mp (hdj hJS hKS hKne.symm) with h | h
       · exact h
       · exact absurd (h.trans (hJ_min K hKS)) (not_le.mpr (K.lower_lt_upper 0))
-    have IH := ih (J.upper 0) d (S.erase J)
+    have IH := ih (J.upper₁) d (S.erase J)
       (by rw [Finset.card_erase_of_mem hJS, hScard]; omega) hJ_bd.2
       (fun K hK ↦ ⟨hRight K hK, (hbd K (Finset.mem_of_mem_erase hK)).2⟩)
       (hdj.mono (Finset.coe_subset.mpr (Finset.erase_subset _ _)))
     rw [← Finset.add_sum_erase _ _ hJS]
-    calc edist (g (J.upper 0)) (g (J.lower 0)) +
-          ∑ K ∈ S.erase J, edist (g (K.upper 0)) (g (K.lower 0))
-        ≤ eVariationOn g (Set.Icc (J.lower 0) (J.upper 0)) +
-            eVariationOn g (Set.Icc (J.upper 0) d) :=
+    calc edist (g (J.upper₁)) (g (J.lower₁)) +
+          ∑ K ∈ S.erase J, edist (g (K.upper₁)) (g (K.lower₁))
+        ≤ eVariationOn g (Set.Icc (J.lower₁) (J.upper₁)) +
+            eVariationOn g (Set.Icc (J.upper₁) d) :=
           add_le_add (eVariationOn.edist_le g (Set.right_mem_Icc.mpr hJ_lt.le)
             (Set.left_mem_Icc.mpr hJ_lt.le)) IH
-      _ = eVariationOn g (Set.Icc (J.lower 0) d) := by
+      _ = eVariationOn g (Set.Icc (J.lower₁) d) := by
           simpa using
             eVariationOn.Icc_add_Icc (s := Set.univ) g hJ_lt.le hJ_bd.2 (Set.mem_univ _)
       _ ≤ eVariationOn g (Set.Icc c d) :=
@@ -946,17 +946,17 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
     have hJτ₁ : J ∈ τ₁.toPrepartition := by simpa [π, τ₁] using hJ
     have := τ₁.tag_mem_Icc J
     have := τ₂.tag_mem_Icc J
-    have hτ₁_upper : |τ₁.tag J 0 - J.upper 0| ≤ δ/4 := by
+    have hτ₁_upper : |τ₁.tag J 0 - J.upper₁| ≤ δ/4 := by
       simpa [mem_closedBall, dist_pi_le_iff', Real.dist_eq, abs_sub_comm]
         using hπ₁.isSubordinate.infPrepartition _ J hJτ₁ J.upper_mem_Icc
-    have hτ₂_upper : |J.upper 0 - τ₂.tag J 0| ≤ δ/4 := by
+    have hτ₂_upper : |J.upper₁ - τ₂.tag J 0| ≤ δ/4 := by
       simpa [mem_closedBall, dist_pi_le_iff', Real.dist_eq]
         using hπ₂.isSubordinate.infPrepartition _ J
           (mem_infPrepartition_comm.mp hJτ₁) J.upper_mem_Icc
     grw [← map_sub, (vol J).le_opNorm]
     gcongr
     apply (hδf _ (by simp_all) _ (by simp_all) _).le
-    linarith [abs_sub_le (τ₁.tag J 0) (J.upper 0) (τ₂.tag J 0)]
+    linarith [abs_sub_le (τ₁.tag J 0) (J.upper₁) (τ₂.tag J 0)]
   calc
     dist (integralSum f' vol π₁) (integralSum f' vol π₂)
       = ‖∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0)))‖ := by
