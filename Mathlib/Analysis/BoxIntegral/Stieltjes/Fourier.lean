@@ -85,7 +85,7 @@ theorem norm_stieltjesIntegral_E_le
       |ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) *
         (eVariationOn g (.Icc a b)).toReal := by
   calc
-    _ ≤ ‖(mul ℝ ℂ)‖ * (|ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) * (eVariationOn g (.Icc a b)).toReal) := by
+    _ ≤ ‖mul ℝ ℂ‖ * (|ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) * (eVariationOn g (.Icc a b)).toReal) := by
       apply integral_le_integral_of_variation hab hg
         (StieltjesIntegrable.of_continuousOn_of_boundedVariationOn _
           hab (by fun_prop) hg).hasStieltjesIntegral

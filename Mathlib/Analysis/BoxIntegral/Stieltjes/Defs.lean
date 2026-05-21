@@ -22,9 +22,15 @@ The notation here is deliberately chosen to mimic the notation `∫ x in a..b, f
 
 The bilinear pairing `B` covers the three main variants of
 Stieltjes integration that appear in practice:
-* **`f` scalar, `g` vector-valued.** Here we take `B = ContinuousLinearMap.lsmul ℝ ℝ`
-* **`f` vector-valued, `g` scalar.** Here we take `B = (ContinuousLinearMap.lsmul ℝ ℝ).flip`.
-* **`f` and `g` are both real or both complex.** Here we take `B = ContinuousLinearMap.mul ℝ E`.
+* **`f` scalar, `g` vector-valued.** Here we take `B = .lsmul ℝ ℝ`
+* **`f` vector-valued, `g` scalar.** Here we take `B = (.lsmul ℝ ℝ).flip`.
+* **`f` and `g` are both real or both complex.** Here we take `B = .mul ℝ E`.
+
+The `.` here can be removed if `ContinuousLinearMap` is open.
+
+The Riemann integral is the special case `F = ℝ`, `B = (.lsmul ℝ ℝ).flip` and `g = id`.
+Separate API is provided for this classical case; alternatively, one can `unfold` the Riemann
+integral definitions to access the more general Stieltjes integral API.
 
 The development follows the treatment of Riemann–Stieltjes integration in
 Montgomery–Vaughan, *Multiplicative Number Theory I: Classical Theory*, Appendix A.
@@ -51,7 +57,7 @@ In all cases, we denote the integral by `∫⟨B⟩ x in a..b, f x ∂g`.
 
 ## Tags
 
-Stieltjes integral, Riemann–Stieltjes, bounded variation
+Stieltjes integral, Riemann–Stieltjes, Riemann integral
 -/
 
 @[expose] public section
@@ -278,10 +284,18 @@ section Riemann
 
 variable (f : ℝ → E) (L : E)
 
+/-- `HasRiemannIntegral a b f L` is defined to equal
+`HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L`.  Use `unfold HasRiemannIntegral` or similar
+to access the Stieltjes integral API. -/
 def HasRiemannIntegral := HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L
 
+/-- `RiemannIntegrable a b f` is defined to equal
+`StieltjesIntegrable a b (lsmul ℝ ℝ).flip f id`.  Use `unfold RiemannIntegrable` or similar
+to access the Stieltjes integral API. -/
 def RiemannIntegrable := StieltjesIntegrable a b (lsmul ℝ ℝ).flip f id
 
+/-- `riemannIntegral a b f` is defined to equal `∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id`.
+Use `unfold riemannIntegral` or similar to access the Stieltjes integral API. -/
 noncomputable def riemannIntegral : E := ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id
 
 theorem HasRiemannIntegral.iff_hasIntegral {a b : ℝ} (hab : a < b) :
