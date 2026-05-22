@@ -159,7 +159,7 @@ lemma StieltjesIntegrable.symm_iff :
 
 @[symm]
 lemma StieltjesIntegrable.symm {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
-  (h : StieltjesIntegrable a b B f g) :  StieltjesIntegrable b a B f g := by
+    (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable b a B f g := by
   rwa [← symm_iff]
 
 lemma StieltjesIntegrable.of_gt {a b : ℝ} (hba : b < a) :
@@ -221,8 +221,7 @@ theorem HasStieltjesIntegral.stieltjesIntegral_eq
   exact hI.choose_spec.unique h
 
 theorem StieltjesIntegrable.hasStieltjesIntegral_iff (h : StieltjesIntegrable a b B f g) (L : G) :
-   HasStieltjesIntegral a b B f g L ↔ ∫⟨B⟩ x in a..b, f x ∂g = L
-     := by
+    HasStieltjesIntegral a b B f g L ↔ ∫⟨B⟩ x in a..b, f x ∂g = L := by
   grind [hasStieltjesIntegral, HasStieltjesIntegral.unique]
 
 @[simp]

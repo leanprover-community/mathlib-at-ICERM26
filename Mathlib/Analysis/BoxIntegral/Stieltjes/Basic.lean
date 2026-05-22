@@ -122,8 +122,8 @@ theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E)
 /-- A Riemann integrable function on a closed interval is bounded. -/
 theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannIntegrable a b f) :
     Bornology.IsBounded (f '' (.Ioc a b)) := by
-  rw [RiemannIntegrable.def] at h; obtain ⟨ L, hL ⟩ := h
-  rw [hasRiemannIntegral_iff_lim_sum hab] at hL; obtain ⟨ δ, hδ, h ⟩ := hL 1 (by norm_num)
+  rw [RiemannIntegrable.def] at h; obtain ⟨L, hL⟩ := h
+  rw [hasRiemannIntegral_iff_lim_sum hab] at hL; obtain ⟨δ, hδ, h⟩ := hL 1 (by norm_num)
   let N := ⌈(b - a) / δ⌉₊
   have hN : N > 0 := by positivity
   have hab' : 0 < b - a := by positivity
@@ -139,11 +139,11 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
   have box_le {i : ℕ} (hi : i < N) : box i ≤ Ioc a b := by
     simp only [hab, zmono i, Ioc_le_Ioc_iff, box]
     simp only [← z0, ← zN]
-    exact ⟨ zmono' (by lia), zmono' (by lia) ⟩
+    exact ⟨zmono' (by lia), zmono' (by lia)⟩
   rw [isBounded_iff_forall_norm_le]
   let F : ℕ → NNReal := fun n ↦ ‖f (z n)‖₊
-  refine ⟨ (range (N + 1)).sup F + 2 * N / (b - a), fun y hy ↦ ?_ ⟩
-  simp only [Set.mem_image, Set.mem_Ioc] at hy; obtain ⟨ x, ⟨ hx, hx' ⟩, rfl ⟩ := hy
+  refine ⟨(range (N + 1)).sup F + 2 * N / (b - a), fun y hy ↦ ?_⟩
+  simp only [Set.mem_image, Set.mem_Ioc] at hy; obtain ⟨x, ⟨hx, hx'⟩, rfl⟩ := hy
   let i : ℝ → ℕ := fun x ↦ ⌈N * (x - a) / (b - a)⌉₊
   have hipos {x : ℝ} (hx : a < x) : 0 < i x := by positivity
   have hi {x : ℝ} (hx' : x ≤ b) : i x ≤ N := by simp [i]; field_simp; linarith
@@ -152,12 +152,12 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
   let π : Bool → TaggedPrepartition (Ioc a b) := fun p ↦ {
     boxes := (range N).image box
     le_of_mem' J hJ := by
-      simp only [mem_image, mem_range] at hJ; obtain ⟨ j, hj, rfl ⟩ := hJ
+      simp only [mem_image, mem_range] at hJ; obtain ⟨j, hj, rfl⟩ := hJ
       exact box_le hj
     pairwiseDisjoint I hI J hJ hdisj := by
       simp only [coe_image, coe_range, Set.mem_image, Set.mem_Iio] at hI hJ
-      obtain ⟨ i, hi, rfl ⟩ := hI
-      obtain ⟨ j, hj, rfl ⟩ := hJ
+      obtain ⟨i, hi, rfl⟩ := hI
+      obtain ⟨j, hj, rfl⟩ := hJ
       simp only [Function.onFun, Box.disjoint_iff₁, box_upper, box_lower]
       rcases lt_trichotomy i j with _ | rfl | _
       · left; exact zmono' (by lia)
@@ -168,7 +168,7 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
     tag_mem_Icc J := by
       split_ifs with h h'
       · simp [Box.Icc_def, Pi.le_def, hab, hx.le, hx']
-      · simp only [mem_image, mem_range] at h'; obtain ⟨ j, hj, rfl ⟩ := h'
+      · simp only [mem_image, mem_range] at h'; obtain ⟨j, hj, rfl⟩ := h'
         exact (Box.le_iff_Icc.mp (box_le hj)) (Box.upper_mem_Icc _)
       apply Box.upper_mem_Icc
   }
@@ -191,18 +191,18 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
     simp only [mem_image, mem_range, π]; split_ifs with h h'
     · rw [h.2]
       exact Box.coe_subset_Icc (hmem hx hx')
-    · obtain ⟨ j, _, rfl ⟩ := h'
+    · obtain ⟨j, _, rfl⟩ := h'
       apply Box.upper_mem_Icc
     simp [π] at hJ; tauto
   have hpart (p : Bool) : (π p).IsPartition := by
     intro x hx; simp only [hab, mem_Ioc, isValue] at hx
-    refine ⟨ box (i (x 0) - 1), ?_, by convert hmem hx.1 hx.2 ⟩
+    refine ⟨box (i (x 0) - 1), ?_, by convert hmem hx.1 hx.2⟩
     simp only [isValue, Prepartition.mem_mk, mem_image, mem_range, π]
-    exact ⟨ i (x 0) - 1, by have := hi hx.2; grind, by rfl ⟩
+    exact ⟨i (x 0) - 1, by have := hi hx.2; grind, by rfl⟩
   have hmesh (p : Bool) : (π p).mesh_size ≤ δ := by
     simp only [mesh_size_le_iff₁, mem_boxes, mem_toPrepartition, tsub_le_iff_right]
     intro J hJ; simp only [mem_image, mem_range, mem_mk, Prepartition.mem_mk, π] at hJ
-    obtain ⟨ i, hi, rfl ⟩ := hJ
+    obtain ⟨i, hi, rfl⟩ := hJ
     simp only [box_upper, zdiff, box_lower, N]
     nth_rw 1 [add_comm]; gcongr; field_simp; grw [← Nat.le_ceil]; field_simp; norm_num
   specialize hi hx'
@@ -216,10 +216,10 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
           ← sum_sub_distrib, π]
         congr; symm
         convert sum_eq_single (box (i x - 1)) ?_ ?_ using 1
-        · have : ∃ a < N, box a = box (i x - 1) := ⟨ i x - 1, by lia, rfl ⟩
+        · have : ∃ a < N, box a = box (i x - 1) := ⟨i x - 1, by lia, rfl⟩
           simp [← smul_sub, this, Box.upper₁, Box.lower₁]
         · intro I hI hIi; simp only [mem_image, mem_range] at hI
-          obtain ⟨ j, _, rfl ⟩ := hI
+          obtain ⟨j, _, rfl⟩ := hI
           simp [hIi]
         simp only [mem_image, mem_range, not_exists, not_and, isValue, ↓reduceIte]
         intro h; simpa using h (i x - 1) (by lia)
