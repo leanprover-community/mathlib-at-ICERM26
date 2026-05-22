@@ -1096,6 +1096,8 @@ theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[�
       (fun x ↦ (eVariationOn g (.Icc a x)).toReal) L') :
     ‖L‖ ≤ ‖B‖ * L' := by sorry
 
+-- The material below is not currently in use.
+
 section Sorted
 
 omit [NormedSpace ℝ F] in

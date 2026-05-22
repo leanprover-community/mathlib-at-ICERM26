@@ -31,11 +31,11 @@ open BoxIntegral ContinuousLinearMap TaggedPrepartition Prepartition
 open scoped FourierTransform
 open Filter Complex MeasureTheory intervalIntegral
 
-section Asymptotic
+namespace BoundedVariationOn
 
 variable {E : Type*} [NormedAddCommGroup E] [CompleteSpace E] {f : ℝ → E}
 
-lemma atTop_limUnder_of_integrable_boundedVariationOn
+lemma atTop_limUnder_of_integrable
     (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) : atTop.limUnder f = 0 := by
   have hlim := hf2.tendsto_atTop_limUnder
   set L := atTop.limUnder f
@@ -49,11 +49,11 @@ lemma atTop_limUnder_of_integrable_boundedVariationOn
     linarith [norm_le_norm_add_norm_sub (f x) L]
   exact (hf1.measure_norm_gt_lt_top hpos).ne (measure_mono_top this (by simp))
 
-lemma tendsto_zero_atTop_of_integrable_boundedVariationOn
+lemma tendsto_zero_atTop_of_integrable
     (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) : atTop.Tendsto f (nhds 0) :=
-  (atTop_limUnder_of_integrable_boundedVariationOn hf1 hf2) ▸ hf2.tendsto_atTop_limUnder
+  (hf2.atTop_limUnder_of_integrable hf1) ▸ hf2.tendsto_atTop_limUnder
 
-lemma atBot_limUnder_of_integrable_boundedVariationOn
+lemma atBot_limUnder_of_integrable
     (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) : atBot.limUnder f = 0 := by
   have hlim := hf2.tendsto_atBot_limUnder
   set L := atBot.limUnder f
@@ -67,15 +67,13 @@ lemma atBot_limUnder_of_integrable_boundedVariationOn
     linarith [norm_le_norm_add_norm_sub (f x) L]
   exact (hf1.measure_norm_gt_lt_top hpos).ne (measure_mono_top this (by simp))
 
-lemma tendsto_zero_atBot_of_integrable_boundedVariationOn
+lemma tendsto_zero_atBot_of_integrable
     (hf1 : Integrable f) (hf2 : BoundedVariationOn f .univ) : atBot.Tendsto f (nhds 0) :=
-  (atBot_limUnder_of_integrable_boundedVariationOn hf1 hf2) ▸ hf2.tendsto_atBot_limUnder
+  (hf2.atBot_limUnder_of_integrable hf1) ▸ hf2.tendsto_atBot_limUnder
 
-end Asymptotic
+end BoundedVariationOn
 
--- TODO: find a namespace
-
-section FourierStieltjes
+namespace FourierTransform
 
 variable {a b : ℝ} (ξ x : ℝ)
 
@@ -91,7 +89,6 @@ lemma continuous_e : Continuous (e ξ) := by unfold e; fun_prop
 
 @[fun_prop]
 lemma continuous_E : Continuous (E ξ) := by unfold E; fun_prop
-noncomputable section
 
 lemma hasDerivAt_e : HasDerivAt (e ξ)
     (e ξ x * ((↑(-2 * Real.pi * ξ) : ℂ) * I)) x := by
@@ -180,12 +177,9 @@ theorem tendsto_fourier_boundary_zero_of_tendsto
 theorem tendsto_fourier_boundary_zero
     {g : ℝ → ℂ} (hg1 : MeasureTheory.Integrable g)
     (hg2 : BoundedVariationOn g .univ) (ξ : ℝ) :
-    atTop.Tendsto
-      (fun R ↦ g R * E ξ R - g (-R) * E ξ (-R))
-      (nhds 0) :=
+    atTop.Tendsto (fun R ↦ g R * E ξ R - g (-R) * E ξ (-R)) (nhds 0) :=
   tendsto_fourier_boundary_zero_of_tendsto
-    (tendsto_zero_atTop_of_integrable_boundedVariationOn hg1 hg2)
-    (tendsto_zero_atBot_of_integrable_boundedVariationOn hg1 hg2) ξ
+    (hg2.tendsto_zero_atTop_of_integrable hg1) (hg2.tendsto_zero_atBot_of_integrable hg1) ξ
 
 lemma integrable_e_mul
     {g : ℝ → ℂ} (hg : Integrable g) (ξ : ℝ) :
@@ -232,8 +226,7 @@ lemma fourier_bounded_variation
   obtain ⟨L, _, hb, hc⟩ := fourier_tendsto_stieltjesPrimitive_of_boundedVariation hg1 hg2 hξ
   simpa [hb] using hc
 
-end
-end FourierStieltjes
+end FourierTransform
 
 
 -- The old proof of `hasStieltjesIntegral_E`, given below,
