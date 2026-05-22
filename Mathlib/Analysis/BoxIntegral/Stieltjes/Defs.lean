@@ -141,11 +141,11 @@ theorem stieltjesIntegrable'_iff_integrable :
   StieltjesIntegrable' a b B f g ↔
   Integrable (Ioc a b) IntegrationParams.Riemann
     (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) :=
-  ⟨ fun ⟨ _, hL ⟩ ↦ HasIntegral.integrable hL, fun h ↦ ⟨ _, h.hasIntegral ⟩ ⟩
+  ⟨fun ⟨_, hL⟩ ↦ HasIntegral.integrable hL, fun h ↦ ⟨_, h.hasIntegral⟩⟩
 
 @[simp]
 lemma StieltjesIntegrable.of_eq :
-  StieltjesIntegrable a a B f g := by
+    StieltjesIntegrable a a B f g := by
   simp [StieltjesIntegrable, HasStieltjesIntegral]
 
 lemma StieltjesIntegrable.of_lt {a b : ℝ} (hab : a < b) :
@@ -155,7 +155,7 @@ lemma StieltjesIntegrable.of_lt {a b : ℝ} (hab : a < b) :
 lemma StieltjesIntegrable.symm_iff :
     StieltjesIntegrable a b B f g ↔ StieltjesIntegrable b a B f g := by
   unfold StieltjesIntegrable
-  constructor <;> rintro ⟨ L, h ⟩ <;> use -L <;> apply h.symm
+  constructor <;> rintro ⟨L, h⟩ <;> use -L <;> apply h.symm
 
 @[symm]
 lemma StieltjesIntegrable.symm {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
@@ -200,8 +200,7 @@ theorem HasStieltjesIntegral.unique
   · simp_all
   symm at h₁ h₂
   simp only [h, of_lt] at h₁ h₂
-  have := HasIntegral.unique h₁ h₂
-  grind
+  exact neg_injective (HasIntegral.unique h₁ h₂)
 
 /-- The existence of a Riemann–Stieltjes integral implies `StieltjesIntegrable`. -/
 theorem HasStieltjesIntegral.stieltjesIntegrable
@@ -248,9 +247,7 @@ theorem hasStieltjesIntegral'_congr {a b : ℝ} (hab : a < b)
     HasStieltjesIntegral' a b B f₁ g₁ L ↔ HasStieltjesIntegral' a b B f₂ g₂ L := by
   unfold HasStieltjesIntegral'
   apply BoxIntegral.hasIntegral_congr
-  · intro x hx
-    simp only [hab, Icc_of_Ioc, Fin.isValue, Set.mem_setOf_eq] at hx ⊢
-    exact hf hx
+  · intro x hx; exact hf (by simpa [hab, Icc_of_Ioc] using hx)
   intro J hJ
   simp only [Set.mem_Iic, Box.le_Ioc_iff hab, BoxAdditiveMap.ofDiff_apply] at hJ ⊢
   have := J.lower_lt_upper₁
