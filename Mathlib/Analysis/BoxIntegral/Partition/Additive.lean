@@ -251,7 +251,7 @@ lemma ofDiff_smul {R : Type*} [Monoid R] [DistribMulAction R M]
   ext J
   simp [smul_sub]
 
-/-- The Riemann–Stieltjes differential of a constant function vanishes. -/
+/-- The differential of a constant function vanishes. -/
 @[simp]
 lemma ofDiff_const (c : M) : ofDiff (fun _ : ℝ ↦ c) = 0 := by
   ext J

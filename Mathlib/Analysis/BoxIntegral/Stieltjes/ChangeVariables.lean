@@ -16,17 +16,15 @@ public import Mathlib.Analysis.BoxIntegral.Stieltjes.Basic
 
 In this file we establish how the Riemann–Stieltjes integral
 `∫⟨B⟩ x in a..b, f x ∂g` defined in `Analysis.BoxIntegral.Stieltjes.Defs`, behaves with respect to
-changes of variable.
+monotone changes of variable.
 
 -/
 
 @[expose] public section
 
-open BoxIntegral
-open ContinuousLinearMap TaggedPrepartition Metric
+open BoxIntegral Fin ContinuousLinearMap TaggedPrepartition Metric
 open Prepartition hiding mem_mk
 open Finset hiding Ioc mem_mk
-open Fin hiding zero_lt_one
 
 /-- Move to Mathlib.Topology.Order.IntermediateValue -/
 theorem Set.BijOn.of_strictMonoOn_continuousOn {α : Type*} [TopologicalSpace α]
@@ -66,7 +64,7 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a ≤ b)
     mem_boxes, mem_toPrepartition, isValue, map_sub,
     hab, Function.comp_apply] at h ⊢
   peel h with ε hε h
-  obtain ⟨⟨δ', hpos⟩, hδ', h⟩ := h
+  obtain ⟨δ', hδ', h⟩ := h
   obtain ⟨δ, hδ, hδf⟩ := hcont.metric_uniform δ' hδ'
   refine ⟨ NNReal.mk (δ/2) (by linarith), (show 0 < δ/2 by positivity),
     fun π hhen hpart hmesh ↦ ?_ ⟩
