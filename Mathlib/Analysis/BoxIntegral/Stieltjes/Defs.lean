@@ -55,6 +55,11 @@ tagged partition `π` of `(a, b]` tends to `0`.  We implement this via the
 The Riemann--Stieltjes integral is also extended to the `a = b` and `a > b` cases by antisymmetry.
 In all cases, we denote the integral by `∫⟨B⟩ x in a..b, f x ∂g`.
 
+As is traditional, the Riemann--Stieltjes integral is defined in terms of `Ioc` intervals.  No
+API is directly provided for the `Ico` variant of this integral, but as a workaround one could
+apply a reflection `x ↦ -x` change of variable to the concepts introduced here to define
+such an integral.
+
 ## Tags
 
 Stieltjes integral, Riemann–Stieltjes, Riemann integral

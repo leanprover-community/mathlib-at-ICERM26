@@ -13,12 +13,7 @@ public import Mathlib.Analysis.BoxIntegral.Stieltjes.Defs
 public import Mathlib.Analysis.BoxIntegral.Partition.OrderedDivision
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
-public import Mathlib.Analysis.Calculus.ContDiff.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.ContDiff
-public import Mathlib.Analysis.Calculus.ContDiff.Defs
-public import Mathlib.Analysis.Calculus.ContDiff.Deriv
-public import Mathlib.Analysis.Calculus.Deriv.Linear
-public import Mathlib.Analysis.Calculus.Deriv.Mul
 
 /-! # Riemann–Stieltjes integral
 
@@ -57,11 +52,8 @@ existing Mathlib examples and style guides.
 * Develop a higher-dimensional Stieltjes integral (exists in the literature, but is rarely used)
 * Develop a Stieltjes integral based around `Ico` intervals rather than `Ioc` intervals
 * Other variants of Stieltjes integration, such as the Henstock-Stieltjes integral
-* Interpretation of `ofDiff` as a measure (assuming Stieltjes measure): see
-  https://leanprover-community.github.io/mathlib4_docs/Mathlib/MeasureTheory/Measure/Stieltjes.html
 * Interpretation of `ofDiff` as a signed measure (assuming bounded variation and right continuity).
 This requires the development of signed measures in Mathlib
-* Comparison/monotonicity theorems
 
 ## Tags
 
@@ -99,7 +91,6 @@ variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 
-
 /-- In one dimension, the mesh size simplifies to the longest length of an interval
 in the partition. -/
 theorem mesh_size₁ {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_size
@@ -131,10 +122,8 @@ theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E)
 /-- A Riemann integrable function on a closed interval is bounded. -/
 theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannIntegrable a b f) :
     Bornology.IsBounded (f '' (.Ioc a b)) := by
-  rw [RiemannIntegrable.def] at h
-  obtain ⟨ L, hL ⟩ := h
-  rw [hasRiemannIntegral_iff_lim_sum hab] at hL
-  obtain ⟨ δ, hδ, h ⟩ := hL 1 (by norm_num)
+  rw [RiemannIntegrable.def] at h; obtain ⟨ L, hL ⟩ := h
+  rw [hasRiemannIntegral_iff_lim_sum hab] at hL; obtain ⟨ δ, hδ, h ⟩ := hL 1 (by norm_num)
   let N := ⌈(b - a) / δ⌉₊
   have hN : N > 0 := by positivity
   have hab' : 0 < b - a := by positivity
@@ -170,7 +159,7 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
       obtain ⟨ i, hi, rfl ⟩ := hI
       obtain ⟨ j, hj, rfl ⟩ := hJ
       simp only [Function.onFun, Box.disjoint_iff₁, box_upper, box_lower]
-      rcases lt_trichotomy i j with hlt | rfl | hgt
+      rcases lt_trichotomy i j with _ | rfl | _
       · left; exact zmono' (by lia)
       · simp at hdisj
       right; exact zmono' (by lia)
@@ -202,7 +191,7 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
     simp only [mem_image, mem_range, π]; split_ifs with h h'
     · rw [h.2]
       exact Box.coe_subset_Icc (hmem hx hx')
-    · obtain ⟨ j, hj, rfl ⟩ := h'
+    · obtain ⟨ j, _, rfl ⟩ := h'
       apply Box.upper_mem_Icc
     simp [π] at hJ; tauto
   have hpart (p : Bool) : (π p).IsPartition := by
@@ -230,7 +219,7 @@ theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannInte
         · have : ∃ a < N, box a = box (i x - 1) := ⟨ i x - 1, by lia, rfl ⟩
           simp [← smul_sub, this, Box.upper₁, Box.lower₁]
         · intro I hI hIi; simp only [mem_image, mem_range] at hI
-          obtain ⟨ j, hj, rfl ⟩ := hI
+          obtain ⟨ j, _, rfl ⟩ := hI
           simp [hIi]
         simp only [mem_image, mem_range, not_exists, not_and, isValue, ↓reduceIte]
         intro h; simpa using h (i x - 1) (by lia)

@@ -155,7 +155,7 @@ lemma Box.mem_of_le (hab : a < b) {J : Box (Fin 1)} (hJ : J ≤ Ioc a b) :
   grind
 
 
-/-! ## Mapping or reflecting an interval -/
+/-! ## Mapping an interval -/
 
 variable (φ : ℝ → ℝ)
 
@@ -165,31 +165,28 @@ noncomputable def Ioc.comp (J : Box (Fin 1)) := Ioc (φ J.lower₁) (φ J.upper�
 lemma Ioc.comp_apply (hab : a < b) : comp φ (Ioc a b) = Ioc (φ a) (φ b) := by
   simp [comp, hab]
 
-noncomputable def Ioc.reflect (J : Box (Fin 1)) := Ioc (-J.upper₁) (-J.lower₁)
+/-- The map `Ioc.comp φ` is injective on any set of boxes contained in `Ioc a b`, provided `φ` is
+strictly monotone on `[a, b]`. -/
+lemma Ioc.comp_injOn_of_strictMonoOn {a b : ℝ} {φ : ℝ → ℝ} {S : Set (Box (Fin 1))}
+    (hab : a < b) (hS : ∀ J ∈ S, J ≤ Ioc a b)
+    (hmono : StrictMonoOn φ (Set.Icc a b)) :
+    Set.InjOn (Ioc.comp φ) S := by
+  intro I hI J hJ hIJ
+  have hI' := Box.mem_of_le hab (hS I hI)
+  have hJ' := Box.mem_of_le hab (hS J hJ)
+  have hIlt : φ I.lower₁ < φ I.upper₁ := hmono hI'.1 hI'.2 I.lower_lt_upper₁
+  have hJlt : φ J.lower₁ < φ J.upper₁ := hmono hJ'.1 hJ'.2 J.lower_lt_upper₁
+  have hl : φ I.lower₁ = φ J.lower₁ := by
+    simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.lower₁ hIJ
+  have hu : φ I.upper₁ = φ J.upper₁ := by
+    simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.upper₁ hIJ
+  exact (Box.congr₁ I J).mpr ⟨hmono.injOn hI'.1 hJ'.1 hl, hmono.injOn hI'.2 hJ'.2 hu⟩
 
-@[simp]
-lemma Ioc.reflect_upper (J : Box (Fin 1)) : (reflect J).upper₁ = -J.lower₁ := by
-  have : -J.upper₁ < -J.lower₁ := by grind [Box.lower_lt_upper₁]
-  simp [reflect, this]
+/-! ## Lexicographic ordering of one-dimensional boxes
 
-@[simp]
-lemma Ioc.reflect_lower (J : Box (Fin 1)) : (reflect J).lower₁ = -J.upper₁ := by
-  have : -J.upper₁ < -J.lower₁ := by grind [Box.lower_lt_upper₁]
-  simp [reflect, this]
+This code is not currently in use.
 
-@[simp]
-lemma Ioc.reflect_reflect (J : Box (Fin 1)) : reflect (reflect J) = J := by
-  simp [Box.congr₁]
-
-@[simp]
-lemma Ioc.reflect_eq : reflect (Ioc a b) = Ioc (-b) (-a) := by
-  rcases lt_trichotomy a b with (hab | rfl | hab)
-  · simp [reflect, hab]
-  · simp [reflect, Ioc, Box.upper₁, Box.lower₁]; aesop
-  simp [reflect, hab, symm]
-
-
-/-! ## Lexicographic ordering of one-dimensional boxes -/
+-/
 
 def Box.lexKey (J : Box (Fin 1)) : ℝ ×ₗ ℝ :=
   toLex (J.lower₁, J.upper₁)
