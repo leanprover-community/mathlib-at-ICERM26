@@ -78,6 +78,7 @@ lemma ContinuousOn.metric_uniform {E : Type*} [NormedAddCommGroup E] {a b : ℝ}
     (isCompact_Icc.uniformContinuousOn_of_continuous hf) ε hε
 
 open BoxIntegral
+open BoxAdditiveMap hiding zero_apply
 open ContinuousLinearMap TaggedPrepartition intervalIntegral Metric
 open Prepartition hiding mem_mk
 open Finset hiding Ioc mem_mk
@@ -469,7 +470,7 @@ theorem stieltjesIntegral_finset_sum_left {f : ι → ℝ → E}
 
 private theorem HasStieltjesIntegral'.const_right (c : F) :
     HasStieltjesIntegral' a b B f (fun _ ↦ c) 0 := by
-  simp only [HasStieltjesIntegral', isValue, BoxAdditiveMap.ofDiff_const, hasIntegral_zero_vol]
+  simp only [HasStieltjesIntegral', isValue, ofDiff_const, hasIntegral_zero_vol]
 
 @[simp]
 theorem HasStieltjesIntegral.const_right (c : F) :
@@ -728,13 +729,11 @@ it is also Stieltjes-integrable on any sub-interval of `(a, b]`. -/
 theorem StieltjesIntegrable.to_subinterval (hab : a < b) (hc : c ∈ Set.Icc a b)
     (hd : d ∈ Set.Icc a b) (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable c d B f g := by
-  simp only [Set.mem_Icc] at hc hd
-  simp only [of_lt, hab] at h
-  rcases lt_trichotomy c d with hcd | rfl | hcd
-  · simp only [hcd, of_lt]; exact h.to_subinterval hab hcd hc.1 hd.2
+  simp only [Set.mem_Icc, of_lt, hab] at hc hd h
+  rcases lt_trichotomy c d with _ | rfl | _
+  · grind [of_lt, StieltjesIntegrable'.to_subinterval]
   · simp
-  · rw [symm_iff]; simp only [hcd, of_lt]
-    exact h.to_subinterval hab hcd hd.1 hc.2
+  · grind [of_lt, StieltjesIntegrable'.to_subinterval, symm_iff]
 
 theorem RiemannIntegrable.to_subinterval [CompleteSpace E] (hab : a < b)
     (hc : c ∈ Set.Icc a b) (hd : d ∈ Set.Icc a b) (h : RiemannIntegrable a b f) :
@@ -772,12 +771,9 @@ private theorem HasStieltjesIntegral.add_adjacent_prelim (hab : a < b) (hbc : b 
   exact h₁.add_adjacent hab hbc ⟨L'', h₃⟩ h₂
 
 /-- If `f` is Stieltjes-integrable from `a` to `c`, has Stieltjes integral `L` from `a` to `b`
-and `L'` from `b` to `c` then `f` has Stieltjes integral `L + L'` from `a` to `c`.  No ordering
-is assumed in `a`, `b`, `c` in the final statement of the theorem.
-
-The 6-branch case-split below is intrinsic: after the three equality cases are dispatched, the
-remaining `a, b, c` are distinct and admit 3! = 6 orderings.  Each ordering routes through
-`add_adjacent_prelim` with a different choice of which integrals to flip via `.symm`. -/
+and `L'` from `b` to `c` then `f` has Stieltjes integral `L + L'` from `a` to `c`.  No ordering is assumed in `a`, `b`, `c` in the final statement of the theorem.
+(As such, the proof requires a split into 3!=6 cases.)
+-/
 theorem HasStieltjesIntegral.add_adjacent
     (h : StieltjesIntegrable a c B f g)
     (h₁ : HasStieltjesIntegral a b B f g L)
@@ -835,81 +831,51 @@ end Split
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → F)
     (hab : a < b)
-    (hg : BoundedVariationOn g (Set.Icc a b))
+    (hg : BoundedVariationOn g (.Icc a b))
     (π : Prepartition (Ioc a b)) :
-    ∑ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (B.flip <| g ·)) J‖ ≤
-      ‖B‖ * (eVariationOn g (Set.Icc a b)).toReal := by
-
-  -- Step 1: Bound each local subbox evaluation by the operator norm of B.flip
-  have h_term : ∀ J ∈ π.boxes, ‖(BoxAdditiveMap.ofDiff (B.flip <| g ·)) J‖ ≤
+    ∑ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤
+      ‖B‖ * (eVariationOn g (.Icc a b)).toReal := by
+  have h_term : ∀ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤
       ‖B‖ * ‖g J.upper₁ - g J.lower₁‖ := by
-    intro J hJ
-    change ‖B.flip (g J.upper₁) - B.flip (g J.lower₁)‖ ≤ _
-    rw [← map_sub, ← opNorm_flip B]
-    exact (B.flip).le_opNorm (g J.upper₁ - g J.lower₁)
-  -- Step 2: Apply bound term-wise to sum and cancel operator norm
-  refine (Finset.sum_le_sum h_term).trans ?_
-  rw [← Finset.mul_sum]
+    intros
+    simp only [ofDiff_apply, ← map_sub, ← opNorm_flip B, le_opNorm]
+  grw [Finset.sum_le_sum h_term, ← Finset.mul_sum]
   gcongr
-  -- Step 3: Upgrade to ENNReal and convert vector norms to `edist`
-  have h_sum_eq : ∑ J ∈ π.boxes, ‖g J.upper₁ - g J.lower₁‖ =
-      (ENNReal.ofReal (∑ J ∈ π.boxes, ‖g J.upper₁ - g J.lower₁‖)).toReal :=
-    (ENNReal.toReal_ofReal (Finset.sum_nonneg fun _ _ ↦ norm_nonneg _)).symm
-  rw [h_sum_eq]
+  rw [←ENNReal.toReal_ofReal (Finset.sum_nonneg fun _ _ ↦ norm_nonneg _)]
   refine ENNReal.toReal_mono hg ?_
-  rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _)]
-  simp_rw [← dist_eq_norm, ← edist_dist]
-  -- Step 4: The sum argument.
-  -- Induct on cardinality and detach leftmost box; using `Icc_add_Icc` additivity from eVariation
-  -- API.
-  -- TODO(bmgeorgiev): Golfing
+  simp_rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _), ← dist_eq_norm, ← edist_dist]
   classical
   suffices h : ∀ (n : ℕ) (c d : ℝ) (S : Finset (Box (Fin 1))),
       S.card = n → c ≤ d →
       (∀ J ∈ S, c ≤ J.lower₁ ∧ J.upper₁ ≤ d) →
-      (↑S : Set _).Pairwise
+      (S : Set _).Pairwise
         (Function.onFun Disjoint ((↑) : Box (Fin 1) → Set (Fin 1 → ℝ))) →
-      ∑ J ∈ S, edist (g (J.upper₁)) (g (J.lower₁)) ≤ eVariationOn g (Set.Icc c d) by
-    exact h π.boxes.card a b π.boxes rfl hab.le
-      (fun J hJ ↦ (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)) π.pairwiseDisjoint
-  intro n
-  induction n with
-  | zero =>
-    intro c d S hScard _ _ _
-    rw [Finset.card_eq_zero] at hScard
-    subst hScard
-    simp
+      ∑ J ∈ S, edist (g (J.upper₁)) (g (J.lower₁)) ≤ eVariationOn g (.Icc c d) by
+    exact h π.boxes.card _ _ _ rfl hab.le
+      (fun J hJ ↦ (J.le_Ioc_iff hab).mp (π.le_of_mem' J hJ)) π.pairwiseDisjoint
+  intro n; induction n with
+  | zero => intros; simp_all
   | succ n ih =>
     intro c d S hScard _ hbd hdj
     obtain ⟨J, hJS, hJ_min⟩ :=
-      S.exists_min_image (fun K ↦ K.lower₁) (Finset.card_pos.mp (by omega))
+      S.exists_min_image Box.lower₁ (Finset.card_pos.mp (by omega))
     have hJ_bd := hbd J hJS
-    have hJ_lt : J.lower₁ < J.upper₁ := J.lower_lt_upper 0
-    -- The minimality of `J.lower₁` together with disjointness puts every other
-    -- box strictly to the right of `J`.
+    have hJ_le : J.lower₁ ≤ J.upper₁ := J.lower_lt_upper₁.le
     have hRight : ∀ K ∈ S.erase J, J.upper₁ ≤ K.lower₁ := by
       intro K hKerase
-      have hKS : K ∈ S := Finset.mem_of_mem_erase hKerase
-      have hKne : K ≠ J := (Finset.mem_erase.mp hKerase).1
-      rcases Box.disjoint_iff₁.mp (hdj hJS hKS hKne.symm) with h | h
-      · exact h
-      · exact absurd (h.trans (hJ_min K hKS)) (not_le.mpr (K.lower_lt_upper 0))
+      have hKS := Finset.mem_of_mem_erase hKerase
+      specialize hJ_min K hKS
+      have := K.lower_lt_upper₁
+      specialize hdj hJS hKS (Finset.mem_erase.mp hKerase).1.symm
+      grind [Box.disjoint_iff₁]
     have IH := ih (J.upper₁) d (S.erase J)
       (by rw [Finset.card_erase_of_mem hJS, hScard]; omega) hJ_bd.2
       (fun K hK ↦ ⟨hRight K hK, (hbd K (Finset.mem_of_mem_erase hK)).2⟩)
       (hdj.mono (Finset.coe_subset.mpr (Finset.erase_subset _ _)))
-    rw [← Finset.add_sum_erase _ _ hJS]
-    calc edist (g (J.upper₁)) (g (J.lower₁)) +
-          ∑ K ∈ S.erase J, edist (g (K.upper₁)) (g (K.lower₁))
-        ≤ eVariationOn g (Set.Icc (J.lower₁) (J.upper₁)) +
-            eVariationOn g (Set.Icc (J.upper₁) d) :=
-          add_le_add (eVariationOn.edist_le g (Set.right_mem_Icc.mpr hJ_lt.le)
-            (Set.left_mem_Icc.mpr hJ_lt.le)) IH
-      _ = eVariationOn g (Set.Icc (J.lower₁) d) := by
-          simpa using
-            eVariationOn.Icc_add_Icc (s := Set.univ) g hJ_lt.le hJ_bd.2 (Set.mem_univ _)
-      _ ≤ eVariationOn g (Set.Icc c d) :=
-          eVariationOn.mono g (Set.Icc_subset_Icc hJ_bd.1 le_rfl)
+    grw [← Finset.add_sum_erase _ _ hJS, eVariationOn.edist_le g (Set.right_mem_Icc.mpr hJ_le)
+      (Set.left_mem_Icc.mpr hJ_le), IH, ←eVariationOn.mono g (Set.Icc_subset_Icc hJ_bd.1 le_rfl)]
+    apply le_of_eq
+    simpa using eVariationOn.Icc_add_Icc g hJ_le hJ_bd.2 (Set.mem_univ _)
 
 /-- Continuous integrand and a
 bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
@@ -917,14 +883,14 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
    {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab : a < b) (l : IntegrationParams)
     (hf : ContinuousOn f (.Icc a b)) (hg : BoundedVariationOn g (.Icc a b)) :
     Integrable (Ioc a b) l
-      (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (B.flip <| g ·)) := by
+      (fun x ↦ f (x 0)) (ofDiff (B.flip <| g ·)) := by
   let f' := fun x : Fin 1 → ℝ ↦ f (x 0)
   refine integrable_iff_cauchy_basis.2 fun ε hε ↦ ?_
   let V : ℝ := (eVariationOn g (.Icc a b)).toReal
   rcases exists_pos_mul_lt hε (‖B‖ * V) with ⟨η, hη, hηC⟩
   obtain ⟨δ, hδ, hδf⟩ := hf.metric_uniform η hη
   refine ⟨fun _ _ ↦ ⟨δ/4, by grind⟩, fun _ _ _ ↦ by rfl, fun _ _ π₁ π₂ hπ₁ hpart₁ hπ₂ hpart₂ ↦ ?_⟩
-  let vol := BoxAdditiveMap.ofDiff (B.flip <| g ·)
+  let vol := ofDiff (B.flip <| g ·)
   let π := π₁.toPrepartition ⊓ π₂.toPrepartition
   let τ₁ := π₁.infPrepartition π₂.toPrepartition
   let τ₂ := π₂.infPrepartition π₁.toPrepartition
