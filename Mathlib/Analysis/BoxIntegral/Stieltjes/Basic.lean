@@ -122,7 +122,7 @@ theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E)
 /-- A Riemann integrable function on a closed interval is bounded. -/
 theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannIntegrable a b f) :
     Bornology.IsBounded (f '' (.Ioc a b)) := by
-  rw [RiemannIntegrable.def] at h; obtain ⟨L, hL⟩ := h
+  obtain ⟨L, hL⟩ := RiemannIntegrable_def.mp h
   rw [hasRiemannIntegral_iff_lim_sum hab] at hL; obtain ⟨δ, hδ, h⟩ := hL 1 (by norm_num)
   let N := ⌈(b - a) / δ⌉₊
   have hN : N > 0 := by positivity
@@ -393,15 +393,15 @@ theorem HasStieltjesIntegral.neg_left (h : HasStieltjesIntegral a b B f g L) :
   convert h.smul_left (-1) using 1 <;> simp
 
 theorem HasRiemannIntegral.neg (h : HasRiemannIntegral a b f M) :
-  HasRiemannIntegral a b (-f) (-M) :=
+    HasRiemannIntegral a b (-f) (-M) :=
   HasStieltjesIntegral.neg_left h
 
 theorem StieltjesIntegrable.neg_left
-  (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable a b B (-f) g :=
+    (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable a b B (-f) g :=
   h.hasStieltjesIntegral.neg_left.stieltjesIntegrable
 
 theorem RiemannIntegrable.neg
-  (h : RiemannIntegrable a b f) : RiemannIntegrable a b (-f) :=
+    (h : RiemannIntegrable a b f) : RiemannIntegrable a b (-f) :=
   StieltjesIntegrable.neg_left h
 
 @[simp]
@@ -475,11 +475,11 @@ private theorem HasStieltjesIntegral'.const_right (c : F) :
 theorem HasStieltjesIntegral.const_right (c : F) :
     HasStieltjesIntegral a b B f (fun _ ↦ c) 0 := by
   rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab] at ⊢
+  · simp only [of_lt, hab]
     apply HasStieltjesIntegral'.const_right
   · simp_all
-  rw [symm_iff] at ⊢
-  simp only [neg_zero, hab, of_lt] at ⊢
+  rw [symm_iff]
+  simp only [neg_zero, hab, of_lt]
   apply HasStieltjesIntegral'.const_right
 
 @[simp]
@@ -550,7 +550,6 @@ theorem stieltjesIntegral_smul_right
     ∫⟨B⟩ x in a..b, f x ∂(c • g) = c • ∫⟨B⟩ x in a..b, f x ∂g :=
   (h.hasStieltjesIntegral.smul_right c).stieltjesIntegral_eq
 
-
 theorem HasStieltjesIntegral.neg_right (h : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b B f (-g) (-L) := by
   convert h.smul_right (-1) using 1 <;> simp
@@ -611,11 +610,11 @@ private theorem HasStieltjesIntegral'.zero_bil : HasStieltjesIntegral' a b 0 f g
 @[simp]
 theorem HasStieltjesIntegral.zero_bil : HasStieltjesIntegral a b 0 f g (0 : G) := by
   rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab] at ⊢
+  · simp only [of_lt, hab]
     apply HasStieltjesIntegral'.zero_bil
   · simp_all
-  rw [symm_iff] at ⊢
-  simp only [neg_zero, hab, of_lt] at ⊢
+  rw [symm_iff]
+  simp only [neg_zero, hab, of_lt]
   apply HasStieltjesIntegral'.zero_bil
 
 @[simp]
@@ -732,12 +731,10 @@ theorem StieltjesIntegrable.to_subinterval (hab : a < b) (hc : c ∈ Set.Icc a b
   simp only [Set.mem_Icc] at hc hd
   simp only [of_lt, hab] at h
   rcases lt_trichotomy c d with hcd | rfl | hcd
-  · simp only [hcd, of_lt]
-    exact h.to_subinterval hab hcd hc.1 hd.2
+  · simp only [hcd, of_lt]; exact h.to_subinterval hab hcd hc.1 hd.2
   · simp
-  symm
-  simp only [hcd, of_lt]
-  exact h.to_subinterval hab hcd hd.1 hc.2
+  · rw [symm_iff]; simp only [hcd, of_lt]
+    exact h.to_subinterval hab hcd hd.1 hc.2
 
 theorem RiemannIntegrable.to_subinterval [CompleteSpace E] (hab : a < b)
     (hc : c ∈ Set.Icc a b) (hd : d ∈ Set.Icc a b) (h : RiemannIntegrable a b f) :
@@ -778,18 +775,20 @@ private theorem HasStieltjesIntegral.add_adjacent_prelim (hab : a < b) (hbc : b 
 and `L'` from `b` to `c` then `f` has Stieltjes integral `L + L'` from `a` to `c`.  No ordering
 is assumed in `a`, `b`, `c` in the final statement of the theorem.
 
-TODO: reduce the amount of case splitting in the proof. -/
+The 6-branch case-split below is intrinsic: after the three equality cases are dispatched, the
+remaining `a, b, c` are distinct and admit 3! = 6 orderings.  Each ordering routes through
+`add_adjacent_prelim` with a different choice of which integrals to flip via `.symm`. -/
 theorem HasStieltjesIntegral.add_adjacent
     (h : StieltjesIntegrable a c B f g)
     (h₁ : HasStieltjesIntegral a b B f g L)
     (h₂ : HasStieltjesIntegral b c B f g L') :
     HasStieltjesIntegral a c B f g (L + L') := by
   have h₃ := h.hasStieltjesIntegral
-  by_cases! hab : a = b
+  obtain rfl | hab := eq_or_ne a b
   · simp_all
-  by_cases! hbc : b = c
+  obtain rfl | hbc := eq_or_ne b c
   · simp_all
-  by_cases! hac : a = c
+  obtain rfl | hac := eq_or_ne a c
   · simp_all; simp [h₁.unique h₂.symm]
   have h₁' := h₁.symm
   have h₂' := h₂.symm
@@ -799,7 +798,8 @@ theorem HasStieltjesIntegral.add_adjacent
   rcases lt_or_gt_of_ne hbc with hbc | hcb <;>
   rcases lt_or_gt_of_ne hac with hac | hca <;>
   try order
-  · simp_all [add_adjacent_prelim hab hbc h₁ h₂ h₃]
+  · have := add_adjacent_prelim hab hbc h₁ h₂ h₃
+    grind
   · have := add_adjacent_prelim hac hcb h₃ h₂' h₁
     grind
   · have := add_adjacent_prelim hca hab h₃' h₁ h₂'

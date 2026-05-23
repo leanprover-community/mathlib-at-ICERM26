@@ -95,20 +95,24 @@ def HasStieltjesIntegral : Prop :=
       HasStieltjesIntegral' b a B f g (-L)
 
 @[simp]
-lemma HasStieltjesIntegral.of_eq_iff_zero :
+lemma HasStieltjesIntegral.of_eq_iff_zero {a : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} :
     HasStieltjesIntegral a a B f g L ↔ L = 0 := by
   simp [HasStieltjesIntegral]
 
-lemma HasStieltjesIntegral.of_lt {a b : ℝ} (hab : a < b) :
+lemma HasStieltjesIntegral.of_lt {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (hab : a < b) :
     HasStieltjesIntegral a b B f g L ↔ HasStieltjesIntegral' a b B f g L := by
   simp [HasStieltjesIntegral, hab, hab.ne]
 
 @[simp]
-lemma HasStieltjesIntegral.of_gt {a b : ℝ} (hba : b < a) :
+lemma HasStieltjesIntegral.of_gt {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} (hba : b < a) :
     HasStieltjesIntegral a b B f g L ↔ HasStieltjesIntegral' b a B f g (-L) := by
   simp [HasStieltjesIntegral, Std.not_gt_of_lt hba, hba.ne.symm]
 
-lemma HasStieltjesIntegral.symm_iff :
+lemma HasStieltjesIntegral.symm_iff {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G} :
     HasStieltjesIntegral a b B f g L ↔ HasStieltjesIntegral b a B f g (-L) := by
   unfold HasStieltjesIntegral
   rcases lt_trichotomy a b with h | rfl | h
@@ -117,7 +121,8 @@ lemma HasStieltjesIntegral.symm_iff :
   simp [h, Std.not_gt_of_lt h, h.ne, h.ne.symm]
 
 @[symm]
-lemma HasStieltjesIntegral.symm {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L : G}
+lemma HasStieltjesIntegral.symm {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} {L : G}
     (h : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral b a B f g (-L) := by
   rwa [← symm_iff]
@@ -137,22 +142,25 @@ useful even outside of the case `a < b`.
 def StieltjesIntegrable : Prop :=
   ∃ L, HasStieltjesIntegral a b B f g L
 
-theorem stieltjesIntegrable'_iff_integrable :
-  StieltjesIntegrable' a b B f g ↔
-  Integrable (Ioc a b) IntegrationParams.Riemann
-    (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) :=
+theorem stieltjesIntegrable'_iff_integrable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} :
+    StieltjesIntegrable' a b B f g ↔
+    Integrable (Ioc a b) IntegrationParams.Riemann
+      (fun x ↦ f (x 0)) (BoxAdditiveMap.ofDiff (fun x ↦ B.flip (g x))) :=
   ⟨fun ⟨_, hL⟩ ↦ HasIntegral.integrable hL, fun h ↦ ⟨_, h.hasIntegral⟩⟩
 
 @[simp]
-lemma StieltjesIntegrable.of_eq :
+lemma StieltjesIntegrable.of_eq {a : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F} :
     StieltjesIntegrable a a B f g := by
   simp [StieltjesIntegrable, HasStieltjesIntegral]
 
-lemma StieltjesIntegrable.of_lt {a b : ℝ} (hab : a < b) :
+lemma StieltjesIntegrable.of_lt {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} (hab : a < b) :
     StieltjesIntegrable a b B f g ↔ StieltjesIntegrable' a b B f g := by
   simp [StieltjesIntegrable, StieltjesIntegrable', HasStieltjesIntegral.of_lt, hab]
 
-lemma StieltjesIntegrable.symm_iff :
+lemma StieltjesIntegrable.symm_iff {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} :
     StieltjesIntegrable a b B f g ↔ StieltjesIntegrable b a B f g := by
   unfold StieltjesIntegrable
   constructor <;> rintro ⟨L, h⟩ <;> use -L <;> apply h.symm
@@ -162,11 +170,13 @@ lemma StieltjesIntegrable.symm {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : 
     (h : StieltjesIntegrable a b B f g) : StieltjesIntegrable b a B f g := by
   rwa [← symm_iff]
 
-lemma StieltjesIntegrable.of_gt {a b : ℝ} (hba : b < a) :
+lemma StieltjesIntegrable.of_gt {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} (hba : b < a) :
     StieltjesIntegrable a b B f g ↔ StieltjesIntegrable' b a B f g := by
-  rw [symm_iff]; exact of_lt B f g hba
+  rw [symm_iff]; exact of_lt hba
 
-lemma StieltjesIntegrable.iff_min_max :
+lemma StieltjesIntegrable.iff_min_max {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
+    {f : ℝ → E} {g : ℝ → F} :
     StieltjesIntegrable a b B f g ↔
     StieltjesIntegrable (min a b) (max a b) B f g := by
   rcases le_total a b with h | h <;> simp [h, symm_iff]
@@ -225,10 +235,8 @@ theorem StieltjesIntegrable.hasStieltjesIntegral_iff (h : StieltjesIntegrable a 
   grind [hasStieltjesIntegral, HasStieltjesIntegral.unique]
 
 @[simp]
-theorem stieltjesIntegral.of_eq : ∫⟨B⟩ x in a..a, f x ∂g = 0 := by
-  simp only [stieltjesIntegral, StieltjesIntegrable.of_eq, ↓reduceDIte]
-  rw [← HasStieltjesIntegral.of_eq_iff_zero a B f g]
-  apply Exists.choose_spec
+theorem stieltjesIntegral.of_eq : ∫⟨B⟩ x in a..a, f x ∂g = 0 :=
+  HasStieltjesIntegral.of_eq_iff_zero.mp StieltjesIntegrable.of_eq.hasStieltjesIntegral
 
 @[simp]
 theorem stieltjesIntegral.of_not_integrable (h : ¬ StieltjesIntegrable a b B f g) :
@@ -259,7 +267,7 @@ theorem hasStieltjesIntegral_congr {a b : ℝ}
   · simp only [hab.le, Set.uIcc_of_le, hab, HasStieltjesIntegral.of_lt] at hf hg ⊢
     exact hasStieltjesIntegral'_congr hab hf hg
   · simp
-  simp only [HasStieltjesIntegral.symm_iff a b, hab.le, Set.uIcc_of_ge, hab,
+  simp only [HasStieltjesIntegral.symm_iff (a := a) (b := b), hab.le, Set.uIcc_of_ge, hab,
     HasStieltjesIntegral.of_lt] at hf hg ⊢
   exact hasStieltjesIntegral'_congr hab hf hg
 
@@ -306,19 +314,19 @@ theorem HasRiemannIntegral.iff_hasIntegral {a b : ℝ} (hab : a < b) :
     simp [HasRiemannIntegral, hab, HasStieltjesIntegral.of_lt, HasStieltjesIntegral',
       BoxAdditiveMap.ofDiff_lsmul_eq_volume]
 
-lemma RiemannIntegrable.def :
+lemma RiemannIntegrable_def {a b : ℝ} {f : ℝ → E} :
     RiemannIntegrable a b f ↔ ∃ L, HasRiemannIntegral a b f L := by rfl
 
 lemma RiemannIntegrable.symm {a b : ℝ} {f : ℝ → E} (h : RiemannIntegrable a b f) :
     RiemannIntegrable b a f := StieltjesIntegrable.symm h
 
 @[simp]
-lemma RiemannIntegrable.of_eq : RiemannIntegrable a a f := StieltjesIntegrable.of_eq _ _ _ _
+lemma RiemannIntegrable.of_eq : RiemannIntegrable a a f := StieltjesIntegrable.of_eq
 
 theorem RiemannIntegrable.iff_integrable {a b : ℝ} (hab : a < b) :
     RiemannIntegrable a b f ↔
       Integrable (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0)) BoxAdditiveMap.volume := by
-    simp [RiemannIntegrable.def, Integrable, HasRiemannIntegral.iff_hasIntegral, hab]
+    simp [RiemannIntegrable_def, Integrable, HasRiemannIntegral.iff_hasIntegral, hab]
 
 theorem hasRiemannIntegral_congr {a b : ℝ} {f₁ f₂ : ℝ → E}
     (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) :

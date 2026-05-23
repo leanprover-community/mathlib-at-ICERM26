@@ -73,16 +73,16 @@ TODO: Stieltjes integration against a Heaviside function
 section Sums
 
 private lemma short {I J : Box (Fin 1)} {π : TaggedPrepartition I} (hπ : π.mesh_size ≤ 1)
-    (hJ : J ∈ π) : ⌊J.upper 0⌋ = ⌊J.lower 0⌋ ∨ ⌊J.upper 0⌋ = ⌊J.lower 0⌋ + 1 := by
-    simp only [mesh_size_le_iff, mem_boxes, mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right,
-      forall_fin_one, isValue] at hπ
+    (hJ : J ∈ π) : ⌊J.upper₁⌋ = ⌊J.lower₁⌋ ∨ ⌊J.upper₁⌋ = ⌊J.lower₁⌋ + 1 := by
+    simp only [mesh_size_le_iff₁, mem_boxes, mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right]
+    at hπ
     replace hπ := Int.floor_mono (hπ J hJ)
-    have := Int.floor_mono (J.lower_lt_upper 0).le
+    have := Int.floor_mono (J.lower_lt_upper₁).le
     rw [add_comm, Int.floor_add_one] at hπ; grind
 
 private lemma coe_mem_Box_iff {n : ℤ} {J : Box (Fin 1)} :
-  ↑n ∈ J ↔ n ∈ Finset.Ioc ⌊J.lower 0⌋ ⌊J.upper 0⌋ := by
-  simp [Box.mem_def, Int.floor_lt, Int.le_floor]
+  ↑n ∈ J ↔ n ∈ Finset.Ioc ⌊J.lower₁⌋ ⌊J.upper₁⌋ := by
+  simp [Box.mem₁, Int.floor_lt, Int.le_floor]
 
 private lemma floor_le {a b x y : ℝ} (h : a ≤ x ∧ y ≤ b) : ⌊a⌋ ≤ ⌊x⌋ ∧ ⌊y⌋ ≤ ⌊b⌋ :=
   ⟨Int.floor_mono h.1, Int.floor_mono h.2⟩
@@ -109,13 +109,13 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f :
       _ = dist (∑ J ∈ π.boxes, 0) (∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, (0:G)) := by
         congr 1
         · apply sum_congr rfl; intro J hJ
-          have : g ⌊J.upper 0⌋ - g ⌊J.lower 0⌋ = 0 := by
+          have : g ⌊J.upper₁⌋ - g ⌊J.lower₁⌋ = 0 := by
             rcases short hmesh hJ with h | h
             · simp [h]
             convert hM _ ?_
             · simp [h]
             have := π.le_of_mem' J hJ
-            simp only [Box.le_Ioc_iff hab, isValue] at this
+            simp only [Box.le_Ioc_iff hab] at this
             have := floor_le this
             grind
           simp [this]
@@ -127,7 +127,7 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f :
   refine ⟨ NNReal.mk (min (δ / 2) 1) (by positivity), show min (δ / 2) 1 > 0 by positivity,
     fun π hhen hpart hmesh ↦ ?_ ⟩
   have hmesh' : π.mesh_size ≤ 1 := by grw [hmesh]; exact min_le_right (δ / 2) 1
-  replace hmesh : ∀ J ∈ π, J.upper 0 ≤ min (δ / 2) 1 + J.lower 0 := by
+  replace hmesh : ∀ J ∈ π, J.upper₁ ≤ min (δ / 2) 1 + J.lower₁ := by
     simpa [-le_inf_iff] using hmesh
   classical
   let K : ℤ → Box (Fin 1) := fun n ↦ if h : ↑n ∈ Ioc a b then (hpart n h).choose else Ioc a b
@@ -150,14 +150,14 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f :
       · intro J hJ hJK; rcases short hmesh' hJ with h | h
         · simp [h]
         contrapose! hJK
-        have : ⌊J.upper 0⌋ ∈ Finset.Ioc ⌊a⌋ ⌊b⌋ := by
+        have : ⌊J.upper₁⌋ ∈ Finset.Ioc ⌊a⌋ ⌊b⌋ := by
           replace hJ := π.le_of_mem hJ
-          simp only [Box.le_Ioc_iff hab, isValue, Finset.mem_Ioc] at hJ ⊢
+          simp only [Box.le_Ioc_iff hab, Finset.mem_Ioc] at hJ ⊢
           have := floor_le hJ
           lia
-        refine ⟨ ⌊J.upper 0⌋, by grind, ?_ ⟩
+        refine ⟨ ⌊J.upper₁⌋, by grind, ?_ ⟩
         apply π.eq_of_mem_of_mem (hK _ this).1 hJ (hK _ this).2
-        simp [Box.mem_fin_one, h, ← Int.lt_floor_iff]
+        simp [Box.mem₁, h, ← Int.lt_floor_iff]
       congr! 3 with n hn <;> have := short hmesh' (hK n hn).1
       <;> have := (hK n hn).2
       <;> simp only [coe_mem_Box_iff, Finset.mem_Ioc] at this
