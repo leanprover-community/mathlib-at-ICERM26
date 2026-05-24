@@ -76,6 +76,8 @@ lemma Box.Icc₁_eq (J : Box (Fin 1)) : J.Icc = {x | x 0 ∈ J.Icc₁ } := by
 lemma Box.mem_Icc₁ (x : Fin 1 → ℝ) (J : Box (Fin 1)) :
     x ∈ J.Icc ↔ x 0 ∈ J.Icc₁ := by simp
 
+lemma Box.Icc₁_subset_Icc₁ {J J' : Box (Fin 1)} (h : J ≤ J') : J.Icc₁ ⊆ J'.Icc₁ := by
+  grind [le_iff₁, Icc₁]
 
 /-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(-1, 1]` if `a = b`,
 and `(b, a]` if `a > b` (to give symmetry)).

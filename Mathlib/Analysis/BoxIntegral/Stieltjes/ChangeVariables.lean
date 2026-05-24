@@ -11,7 +11,6 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Stieltjes.Basic
 
-
 /-! # Change of variables for the Riemann–Stieltjes integral
 
 In this file we establish how the Riemann–Stieltjes integral
@@ -26,15 +25,6 @@ open BoxIntegral Fin ContinuousLinearMap TaggedPrepartition Metric
 open Prepartition hiding mem_mk
 open Finset hiding Ioc mem_mk
 
-/-- Move to Mathlib.Topology.Order.IntermediateValue -/
-theorem Set.BijOn.of_strictMonoOn_continuousOn {α : Type*} [TopologicalSpace α]
-    [ConditionallyCompleteLinearOrder α] [OrderTopology α] [DenselyOrdered α] {δ : Type u_1}
-    [LinearOrder δ] [TopologicalSpace δ] [OrderClosedTopology δ] {f : α → δ} {a b : α}
-    (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) (hf_mono : StrictMonoOn f (.Icc a b)) :
-    Set.BijOn f (.Icc a b) (.Icc (f a) (f b)) :=
-  Set.BijOn.mk hf_mono.monotoneOn.mapsTo_Icc hf_mono.injOn
-  (hf.surjOn_Icc (Set.left_mem_Icc.mpr hab) (Set.right_mem_Icc.mpr hab))
-
 namespace BoxIntegral
 
 section Change
@@ -43,16 +33,15 @@ section Change
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
-variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
 variable {φ : ℝ → ℝ} {f : ℝ → E} {g : ℝ → F} {L : G} {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
 
 /-- The Riemann-Stieltjes integral is unchanged after composing with a strictly monotone
 continuous function. -/
 theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a ≤ b)
-  (hmono : StrictMonoOn φ (Set.Icc a b))
-  (hcont : ContinuousOn φ (Set.Icc a b))
-  (h : HasStieltjesIntegral (φ a) (φ b) B f g L) :
-  HasStieltjesIntegral a b B (f ∘ φ) (g ∘ φ) L := by
+    (hmono : StrictMonoOn φ (Set.Icc a b))
+    (hcont : ContinuousOn φ (Set.Icc a b))
+    (h : HasStieltjesIntegral (φ a) (φ b) B f g L) :
+    HasStieltjesIntegral a b B (f ∘ φ) (g ∘ φ) L := by
   rcases eq_or_lt_of_le hab with rfl | hab
   · simp_all
   have ha_mem : a ∈ Set.Icc a b := by simp [hab.le]
@@ -66,8 +55,8 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a ≤ b)
   peel h with ε hε h
   obtain ⟨δ', hδ', h⟩ := h
   obtain ⟨δ, hδ, hδf⟩ := hcont.metric_uniform δ' hδ'
-  refine ⟨ NNReal.mk (δ/2) (by linarith), (show 0 < δ/2 by positivity),
-    fun π hhen hpart hmesh ↦ ?_ ⟩
+  refine ⟨NNReal.mk (δ/2) (by linarith), (show 0 < δ/2 by positivity),
+    fun π hhen hpart hmesh ↦ ?_⟩
   have h1 {J : Box (Fin 1)} (hJ : J ∈ π) := J.mem_of_le hab (π.le_of_mem' _ hJ)
   have h2 {J : Box (Fin 1)} (hJ : J ∈ π) : φ J.lower₁ < φ J.upper₁ :=
     hmono (h1 hJ).1 (h1 hJ).2 J.lower_lt_upper₁
@@ -81,15 +70,15 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a ≤ b)
     boxes := π.boxes.image (Ioc.comp φ)
     le_of_mem' J' hJ' := by
       simp only [mem_image, mem_boxes, mem_toPrepartition] at hJ'
-      obtain ⟨ J, hJπ, rfl ⟩ := hJ'
+      obtain ⟨J, hJπ, rfl⟩ := hJ'
       rw [J.eq_Ioc]
       simp only [Box.lower_lt_upper₁, Ioc.comp_apply, Ioc_le_Ioc_iff hφab (h2 hJπ)]
       and_intros <;> apply hmono' <;> grind
     pairwiseDisjoint I' hI' J' hJ' hdisj := by
       simp only [coe_image, Set.mem_image, SetLike.mem_coe, mem_boxes,
         mem_toPrepartition, Function.onFun] at hI' hJ' ⊢
-      obtain ⟨ I, hIπ, rfl ⟩ := hI'
-      obtain ⟨ J, hJπ, rfl ⟩ := hJ'
+      obtain ⟨I, hIπ, rfl⟩ := hI'
+      obtain ⟨J, hJπ, rfl⟩ := hJ'
       have h : I ≠ J := by grind
       replace h := π.pairwiseDisjoint hIπ hJπ h
       simp only [Function.onFun, Box.disjoint_iff₁, Ioc.comp, h2 hIπ, Ioc.upper₁, h2 hJπ,
@@ -100,7 +89,7 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a ≤ b)
       have := π.tag_mem_Icc (σ J')
       simp only [Box.Icc_def, Set.mem_Icc, Pi.le_def, hab, Ioc.lower, forall_fin_one,
         isValue, Ioc.upper, hφab, forall_const] at this ⊢
-      refine ⟨ hmono' ha_mem (by simp [this]) this.1, hmono' (by simp [this]) hb_mem this.2 ⟩
+      refine ⟨hmono' ha_mem (by simp [this]) this.1, hmono' (by simp [this]) hb_mem this.2⟩
   }
   convert h π' (fun J' hJ' ↦ ?_) (fun x' hx' ↦ ?_) (fun J' hJ' ↦ ?_) using 2
   · symm
@@ -109,32 +98,32 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a ≤ b)
     simp [π', hσ J hJ]; simp [Ioc.comp, h2 hJ]
   · simp only [isValue, mem_mk, Prepartition.mem_mk, mem_image, mem_boxes, mem_toPrepartition,
     Box.Icc₁_eq, Box.Icc₁_def, Set.mem_Icc, Set.mem_setOf_eq, π'] at hJ' ⊢
-    obtain ⟨ J, hJπ, rfl ⟩ := hJ'
+    obtain ⟨J, hJπ, rfl⟩ := hJ'
     specialize h1 hJπ
     simp only [hσ J hJπ]; simp only [Ioc.comp, h2 hJπ, Ioc.lower₁, isValue, Ioc.upper₁]
     have h3 := π.tag_mem_Icc J
     have h4 := hhen J hJπ
     simp only [Box.Icc₁_eq, Box.Icc₁_def, hab, Ioc.lower₁, Ioc.upper₁, isValue, Set.mem_Icc,
       Set.mem_setOf_eq] at h3 h4
-    exact ⟨ hmono' h1.1 (by simp [h3]) h4.1, hmono' (by simp [h3]) h1.2 h4.2 ⟩
+    exact ⟨hmono' h1.1 (by simp [h3]) h4.1, hmono' (by simp [h3]) h1.2 h4.2⟩
   · simp only [Box.mem₁, Box.toSet₁_def, hφab, Ioc.lower₁, Ioc.upper₁, isValue, Set.mem_Ioc,
     mem_toPrepartition] at hx' ⊢
     have := hsurj (show x' 0 ∈ Set.Icc (φ a) (φ b) by grind)
     simp only [isValue, Set.mem_image, Set.mem_Icc] at this
-    obtain ⟨ x, hx, hxx' ⟩ := this
+    obtain ⟨x, hx, hxx'⟩ := this
     simp only [isValue, ← hxx', mem_mk, Prepartition.mem_mk,
       mem_image, mem_boxes, mem_toPrepartition,
       exists_exists_and_eq_and, π'] at hx' ⊢
     have : a < x := by grind
-    obtain ⟨ J, hJπ, hxJ ⟩ := hpart (fun _ ↦ x) (by simp [hab, this, hx])
+    obtain ⟨J, hJπ, hxJ⟩ := hpart (fun _ ↦ x) (by simp [hab, this, hx])
     use J, hJπ
     simp only [Box.mem₁, Box.toSet₁_def, Set.mem_Ioc, Ioc.comp, h2 hJπ, Ioc.lower₁,
       Ioc.upper₁] at hxJ ⊢
     specialize h1 hJπ
-    exact ⟨ hmono h1.1 (by simp [hx]) hxJ.1, hmono' (by simp [hx]) h1.2 hxJ.2 ⟩
+    exact ⟨hmono h1.1 (by simp [hx]) hxJ.1, hmono' (by simp [hx]) h1.2 hxJ.2⟩
   simp only [isValue, mem_mk, Prepartition.mem_mk, mem_image, mem_boxes,
     mem_toPrepartition, π'] at hJ'
-  obtain ⟨ J, hJπ, rfl ⟩ := hJ'
+  obtain ⟨J, hJπ, rfl⟩ := hJ'
   specialize h1 hJπ
   specialize h2 hJπ
   have := J.lower_lt_upper₁
@@ -144,7 +133,7 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a ≤ b)
     simp [Real.dist_eq] at this ⊢; grind
   apply hδf _ h1.1 _ h1.2
   specialize hmesh J hJπ
-  simp [←NNReal.coe_le_coe] at hmesh ⊢; grind
+  simp [← NNReal.coe_le_coe] at hmesh ⊢; grind
 
 theorem StieltjesIntegrable.of_comp_strictMono_continuous (hab : a ≤ b)
     (hmono : StrictMonoOn φ (.Icc a b))
@@ -157,9 +146,8 @@ theorem stieltjesIntegral_of_comp_strictMono_continuous (hab : a ≤ b)
     (hmono : StrictMonoOn φ (.Icc a b))
     (hcont : ContinuousOn φ (.Icc a b))
     (h : StieltjesIntegrable (φ a) (φ b) B f g) :
-    ∫⟨B⟩ x in a..b, f (φ x) ∂(g ∘ φ) = ∫⟨B⟩ x in φ a..φ b, f x ∂g := by
-  rw [← (h.hasStieltjesIntegral.of_comp_strictMono_continuous hab hmono hcont).stieltjesIntegral_eq]
-  congr
+    ∫⟨B⟩ x in a..b, f (φ x) ∂(g ∘ φ) = ∫⟨B⟩ x in φ a..φ b, f x ∂g :=
+  (h.hasStieltjesIntegral.of_comp_strictMono_continuous hab hmono hcont).stieltjesIntegral_eq
 
 end Change
 

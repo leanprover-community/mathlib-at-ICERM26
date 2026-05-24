@@ -26,7 +26,6 @@ In this file we obtain estimates on Fourier transforms via the Riemann–Stieltj
 
 @[expose] public section
 
-
 open BoxIntegral ContinuousLinearMap TaggedPrepartition Prepartition
 open scoped FourierTransform
 open Filter Complex MeasureTheory intervalIntegral
@@ -42,7 +41,7 @@ lemma atTop_limUnder_of_integrable
   by_contra! hL
   have hpos : 0 < ‖L‖/2 := by positivity
   simp only [Metric.tendsto_nhds, gt_iff_lt, eventually_atTop, ge_iff_le] at hlim
-  obtain ⟨ R, hR ⟩ := hlim (‖L‖/2) hpos
+  obtain ⟨R, hR⟩ := hlim (‖L‖/2) hpos
   have : Set.Ici R ⊆ {x | ‖L‖ / 2 < ‖f x‖} := by
     peel hR with x hx hR
     simp only [Set.mem_setOf_eq, dist_eq_norm] at hR ⊢
@@ -60,7 +59,7 @@ lemma atBot_limUnder_of_integrable
   by_contra! hL
   have hpos : 0 < ‖L‖/2 := by positivity
   simp only [Metric.tendsto_nhds, gt_iff_lt, eventually_atBot] at hlim
-  obtain ⟨ R, hR ⟩ := hlim (‖L‖/2) hpos
+  obtain ⟨R, hR⟩ := hlim (‖L‖/2) hpos
   have : Set.Iic R ⊆ {x | ‖L‖ / 2 < ‖f x‖} := by
     peel hR with x hx hR
     simp only [Set.mem_setOf_eq, dist_eq_norm] at hR ⊢
@@ -92,11 +91,11 @@ lemma continuous_E : Continuous (E ξ) := by unfold E; fun_prop
 
 lemma hasDerivAt_e : HasDerivAt (e ξ)
     (e ξ x * ((↑(-2 * Real.pi * ξ) : ℂ) * I)) x := by
-  have ha : HasDerivAt (fun (x:ℝ) ↦ (-2 * Real.pi * x :ℝ)) (-2 * Real.pi : ℝ) x := by
+  have ha : HasDerivAt (fun (x : ℝ) ↦ (-2 * Real.pi * x : ℝ)) (-2 * Real.pi : ℝ) x := by
     convert (hasDerivAt_const x ((-2 * Real.pi) : ℝ)).mul (hasDerivAt_id x) using 1
     simp
-  have h1 : HasDerivAt (fun (x:ℝ) ↦ (-2 * Real.pi * x * ξ :ℝ)) (-2 * Real.pi*ξ : ℝ) x := by
-    convert ha.mul (hasDerivAt_const x (ξ:ℝ)) using 1
+  have h1 : HasDerivAt (fun (x : ℝ) ↦ (-2 * Real.pi * x * ξ : ℝ)) (-2 * Real.pi * ξ : ℝ) x := by
+    convert ha.mul (hasDerivAt_const x (ξ : ℝ)) using 1
     simp
   exact (HasDerivAt.mul_const h1.ofReal_comp I).cexp
 
@@ -145,21 +144,19 @@ theorem hasStieltjesIntegral_E
     (hg : RiemannIntegrable a b g) :
     HasStieltjesIntegral a b (mul ℝ ℂ).flip g (E ξ)
       (∫ x in a..b, e ξ x * g x) := by
-      have h (x : ℝ) := hasDerivAt_E x hξ
-      convert integral_of_derivative _ hab ?_ hg using 3 with x
-      · simp [(h x).deriv, mul_comm]
-      refine (contDiff_one_iff_deriv.mpr ⟨ fun x ↦ (h x).differentiableAt, ?_ ⟩).contDiffOn
-      simp only [ne_eq, hξ, not_false_eq_true, deriv_E]
-      fun_prop
+  have h (x : ℝ) := hasDerivAt_E x hξ
+  convert integral_of_derivative _ hab ?_ hg using 3 with x
+  · simp [(h x).deriv, mul_comm]
+  refine (contDiff_one_iff_deriv.mpr ⟨fun x ↦ (h x).differentiableAt, ?_⟩).contDiffOn
+  simp only [ne_eq, hξ, not_false_eq_true, deriv_E]
+  fun_prop
 
 /-- The ordinary Fourier integral over a finite interval is the Stieltjes integral against the
 Fourier antiderivative, up to the boundary term supplied by integration by parts. -/
 theorem interval_fourierIntegral_eq_boundary_sub_stieltjes
     {g : ℝ → ℂ} (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0) (hg : BoundedVariationOn g (.Icc a b)) :
     (∫ x in a..b, e ξ x * g x) =
-      g b * E ξ b -
-        g a * E ξ a -
-          ∫⟨mul ℝ ℂ⟩ x in a..b, E ξ x ∂g := by
+      g b * E ξ b - g a * E ξ a - ∫⟨mul ℝ ℂ⟩ x in a..b, E ξ x ∂g := by
   have hInt : StieltjesIntegrable a b (mul ℝ ℂ) (E ξ) g :=
     .of_continuousOn_of_boundedVariationOn _ hab (by fun_prop) hg
   rw [(hasStieltjesIntegral_E hab hξ (hg.riemannIntegrable hab.le)).stieltjesIntegral_eq.symm,
@@ -184,9 +181,9 @@ theorem tendsto_fourier_boundary_zero
 lemma integrable_e_mul
     {g : ℝ → ℂ} (hg : Integrable g) (ξ : ℝ) :
     Integrable (fun x : ℝ ↦ e ξ x * g x) volume := by
-    refine hg.congr' (AEStronglyMeasurable.mul (by fun_prop) hg.1) ?_
-    filter_upwards with a
-    simp only [e, Complex.norm_exp_ofReal_mul_I, one_mul, Complex.norm_mul]
+  refine hg.congr' (AEStronglyMeasurable.mul (by fun_prop) hg.1) ?_
+  filter_upwards with a
+  simp only [e, Complex.norm_exp_ofReal_mul_I, one_mul, Complex.norm_mul]
 
 theorem tendsto_interval_e_integral
     {g : ℝ → ℂ} (hg1 : MeasureTheory.Integrable g) (ξ : ℝ) :
@@ -227,7 +224,6 @@ lemma fourier_bounded_variation
   simpa [hb] using hc
 
 end FourierTransform
-
 
 -- The old proof of `hasStieltjesIntegral_E`, given below,
 -- could be useful to prove `integral_of_derivative`.

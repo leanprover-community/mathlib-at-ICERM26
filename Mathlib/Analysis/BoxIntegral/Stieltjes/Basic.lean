@@ -103,6 +103,15 @@ theorem mesh_size_le_iff₁ {I : Box (Fin 1)} (π : Prepartition I) (ε : NNReal
     π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, B.upper₁ - B.lower₁ ≤ ε := by
   simp [mesh_size_le_iff, Box.upper₁, Box.lower₁]
 
+/-- The predicate `HasStieltjesIntegral` implies convergence of a limit. -/
+theorem HasStieltjesIntegral.lim {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} (hab : a < b) {f : ℝ → E}
+    {g : ℝ → F} {L : G} (h : HasStieltjesIntegral a b B f g L) :
+    (IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤).Tendsto (fun π ↦ ∑ x ∈ π.boxes,
+    ((B (f (π.tag x 0))) (g x.upper₁ - g x.lower₁))) (nhds L) := by
+  simp [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral'] at h
+  convert h.tendsto with π
+  simp [integralSum]
+
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
 theorem hasStieltjesIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
@@ -771,7 +780,8 @@ private theorem HasStieltjesIntegral.add_adjacent_prelim (hab : a < b) (hbc : b 
   exact h₁.add_adjacent hab hbc ⟨L'', h₃⟩ h₂
 
 /-- If `f` is Stieltjes-integrable from `a` to `c`, has Stieltjes integral `L` from `a` to `b`
-and `L'` from `b` to `c` then `f` has Stieltjes integral `L + L'` from `a` to `c`.  No ordering is assumed in `a`, `b`, `c` in the final statement of the theorem.
+and `L'` from `b` to `c` then `f` has Stieltjes integral `L + L'` from `a` to `c`.  No ordering is
+assumed in `a`, `b`, `c` in the final statement of the theorem.
 (As such, the proof requires a split into 3!=6 cases.)
 -/
 theorem HasStieltjesIntegral.add_adjacent
@@ -786,9 +796,6 @@ theorem HasStieltjesIntegral.add_adjacent
   · simp_all
   obtain rfl | hac := eq_or_ne a c
   · simp_all; simp [h₁.unique h₂.symm]
-  have h₁' := h₁.symm
-  have h₂' := h₂.symm
-  have h₃' := h₃.symm
   convert h₃
   rcases lt_or_gt_of_ne hab with hab | hba <;>
   rcases lt_or_gt_of_ne hbc with hbc | hcb <;>
@@ -796,15 +803,15 @@ theorem HasStieltjesIntegral.add_adjacent
   try order
   · have := add_adjacent_prelim hab hbc h₁ h₂ h₃
     grind
-  · have := add_adjacent_prelim hac hcb h₃ h₂' h₁
+  · have := add_adjacent_prelim hac hcb h₃ h₂.symm h₁
     grind
-  · have := add_adjacent_prelim hca hab h₃' h₁ h₂'
+  · have := add_adjacent_prelim hca hab h₃.symm h₁ h₂.symm
     grind
-  · have := add_adjacent_prelim hba hac h₁' h₃ h₂
+  · have := add_adjacent_prelim hba hac h₁.symm h₃ h₂
     grind
-  · have := add_adjacent_prelim hbc hca h₂ h₃' h₁'
+  · have := add_adjacent_prelim hbc hca h₂ h₃.symm h₁.symm
     grind
-  · have := add_adjacent_prelim hcb hba h₂' h₁' h₃'
+  · have := add_adjacent_prelim hcb hba h₂.symm h₁.symm h₃.symm
     grind
 
 theorem HasRiemannIntegral.add_adjacent [CompleteSpace E] {M M' : E}
@@ -820,8 +827,9 @@ theorem stieltjesIntegral.add_adjacent (h : StieltjesIntegrable a c B f g)
   (HasStieltjesIntegral.add_adjacent h h₁.hasStieltjesIntegral
     h₂.hasStieltjesIntegral).stieltjesIntegral_eq
 
-/- TODO: A gluing theorem: if the Stieltjes integral is well-defined on `a..b` and `b..c`, then it
-is well-defined in `a..c`. -/
+/- Note: the gluing claim that if the Stieltjes integral is well-defined on `a..b` and
+`b..c`, then it is  well-defined in `a..c`, is in fact false; see Exercise A.9
+of Montgomery--Vaughan. -/
 
 end Split
 
@@ -1044,12 +1052,31 @@ theorem integral_of_derivative {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab 
 ‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dg∗(x),
 provided that both integrals exist. -/
 theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
-    {f : ℝ → E} {g : ℝ → F} {L : G} {L' : ℝ}
+    {f : ℝ → E} {g : ℝ → F}
     (hab : a < b) (hg : BoundedVariationOn g (.Icc a b))
-    (hfg : HasStieltjesIntegral a b B f g L)
-    (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (‖f ·‖)
-      (fun x ↦ (eVariationOn g (.Icc a x)).toReal) L') :
-    ‖L‖ ≤ ‖B‖ * L' := by sorry
+    (hfg : StieltjesIntegrable a b B f g)
+    (hfabs_gstar : StieltjesIntegrable a b (mul ℝ ℝ) (‖f ·‖)
+      (fun x ↦ (eVariationOn g (.Icc a x)).toReal)) :
+    ‖∫⟨B⟩ x in a..b, f x ∂g‖ ≤ ‖B‖ *
+      ∫⟨mul ℝ ℝ⟩ x in a..b, ‖f x‖ ∂(fun x ↦ (eVariationOn g (.Icc a x)).toReal) := by
+  refine le_of_tendsto_of_tendsto (hfg.hasStieltjesIntegral.lim hab).norm
+    ((hfabs_gstar.hasStieltjesIntegral.lim hab).const_mul ‖B‖)
+    (Filter.Eventually.of_forall (fun π ↦ ?_))
+  simp only [isValue, mul_apply', Finset.mul_sum]
+  grw [norm_sum_le]
+  apply Finset.sum_le_sum; intro J hJ
+  grw [le_opNorm, le_opNorm, mul_assoc]; gcongr
+  replace hJ := π.le_of_mem hJ
+  have hJ' := J.lower_lt_upper₁
+  have := Box.Icc₁_subset_Icc₁ hJ
+  simp only [Box.Icc₁, Ioc.lower₁, Ioc.upper₁, Box.le_iff₁, hab, Ioc.lower₁, Ioc.upper₁]
+    at this hJ
+  have h1 : eVariationOn g (Set.Icc a J.lower₁) ≠ ⊤ := hg.mono (by grind)
+  have h2 : eVariationOn g (Set.Icc J.lower₁ J.upper₁) ≠ ⊤ := hg.mono (by grind)
+  grw [←dist_eq_norm, (hg.mono this).dist_le (by grind) (by grind)]
+  rw [le_sub_iff_add_le', ←ENNReal.toReal_add h1 h2,
+    ENNReal.toReal_le_toReal (ENNReal.Finiteness.add_ne_top h1 h2) (hg.mono (by grind))]
+  convert le_of_eq (eVariationOn.Icc_add_Icc (s := .univ) g hJ.1 hJ'.le (by simp)) <;> simp
 
 -- The material below is not currently in use.
 
