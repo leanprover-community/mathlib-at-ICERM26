@@ -1062,19 +1062,18 @@ theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[�
   refine le_of_tendsto_of_tendsto (hfg.hasStieltjesIntegral.lim hab).norm
     ((hfabs_gstar.hasStieltjesIntegral.lim hab).const_mul ‖B‖)
     (Filter.Eventually.of_forall (fun π ↦ ?_))
-  simp only [isValue, mul_apply', Finset.mul_sum]
+  simp only [isValue, mul_apply', mul_sum]
   grw [norm_sum_le]
-  apply Finset.sum_le_sum; intro J hJ
+  apply sum_le_sum; intro J hJ
   grw [le_opNorm, le_opNorm, mul_assoc]; gcongr
   replace hJ := π.le_of_mem hJ
   have hJ' := J.lower_lt_upper₁
   have := Box.Icc₁_subset_Icc₁ hJ
-  simp only [Box.Icc₁, Ioc.lower₁, Ioc.upper₁, Box.le_iff₁, hab, Ioc.lower₁, Ioc.upper₁]
-    at this hJ
-  have h1 : eVariationOn g (Set.Icc a J.lower₁) ≠ ⊤ := hg.mono (by grind)
-  have h2 : eVariationOn g (Set.Icc J.lower₁ J.upper₁) ≠ ⊤ := hg.mono (by grind)
-  grw [←dist_eq_norm, (hg.mono this).dist_le (by grind) (by grind)]
-  rw [le_sub_iff_add_le', ←ENNReal.toReal_add h1 h2,
+  simp only [Box.Icc₁, Box.le_iff₁, hab, Ioc.lower₁, Ioc.upper₁] at this hJ
+  have h1 : eVariationOn g (.Icc a J.lower₁) ≠ ⊤ := hg.mono (by grind)
+  have h2 : eVariationOn g (.Icc J.lower₁ J.upper₁) ≠ ⊤ := hg.mono (by grind)
+  grw [← dist_eq_norm, (hg.mono this).dist_le (by grind) (by grind)]
+  rw [le_sub_iff_add_le', ← ENNReal.toReal_add h1 h2,
     ENNReal.toReal_le_toReal (ENNReal.Finiteness.add_ne_top h1 h2) (hg.mono (by grind))]
   convert le_of_eq (eVariationOn.Icc_add_Icc (s := .univ) g hJ.1 hJ'.le (by simp)) <;> simp
 
