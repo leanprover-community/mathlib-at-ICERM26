@@ -192,9 +192,16 @@ noncomputable def toPartition {N : ℕ} {a b : ℝ}
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
     (ha : (x 0) = a) (hb : x (Fin.last N) = b) : Prepartition (Ioc a b) where
       boxes := (Finset.univ : Finset (Fin N)).map
-        ⟨fun i ↦ Ioc (x i.castSucc) (x i.succ), by sorry⟩
+        ⟨fun i ↦ Ioc (x i.castSucc) (x i.succ), by
+          intro i j hij
+          apply Fin.castSucc_injective
+          exact hx.injective <| by
+            have h := congrFun (congrArg Box.lower hij) 0
+            simpa [Ioc.lower (hx i.castSucc_lt_succ),
+              Ioc.lower (hx j.castSucc_lt_succ)] using h⟩
       le_of_mem' := by sorry
       pairwiseDisjoint := by sorry
+
 
 noncomputable def toTaggedPartition {N : ℕ} {a b : ℝ}
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
