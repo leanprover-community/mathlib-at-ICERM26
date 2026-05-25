@@ -258,56 +258,49 @@ namespace BoxIntegral
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
-variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
+variable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F} {L : G} {c : E}
 
 /-- Theorem A.2 of Montgomery Vaughan: if ∫ₐᵇ f dg exists, then ∫ₐᵇ g df exists and
 ∫ₐᵇ g df = g(b) * f(b) - g(a) * f(a) - ∫ₐᵇ f dg. -/
-theorem HasStieltjesIntegral.by_parts {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
-    {f : ℝ → E} {g : ℝ → F} {L : G} (hL : HasStieltjesIntegral a b B f g L) :
+theorem HasStieltjesIntegral.by_parts (hL : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b B.flip g f (B (f b) (g b) - B (f a) (g a) - L) := by sorry
 
-theorem StieltjesIntegrable.by_parts {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
-    (h : StieltjesIntegrable a b B f g) :
+theorem StieltjesIntegrable.by_parts (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable a b B.flip g f := ⟨_, h.hasStieltjesIntegral.by_parts⟩
 
-theorem StieltjesIntegrable.symm_right {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
+theorem StieltjesIntegrable.symm_right
   : StieltjesIntegrable a b B f g ↔ StieltjesIntegrable a b B.flip g f := ⟨by_parts, by_parts⟩
 
-theorem stieltjesIntegral.by_parts {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
-    (h : StieltjesIntegrable a b B f g) :
+theorem stieltjesIntegral.by_parts (h : StieltjesIntegrable a b B f g) :
     ∫⟨B.flip⟩ x in a..b, g x ∂f = B (f b) (g b) - B (f a) (g a) - ∫⟨B⟩ x in a..b, f x ∂g := by
   rw [h.hasStieltjesIntegral.by_parts.stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
-theorem HasStieltjesIntegral.of_const {a b : ℝ} (c : E) (g : ℝ → F) :
+theorem HasStieltjesIntegral.of_const :
     HasStieltjesIntegral a b B (fun _ ↦ c) g (B c (g b) - B c (g a)) := by
   convert by_parts (B := B.flip) (f := g) (g := fun _ ↦ c) (L := 0) (by simp [const_right]) using 1
   simp
 
-theorem StieltjesIntegrable.of_const (c : E) (g : ℝ → F) :
-    StieltjesIntegrable a b B (fun _ ↦ c) g :=
-  (HasStieltjesIntegral.of_const B c g).stieltjesIntegrable
+@[simp]
+theorem StieltjesIntegrable.of_const : StieltjesIntegrable a b B (fun _ ↦ c) g :=
+  HasStieltjesIntegral.of_const.stieltjesIntegrable
 
 @[simp]
-theorem stieltjesIntegral.of_const (c : E) (g : ℝ → F) :
-    ∫⟨B⟩ _ in a..b, c ∂g = B c (g b) - B c (g a) :=
-  (HasStieltjesIntegral.of_const B c g).stieltjesIntegral_eq
+theorem stieltjesIntegral.of_const : ∫⟨B⟩ _ in a..b, c ∂g = B c (g b) - B c (g a) :=
+  HasStieltjesIntegral.of_const.stieltjesIntegral_eq
 
-theorem BoundedVariationOn.riemannIntegrable [CompleteSpace E] {a b : ℝ} {f : ℝ → E}
-    (hab : a ≤ b) (hf : BoundedVariationOn f (.Icc a b)) :
-    RiemannIntegrable a b f := by
+theorem BoundedVariationOn.riemannIntegrable [CompleteSpace E] (hab : a ≤ b)
+    (hf : BoundedVariationOn f (.Icc a b)) : RiemannIntegrable a b f := by
   rcases eq_or_lt_of_le hab with (rfl | hab)
   · simp
   unfold RiemannIntegrable
   rw [StieltjesIntegrable.symm_right]
-  exact .of_continuousOn_of_boundedVariationOn _ hab (by fun_prop) hf
+  exact .of_continuousOn_of_boundedVariationOn hab (by fun_prop) hf
 
-theorem MonotoneOn.riemannIntegrable {a b : ℝ} {f : ℝ → ℝ} (hab : a ≤ b)
-    (hf : MonotoneOn f (.Icc a b)) :
+theorem MonotoneOn.riemannIntegrable {f : ℝ → ℝ} (hab : a ≤ b) (hf : MonotoneOn f (.Icc a b)) :
     RiemannIntegrable a b f := hf.boundedVariationOn.riemannIntegrable hab
 
-theorem AntitoneOn.riemannIntegrable {a b : ℝ} {f : ℝ → ℝ} (hab : a ≤ b)
-    (hf : AntitoneOn f (.Icc a b)) :
+theorem AntitoneOn.riemannIntegrable {f : ℝ → ℝ} (hab : a ≤ b) (hf : AntitoneOn f (.Icc a b)) :
     RiemannIntegrable a b f := hf.boundedVariationOn.riemannIntegrable hab
 
 end BoxIntegral

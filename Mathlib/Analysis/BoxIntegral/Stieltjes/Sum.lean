@@ -54,8 +54,7 @@ classical Abel summation identity.
 * `BoxIntegral.HasStieltjesIntegral.of_Nat_floor_right` and
   `BoxIntegral.HasStieltjesIntegral.of_floor_right`: scalar special cases with integrator
   `⌊·⌋₊` or `⌊·⌋`, giving the identity `∫ f ∂⌊·⌋ = ∑ n ∈ Ioc ⌊a⌋ ⌊b⌋, f n`.
-* `BoxIntegral.HasStieltjesIntegral.of_Heaviside` and
-  `BoxIntegral.HasStieltjesIntegral.of_shift_Heaviside`: for the Heaviside-style integrator
+* `BoxIntegral.HasStieltjesIntegral.of_shift_Heaviside`: for the Heaviside-style integrator
   `(Set.Ici x).indicator 1`, the Stieltjes integral of a continuous `f` evaluates to `f x`
   if `x ∈ Ioc a b` and `0` otherwise — the Stieltjes-integral form of point evaluation.
 
@@ -97,36 +96,36 @@ namespace BoxIntegral
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
-variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
+variable {a b x y : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
 
 /-! ### Connection to standard integrals -/
 
 /-- Function-level form of Theorem A.3(b) (`integral_of_derivative`): when `g` is `C¹` on
 `[a, b]` and `f` is Riemann integrable, the Stieltjes integral of `f` against `g` equals the
 Riemann integral of `B (f x) (g' x)`. -/
-theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' {f : ℝ → E} {g : ℝ → F} {a b : ℝ}
-    (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hf : RiemannIntegrable a b f) :
+theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' (hab : a < b)
+    (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hf : RiemannIntegrable a b f) :
     ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) :=
-  (integral_of_derivative B hab hg hf).stieltjesIntegral_eq
+  (integral_of_derivative hab hg hf).stieltjesIntegral_eq
 
-theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn {f : ℝ → E} {g : ℝ → F} {a b : ℝ}
+theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn
     (hg : ContDiffOn ℝ 1 g (.Icc (min a b) (max a b)))
     (hf : RiemannIntegrable (min a b) (max a b) f) :
     ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) := by
   rcases lt_trichotomy a b with hab | rfl | hba
   · simp only [hab.le, inf_of_le_left, sup_of_le_right] at hg hf
-    exact stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' B hab hg hf
+    exact stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' hab hg hf
   · simp
   simp only [hba.le, inf_of_le_right, sup_of_le_left] at hg hf
   rw [stieltjesIntegral.integral_symm, integral_symm,
-    stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' B hba hg hf]
+    stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' hba hg hf]
 
 /-- Special case of previous when `g x = x`. -/
 theorem stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable
-    {f : ℝ → E} {a b : ℝ} (hf : RiemannIntegrable (min a b) (max a b) f) :
+    (hf : RiemannIntegrable (min a b) (max a b) f) :
     ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id = ∫ x in a..b, f x := by
-  convert stieltjesIntegral_eq_intervalIntegral_of_contDiffOn _
-    contDiff_id.contDiffOn hf using 3 with x
+  convert stieltjesIntegral_eq_intervalIntegral_of_contDiffOn contDiff_id.contDiffOn hf
+    using 3 with x
   simp
 
 /-! ### Sums as Stieltjes integrals -/
@@ -145,20 +144,19 @@ private lemma coe_mem_Box_iff {n : ℤ} {J : Box (Fin 1)} :
     ↑n ∈ J ↔ n ∈ Finset.Ioc ⌊J.lower₁⌋ ⌊J.upper₁⌋ := by
   simp [Box.mem₁, Int.floor_lt, Int.le_floor]
 
-private lemma floor_le {a b x y : ℝ} (h : a ≤ x ∧ y ≤ b) : ⌊a⌋ ≤ ⌊x⌋ ∧ ⌊y⌋ ≤ ⌊b⌋ :=
+private lemma floor_le (h : a ≤ x ∧ y ≤ b) : ⌊a⌋ ≤ ⌊x⌋ ∧ ⌊y⌋ ≤ ⌊b⌋ :=
   ⟨Int.floor_mono h.1, Int.floor_mono h.2⟩
 
 /-- When the integrator is a piecewise step function `g ⌊·⌋` and the integrand
 `f` is continuous, the Stieltjes integral can be expressed as a sum over the integer points. -/
-theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) (g : ℤ → F) :
-    HasStieltjesIntegral a b B f (g ⌊·⌋)
-      (∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))) := by
+theorem HasStieltjesIntegral.of_fun_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b))
+    (g : ℤ → F) :
+    HasStieltjesIntegral a b B f (g ⌊·⌋) (∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))) := by
   rcases eq_or_lt_of_le hab with rfl | hab
   · simp
   by_cases! hB : ‖B‖ = 0
   · simp_all
-  rw [hasStieltjesIntegral_iff_lim_sum B hab]; intro ε hε
+  rw [hasStieltjesIntegral_iff_lim_sum hab]; intro ε hε
   let M := ∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, ‖g n - g (n - 1)‖
   have hMnn : 0 ≤ M := Finset.sum_nonneg fun _ _ ↦ norm_nonneg _
   rcases eq_or_lt_of_le hMnn with hM | hM
@@ -239,31 +237,28 @@ theorem HasStieltjesIntegral.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f :
     _ < ε := by unfold ε'; field_simp; grind
 
 @[simp]
-theorem StieltjesIntegrable.of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) (g : ℤ → F) :
-    StieltjesIntegrable a b B f (g ⌊·⌋) :=
-  (HasStieltjesIntegral.of_fun_floor_right B hab hf g).stieltjesIntegrable
+theorem StieltjesIntegrable.of_fun_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b))
+    (g : ℤ → F) : StieltjesIntegrable a b B f (g ⌊·⌋) :=
+  (HasStieltjesIntegral.of_fun_floor_right hab hf g).stieltjesIntegrable
 
 @[simp]
-theorem stieltjesIntegral_of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) (g : ℤ → F) :
-    ∫⟨B⟩ x in a..b, f x ∂(g ⌊·⌋) =
-      ∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1)) :=
-  (HasStieltjesIntegral.of_fun_floor_right B hab hf g).stieltjesIntegral_eq
+theorem stieltjesIntegral_of_fun_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b))
+    (g : ℤ → F) : ∫⟨B⟩ x in a..b, f x ∂(g ⌊·⌋) = ∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1)) :=
+  (HasStieltjesIntegral.of_fun_floor_right hab hf g).stieltjesIntegral_eq
 
 @[simp]
-theorem RiemannIntegrable.of_fun_floor {a b : ℝ} (hab : a ≤ b) (g : ℤ → F) :
+theorem RiemannIntegrable.of_fun_floor (hab : a ≤ b) (g : ℤ → F) :
     RiemannIntegrable a b (g ⌊·⌋) := by
   simp only [RiemannIntegrable, ← StieltjesIntegrable.symm_right]
-  exact StieltjesIntegrable.of_fun_floor_right _ hab (by fun_prop) g
+  exact StieltjesIntegrable.of_fun_floor_right hab (by fun_prop) g
 
 /-- When the integrator is a piecewise step function `fun x ↦ g ⌊x⌋₊` and the integrand
 `f` is continuous, the Stieltjes integral can be expressed as a sum over the natural
 number points. -/
-theorem HasStieltjesIntegral.of_fun_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) (g : ℕ → F) :
+theorem HasStieltjesIntegral.of_fun_Nat_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b))
+    (g : ℕ → F) :
     HasStieltjesIntegral a b B f (g ⌊·⌋₊) (∑ n ∈ .Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n - g (n - 1))) := by
-  convert of_fun_floor_right B hab hf (g ⌊·⌋₊)
+  convert of_fun_floor_right hab hf (g ⌊·⌋₊)
   convert (sum_of_injOn (fun (n:ℕ) ↦ (n:ℤ)) ?_ ?_ ?_ ?_)
   · simp_all
   · intro n hn
@@ -286,39 +281,36 @@ theorem HasStieltjesIntegral.of_fun_Nat_floor_right {a b : ℝ} (hab : a ≤ b) 
   intros; simp
 
 @[simp]
-theorem StieltjesIntegrable.of_fun_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) (g : ℕ → F) :
-    StieltjesIntegrable a b B f (g ⌊·⌋₊) :=
-  (HasStieltjesIntegral.of_fun_Nat_floor_right B hab hf g).stieltjesIntegrable
+theorem StieltjesIntegrable.of_fun_Nat_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b))
+    (g : ℕ → F) : StieltjesIntegrable a b B f (g ⌊·⌋₊) :=
+  (HasStieltjesIntegral.of_fun_Nat_floor_right hab hf g).stieltjesIntegrable
 
 @[simp]
-theorem RiemannIntegrable.of_fun_Nat_floor {a b : ℝ} (hab : a ≤ b) (g : ℕ → F) :
+theorem RiemannIntegrable.of_fun_Nat_floor (hab : a ≤ b) (g : ℕ → F) :
     RiemannIntegrable a b (g ⌊·⌋₊) := by
   simp only [RiemannIntegrable, ← StieltjesIntegrable.symm_right]
-  exact StieltjesIntegrable.of_fun_Nat_floor_right _ hab (by fun_prop) g
+  exact StieltjesIntegrable.of_fun_Nat_floor_right hab (by fun_prop) g
 
 @[simp]
-theorem stieltjesIntegral_of_fun_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
+theorem stieltjesIntegral_of_fun_Nat_floor_right (hab : a ≤ b)
     (hf : ContinuousOn f (.Icc a b)) (g : ℕ → F) :
     ∫⟨B⟩ x in a..b, f x ∂(g ⌊·⌋₊) = ∑ n ∈ .Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n - g (n - 1)) :=
-  (HasStieltjesIntegral.of_fun_Nat_floor_right B hab hf g).stieltjesIntegral_eq
+  (HasStieltjesIntegral.of_fun_Nat_floor_right hab hf g).stieltjesIntegral_eq
 
 /-- Sum of pairings `B (f n) (g n)` over natural `n ∈ (⌊a⌋, ⌊b⌋]`, expressed as a Stieltjes
 integral of `f` against the right-continuous summatory `x ↦ ∑ n ≤ x, g n`. -/
-theorem HasStieltjesIntegral.of_sum_Nat_Iic_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
+theorem HasStieltjesIntegral.of_sum_Nat_Iic_right (hab : a ≤ b) {f : ℝ → E}
     (hf : ContinuousOn f (.Icc a b)) (g : ℕ → F) :
     HasStieltjesIntegral a b B f (∑ n ∈ .Iic ⌊·⌋₊, g n) (∑ n ∈ .Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n)) := by
-  convert of_fun_Nat_floor_right B hab hf (∑ m ∈ .Iic ·, g m) with n hn
+  convert of_fun_Nat_floor_right hab hf (∑ m ∈ .Iic ·, g m) with n hn
   rw [← add_sum_Iio_eq_sum_Iic, show Iic (n - 1) = Iio n by grind]
   abel
 
 /-- Relate sums `∑ f n` with Stieltjes integrals `∫ f ∂(⌊·⌋₊)` -/
-theorem HasStieltjesIntegral.of_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) :
+theorem HasStieltjesIntegral.of_Nat_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f (⌊·⌋₊)
     (∑ n ∈ .Ioc ⌊a⌋₊ ⌊b⌋₊, f n) := by
-  convert of_sum_Nat_Iic_right (lsmul ℝ ℝ).flip hab hf
-    (fun n ↦ if n ≠ 0 then 1 else (0 : ℝ)) using 2 with x n hn
+  convert of_sum_Nat_Iic_right hab hf (if · ≠ 0 then 1 else (0 : ℝ)) using 2 with x n hn
   · rw [sum_boole]; simp only [ne_eq, Nat.cast_inj]
     convert (Nat.card_Ioc 0 ⌊x⌋₊).symm
     grind
@@ -326,31 +318,27 @@ theorem HasStieltjesIntegral.of_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {f :
   simp [this]
 
 @[simp]
-theorem stieltjesIntegral.of_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) :
+theorem stieltjesIntegral.of_Nat_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂(⌊·⌋₊) = ∑ n ∈ .Ioc ⌊a⌋₊ ⌊b⌋₊, f n :=
   (HasStieltjesIntegral.of_Nat_floor_right hab hf).stieltjesIntegral_eq
 
-theorem HasStieltjesIntegral.of_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) :
+theorem HasStieltjesIntegral.of_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f (⌊·⌋) (∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, f n) := by
-  convert of_fun_floor_right _ hab hf (fun (n:ℤ) ↦ (n:ℝ)) using 2 with n hn
+  convert of_fun_floor_right hab hf (fun (n:ℤ) ↦ (n:ℝ)) using 2 with n hn
   simp
 
 @[simp]
-theorem stieltjesIntegral_of_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) :
+theorem stieltjesIntegral_of_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂(⌊·⌋) = ∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, f n :=
   (HasStieltjesIntegral.of_floor_right hab hf).stieltjesIntegral_eq
 
-theorem HasStieltjesIntegral.of_Heaviside {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) :
+private theorem HasStieltjesIntegral.of_Heaviside (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f ((Set.Ici 0).indicator 1)
     (if 0 ∈ Set.Ioc a b then f 0 else 0) := by
   have hint : ((Set.Ici (0:ℝ)).indicator (1:ℝ → ℝ)) = (((Set.Ici (0:ℤ)).indicator 1) ⌊·⌋) := by
     ext; simp [Set.indicator, Int.floor_nonneg]
   rw [hint]
-  convert of_fun_floor_right (lsmul ℝ ℝ).flip hab hf ((Set.Ici (0:ℤ)).indicator 1) using 1
+  convert of_fun_floor_right hab hf ((Set.Ici (0:ℤ)).indicator 1) using 1
   have h_term (n : ℤ) : (lsmul ℝ ℝ).flip (f ↑n)
         ((Set.Ici 0).indicator (1:ℤ → ℝ) n - (Set.Ici 0).indicator 1 (n-1))
       = if n = 0 then f 0 else 0 := by
@@ -362,26 +350,24 @@ theorem HasStieltjesIntegral.of_Heaviside {a b : ℝ} (hab : a ≤ b) {f : ℝ �
   simp_rw [h_term, Finset.sum_ite_eq', ← Int.coe_mem_Ioc_iff]
   grind
 
-theorem HasStieltjesIntegral.of_shift_Heaviside {a b x : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) :
+theorem HasStieltjesIntegral.of_shift_Heaviside (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f ((Set.Ici x).indicator 1)
     (if x ∈ Set.Ioc a b then f x else 0) := by
   have hf' : ContinuousOn (f ∘ (· + x)) (.Icc (a - x) (b - x)) :=
     hf.comp (Continuous.continuousOn (by fun_prop)) (by intro _ _; grind)
   have hmono : StrictMonoOn (· - x : ℝ → ℝ) (.Icc a b) := fun _ _ _ _ _ ↦ by linarith
-  convert (of_Heaviside (by linarith) hf').of_comp_strictMono_continuous
-    hab hmono (by fun_prop) using 1
+  convert (of_Heaviside (by linarith) hf').of_comp_strictMono_continuous hab hmono (by fun_prop)
+    using 1
   · grind
   · ext y; simp [Set.indicator]
   · simp
 
-theorem StieltjesIntegrable.of_shift_Heaviside {a b x : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) :
+theorem StieltjesIntegrable.of_shift_Heaviside (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     StieltjesIntegrable a b (lsmul ℝ ℝ).flip f ((Set.Ici x).indicator 1) :=
   (HasStieltjesIntegral.of_shift_Heaviside hab hf).stieltjesIntegrable
 
-theorem stieltjesIntegral_of_shift_Heaviside {a b x : ℝ} (hab : a ≤ b) {f : ℝ → E}
-    (hf : ContinuousOn f (.Icc a b)) :
+@[simp]
+theorem stieltjesIntegral_of_shift_Heaviside (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂((Set.Ici x).indicator 1) =
       if x ∈ Set.Ioc a b then f x else 0 :=
   (HasStieltjesIntegral.of_shift_Heaviside hab hf).stieltjesIntegral_eq
@@ -393,7 +379,7 @@ theorem sum_mul_eq_sub_stieltjes_integral {N : ℕ} {a : ℕ → ℂ} {f : ℝ �
       ∫⟨(lsmul ℝ ℂ).flip⟩ x in 0..N, (∑ n ∈ .Ioc 0 ⌊x⌋₊, a n) ∂f := by
   have h0 : HasStieltjesIntegral 0 N (lsmul ℝ ℂ) f (fun x ↦ ∑ n ∈ .Ioc 0 ⌊x⌋₊, a n)
       (∑ n ∈ .Ioc 0 N, a n * f n) := by
-    have h := HasStieltjesIntegral.of_fun_Nat_floor_right (lsmul ℝ ℂ)
+    have h := HasStieltjesIntegral.of_fun_Nat_floor_right (B := lsmul ℝ ℂ)
       N.cast_nonneg hf (∑ n ∈ .Ioc 0 ·, a n)
     simp only [Nat.floor_zero, Nat.floor_natCast] at h
     convert h using 1
@@ -411,7 +397,7 @@ theorem sum_mul_eq_sub_integral_mul_deriv {N : ℕ} {a : ℕ → ℂ} {f : ℝ �
   obtain rfl | h0 := eq_or_ne N 0
   · simp
   have hN : (0 : ℝ) < N := by exact_mod_cast Nat.pos_of_ne_zero h0
-  rw [sum_mul_eq_sub_stieltjes_integral hf.continuousOn, (integral_of_derivative (lsmul ℝ ℂ).flip
+  rw [sum_mul_eq_sub_stieltjes_integral hf.continuousOn, (integral_of_derivative
     hN hf (.of_fun_Nat_floor hN.le (∑ n ∈ .Ioc 0 ·, a n))).stieltjesIntegral_eq]
   congr 1
   refine intervalIntegral.integral_congr fun x _ ↦ ?_
@@ -430,12 +416,12 @@ These are quick consequences of the Stieltjes-integral / step-function correspon
 theorem Int.sum_Ioc_floor_telescope {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
     {a b : ℝ} (hab : a ≤ b) (g : ℤ → F) :
     ∑ n ∈ Finset.Ioc ⌊a⌋ ⌊b⌋, (g n - g (n - 1)) = g ⌊b⌋ - g ⌊a⌋ := by
-  convert (BoxIntegral.stieltjesIntegral_of_fun_floor_right (f := fun _ ↦ (1 : ℝ)) (lsmul ℝ ℝ)
+  convert (BoxIntegral.stieltjesIntegral_of_fun_floor_right (f := 1) (B := lsmul ℝ ℝ)
     hab (by fun_prop) g).symm using 1 <;> simp
 
 /-- Telescoping identity for natural-floor Ioc-sums. -/
 theorem Nat.sum_Ioc_floor_telescope {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
     {a b : ℝ} (hab : a ≤ b) (g : ℕ → F) :
     ∑ n ∈ Finset.Ioc ⌊a⌋₊ ⌊b⌋₊, (g n - g (n - 1)) = g ⌊b⌋₊ - g ⌊a⌋₊ := by
-  convert (BoxIntegral.stieltjesIntegral_of_fun_Nat_floor_right (f := fun _ ↦ (1 : ℝ)) (lsmul ℝ ℝ)
+  convert (BoxIntegral.stieltjesIntegral_of_fun_Nat_floor_right (f := 1) (B := lsmul ℝ ℝ)
     hab (by fun_prop) g).symm using 1 <;> simp

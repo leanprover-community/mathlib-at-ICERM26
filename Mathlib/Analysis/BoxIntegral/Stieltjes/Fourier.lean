@@ -74,7 +74,7 @@ end BoundedVariationOn
 
 namespace FourierTransform
 
-variable {a b : ℝ} (ξ x : ℝ)
+variable {a b : ℝ} (ξ x : ℝ) {g : ℝ → ℂ}
 
 noncomputable def e : ℂ := exp ((↑(-2 * Real.pi * x * ξ) : ℂ) * I)
 
@@ -119,33 +119,28 @@ lemma isBoundedUnder_norm_E_atTop (φ : ℝ → ℝ) :
   simp [E, abs_of_nonneg, Real.pi_nonneg]
 
 /-- Finite-interval Stieltjes estimate for the Fourier antiderivative. -/
-theorem norm_stieltjesIntegral_E_le
-    {g : ℝ → ℂ} (hab : a < b) (hg : BoundedVariationOn g (.Icc a b)) :
-    ‖stieltjesIntegral a b (mul ℝ ℂ) (E ξ) g‖ ≤
-      |ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) *
-        (eVariationOn g (.Icc a b)).toReal := by
+theorem norm_stieltjesIntegral_E_le (hab : a < b) (hg : BoundedVariationOn g (.Icc a b)) :
+    ‖∫⟨mul ℝ ℂ⟩ x in a..b, E ξ x ∂g‖ ≤ |ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) *
+      (eVariationOn g (.Icc a b)).toReal := by
   calc
     _ ≤ ‖mul ℝ ℂ‖ * (|ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) * (eVariationOn g (.Icc a b)).toReal) := by
       apply integral_le_integral_of_variation hab hg
-        (StieltjesIntegrable.of_continuousOn_of_boundedVariationOn _
+        (StieltjesIntegrable.of_continuousOn_of_boundedVariationOn
           hab (by fun_prop) hg).hasStieltjesIntegral
       simp only [E, inv_neg, mul_inv_rev, inv_I, neg_mul, mul_neg, neg_neg, Complex.norm_mul,
         norm_inv, norm_real, Real.norm_eq_abs, norm_I, Real.pi_nonneg, abs_of_nonneg, norm_ofNat,
         one_mul, norm_e, mul_one]
-      convert HasStieltjesIntegral.of_const _ _
-        (fun x ↦ (eVariationOn g (.Icc a x)).toReal) using 1
+      convert HasStieltjesIntegral.of_const
+        (g := fun x ↦ (eVariationOn g (.Icc a x)).toReal) using 1
       simp
     _ ≤ _ := by grw [opNorm_mul_le ℝ ℂ]; simp
 
 /-- If the integrator is the Fourier primitive, the Stieltjes integral is the ordinary integral
 against its derivative, here specialized to the Fourier kernel. -/
-theorem hasStieltjesIntegral_E
-    {g : ℝ → ℂ} (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0)
-    (hg : RiemannIntegrable a b g) :
-    HasStieltjesIntegral a b (mul ℝ ℂ).flip g (E ξ)
-      (∫ x in a..b, e ξ x * g x) := by
+theorem hasStieltjesIntegral_E (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0) (hg : RiemannIntegrable a b g) :
+    HasStieltjesIntegral a b (mul ℝ ℂ).flip g (E ξ) (∫ x in a..b, e ξ x * g x) := by
   have h (x : ℝ) := hasDerivAt_E x hξ
-  convert integral_of_derivative _ hab ?_ hg using 3 with x
+  convert integral_of_derivative hab ?_ hg using 3 with x
   · simp [(h x).deriv, mul_comm]
   refine (contDiff_one_iff_deriv.mpr ⟨fun x ↦ (h x).differentiableAt, ?_⟩).contDiffOn
   simp only [ne_eq, hξ, not_false_eq_true, deriv_E]
@@ -154,50 +149,43 @@ theorem hasStieltjesIntegral_E
 /-- The ordinary Fourier integral over a finite interval is the Stieltjes integral against the
 Fourier antiderivative, up to the boundary term supplied by integration by parts. -/
 theorem interval_fourierIntegral_eq_boundary_sub_stieltjes
-    {g : ℝ → ℂ} (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0) (hg : BoundedVariationOn g (.Icc a b)) :
-    (∫ x in a..b, e ξ x * g x) =
-      g b * E ξ b - g a * E ξ a - ∫⟨mul ℝ ℂ⟩ x in a..b, E ξ x ∂g := by
+    (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0) (hg : BoundedVariationOn g (.Icc a b)) :
+    (∫ x in a..b, e ξ x * g x) = g b * E ξ b - g a * E ξ a - ∫⟨mul ℝ ℂ⟩ x in a..b, E ξ x ∂g := by
   have hInt : StieltjesIntegrable a b (mul ℝ ℂ) (E ξ) g :=
-    .of_continuousOn_of_boundedVariationOn _ hab (by fun_prop) hg
+    .of_continuousOn_of_boundedVariationOn hab (by fun_prop) hg
   rw [(hasStieltjesIntegral_E hab hξ (hg.riemannIntegrable hab.le)).stieltjesIntegral_eq.symm,
       stieltjesIntegral.by_parts hInt]
   simp [mul_comm]
 
 theorem tendsto_fourier_boundary_zero_of_tendsto
-    {g : ℝ → ℂ} (hg_top : atTop.Tendsto g (nhds 0)) (hg_bot : atBot.Tendsto g (nhds 0)) (ξ : ℝ) :
+    (hg_top : atTop.Tendsto g (nhds 0)) (hg_bot : atBot.Tendsto g (nhds 0)) :
     atTop.Tendsto (fun R ↦ g R * E ξ R - g (-R) * E ξ (-R)) (nhds 0) := by
   simpa using (hg_top.zero_mul_isBoundedUnder_le
       (isBoundedUnder_norm_E_atTop ξ id)).sub
     ((hg_bot.comp tendsto_neg_atTop_atBot).zero_mul_isBoundedUnder_le
       (isBoundedUnder_norm_E_atTop ξ _))
 
-theorem tendsto_fourier_boundary_zero
-    {g : ℝ → ℂ} (hg1 : MeasureTheory.Integrable g)
-    (hg2 : BoundedVariationOn g .univ) (ξ : ℝ) :
+theorem tendsto_fourier_boundary_zero (hg1 : MeasureTheory.Integrable g)
+    (hg2 : BoundedVariationOn g .univ) :
     atTop.Tendsto (fun R ↦ g R * E ξ R - g (-R) * E ξ (-R)) (nhds 0) :=
-  tendsto_fourier_boundary_zero_of_tendsto
-    (hg2.tendsto_zero_atTop_of_integrable hg1) (hg2.tendsto_zero_atBot_of_integrable hg1) ξ
+  tendsto_fourier_boundary_zero_of_tendsto ξ (hg2.tendsto_zero_atTop_of_integrable hg1)
+    (hg2.tendsto_zero_atBot_of_integrable hg1)
 
-lemma integrable_e_mul
-    {g : ℝ → ℂ} (hg : Integrable g) (ξ : ℝ) :
-    Integrable (fun x : ℝ ↦ e ξ x * g x) volume := by
+lemma integrable_e_mul (hg : Integrable g) : Integrable (fun x : ℝ ↦ e ξ x * g x) volume := by
   refine hg.congr' (AEStronglyMeasurable.mul (by fun_prop) hg.1) ?_
   filter_upwards with a
   simp only [e, Complex.norm_exp_ofReal_mul_I, one_mul, Complex.norm_mul]
 
-theorem tendsto_interval_e_integral
-    {g : ℝ → ℂ} (hg1 : MeasureTheory.Integrable g) (ξ : ℝ) :
-    atTop.Tendsto (fun R : ℝ ↦ ∫ x in (-R)..R, (e ξ x) * g x)
-      (nhds (𝓕 g ξ)) := by
+theorem tendsto_interval_e_integral (hg1 : MeasureTheory.Integrable g) :
+    atTop.Tendsto (fun R : ℝ ↦ ∫ x in (-R)..R, (e ξ x) * g x) (nhds (𝓕 g ξ)) := by
   have hb : 𝓕 g ξ = ∫ x : ℝ, e ξ x * g x := by
     simp [Real.fourier_real_eq_integral_exp_smul, e]
-  simpa [hb] using intervalIntegral_tendsto_integral (integrable_e_mul hg1 ξ)
+  simpa [hb] using intervalIntegral_tendsto_integral (integrable_e_mul ξ hg1)
       (tendsto_neg_atTop_atBot) fun ⦃_⦄ a ↦ a
 
 theorem fourier_tendsto_stieltjesPrimitive_of_boundedVariation
-    {g : ℝ → ℂ} (hg1 : Integrable g) (hg2 : BoundedVariationOn g .univ) {ξ : ℝ} (hξ : ξ ≠ 0) :
-    ∃ L, atTop.Tendsto (fun R ↦ ∫⟨mul ℝ ℂ⟩ x in -R..R, (E ξ x) ∂g)
-        (nhds L) ∧
+    (hg1 : Integrable g) (hg2 : BoundedVariationOn g .univ) {ξ : ℝ} (hξ : ξ ≠ 0) :
+    ∃ L, atTop.Tendsto (fun R ↦ ∫⟨mul ℝ ℂ⟩ x in -R..R, (E ξ x) ∂g) (nhds L) ∧
       𝓕 g ξ = -L ∧
       ‖L‖ ≤ |ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) * (eVariationOn g .univ).toReal := by
   use - 𝓕 g ξ
@@ -208,18 +196,16 @@ theorem fourier_tendsto_stieltjesPrimitive_of_boundedVariation
     filter_upwards [eventually_ge_atTop 1] with R hR
     simp [interval_fourierIntegral_eq_boundary_sub_stieltjes (by simp; linarith) hξ (hb R)]
   have hS_tendsto := Tendsto.congr' hS_eq.symm (by simpa using
-      (tendsto_fourier_boundary_zero hg1 hg2 ξ).sub (tendsto_interval_e_integral hg1 ξ))
+      (tendsto_fourier_boundary_zero ξ hg1 hg2).sub (tendsto_interval_e_integral ξ hg1))
   refine ⟨hS_tendsto, by simp,
     (isClosed_le continuous_norm continuous_const).mem_of_tendsto hS_tendsto ?_⟩
   filter_upwards [Filter.eventually_ge_atTop (1 : ℝ)] with R hR
   grw [norm_stieltjesIntegral_E_le ξ (by linarith) (hb R),
     ENNReal.toReal_mono hg2 (eVariationOn.mono g fun ⦃_⦄ _ ↦ trivial)]
 
-lemma fourier_bounded_variation
-    {g : ℝ → ℂ} (hg1 : Integrable g) (hg2 : BoundedVariationOn g .univ) :
-    ∀ (ξ : ℝ), ξ ≠ 0 →
-      ‖𝓕 g ξ‖ ≤ |ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) * (eVariationOn g .univ).toReal := by
-  intro ξ hξ
+lemma fourier_bounded_variation (hg1 : Integrable g) (hg2 : BoundedVariationOn g .univ)
+    {ξ : ℝ} (hξ : ξ ≠ 0) : ‖𝓕 g ξ‖ ≤ |ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) * (eVariationOn g .univ).toReal
+    := by
   obtain ⟨L, _, hb, hc⟩ := fourier_tendsto_stieltjesPrimitive_of_boundedVariation hg1 hg2 hξ
   simpa [hb] using hc
 

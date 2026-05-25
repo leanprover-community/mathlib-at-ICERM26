@@ -90,7 +90,7 @@ namespace BoxIntegral
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
-variable (a b : ℝ) (B : E →L[ℝ] F →L[ℝ] G)
+variable {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L : G}
 
 /-- In one dimension, the mesh size simplifies to the longest length of an interval
 in the partition. -/
@@ -104,8 +104,7 @@ theorem mesh_size_le_iff₁ {I : Box (Fin 1)} (π : Prepartition I) (ε : NNReal
   simp [mesh_size_le_iff, Box.upper₁, Box.lower₁]
 
 /-- The predicate `HasStieltjesIntegral` implies convergence of a limit. -/
-theorem HasStieltjesIntegral.lim {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} (hab : a < b) {f : ℝ → E}
-    {g : ℝ → F} {L : G} (h : HasStieltjesIntegral a b B f g L) :
+theorem HasStieltjesIntegral.lim (hab : a < b) (h : HasStieltjesIntegral a b B f g L) :
     (IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤).Tendsto (fun π ↦ ∑ x ∈ π.boxes,
     ((B (f (π.tag x 0))) (g x.upper₁ - g x.lower₁))) (nhds L) := by
   simp [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral'] at h
@@ -114,7 +113,7 @@ theorem HasStieltjesIntegral.lim {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} (ha
 
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
-theorem hasStieltjesIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (g : ℝ → F) (L : G) :
+theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) :
     HasStieltjesIntegral a b B f g L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
@@ -122,15 +121,15 @@ theorem hasStieltjesIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → 
   simp [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral',
     HasIntegral_Riemann_iff, integralSum]
 
-theorem hasRiemannIntegral_iff_lim_sum {a b : ℝ} (hab : a < b) (f : ℝ → E) (L : E) :
+theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) {L : E} :
     HasRiemannIntegral a b f L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
      dist (∑ x ∈ π.boxes, ((x.upper₁ - x.lower₁) • (f (π.tag x 0)))) L < ε :=
-  hasStieltjesIntegral_iff_lim_sum _ hab _ _ _
+  hasStieltjesIntegral_iff_lim_sum hab
 
 /-- A Riemann integrable function on a closed interval is bounded. -/
-theorem RiemannIntegrable.bounded (hab : a < b) {f : ℝ → E} (h : RiemannIntegrable a b f) :
+theorem RiemannIntegrable.bounded (hab : a < b) (h : RiemannIntegrable a b f) :
     Bornology.IsBounded (f '' (.Ioc a b)) := by
   obtain ⟨L, hL⟩ := RiemannIntegrable_def.mp h
   rw [hasRiemannIntegral_iff_lim_sum hab] at hL; obtain ⟨δ, hδ, h⟩ := hL 1 (by norm_num)
@@ -836,7 +835,7 @@ end Split
 /-! ## Main theorems -/
 
 omit [NormedSpace ℝ F] in
-lemma sum_edist_of_disjoint_le {c d : ℝ} {g : ℝ → F} {S : Finset (Box (Fin 1))}
+lemma sum_edist_of_disjoint_le {c d : ℝ} {S : Finset (Box (Fin 1))}
     (hcd : c ≤ d) (hsub : ∀ J ∈ S, c ≤ J.lower₁ ∧ J.upper₁ ≤ d)
     (hdisj : (SetLike.coe S).Pairwise (Function.onFun Disjoint Box.toSet)) :
     ∑ J ∈ S, edist (g J.upper₁) (g J.lower₁) ≤ eVariationOn g (.Icc c d) := by
@@ -863,7 +862,7 @@ lemma sum_edist_of_disjoint_le {c d : ℝ} {g : ℝ → F} {S : Finset (Box (Fin
 
 /-- For any valid box partition of (a, b], the sum of the norm of the
 differential `ofDiff g` is bounded by the total variation of g on the interval. -/
-private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → F)
+private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn
     (hab : a < b) (hg : BoundedVariationOn g (.Icc a b)) (π : Prepartition (Ioc a b)) :
     ∑ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤ ‖B‖ * (eVariationOn g (.Icc a b)).toReal := by
   have h_term : ∀ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤ ‖B‖ * ‖g J.upper₁ - g J.lower₁‖ := by
@@ -878,7 +877,7 @@ private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → 
 /-- Continuous integrand and a
 bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
 private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
-   {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab : a < b) (l : IntegrationParams)
+   (hab : a < b) (l : IntegrationParams)
     (hf : ContinuousOn f (.Icc a b)) (hg : BoundedVariationOn g (.Icc a b)) :
     Integrable (Ioc a b) l
       (fun x ↦ f (x 0)) (ofDiff (B.flip <| g ·)) := by
@@ -916,16 +915,15 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
       simp [dist_eq_norm, hdiff]
     _ ≤ (‖B‖ * V) * η := by
       grw [norm_sum_le, sum_le_sum hterm, ← sum_mul]; gcongr
-      exact sum_norm_ofDiff_le_norm_mul_eVariationOn _ _ hab hg π
+      exact sum_norm_ofDiff_le_norm_mul_eVariationOn hab hg π
     _ ≤ ε := by grind
 
 /-- Theorem A.1 of Montgomery-Vaughan: a continuous integrand and a bounded-variation integrator
 have a Riemann-Stieltjes integral. -/
-theorem StieltjesIntegrable.of_continuousOn_of_boundedVariationOn [CompleteSpace G] {a b : ℝ}
-    {f : ℝ → E} {g : ℝ → F} (hab : a < b)
+theorem StieltjesIntegrable.of_continuousOn_of_boundedVariationOn [CompleteSpace G] (hab : a < b)
     (hf : ContinuousOn f (.Icc a b)) (hg : BoundedVariationOn g (.Icc a b)) :
     StieltjesIntegrable a b B f g := by
-  obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn B
+  obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn (B := B)
     hab IntegrationParams.Riemann hf hg
   use L
   simp [HasStieltjesIntegral, HasStieltjesIntegral', hab.ne, hab, hL]
@@ -933,7 +931,7 @@ theorem StieltjesIntegrable.of_continuousOn_of_boundedVariationOn [CompleteSpace
 theorem RiemannIntegrable.of_continuousOn [CompleteSpace E] {a b : ℝ} {f : ℝ → E}
     (hab : a < b) (hf : ContinuousOn f (.Icc a b)) :
     RiemannIntegrable a b f := by
-  apply StieltjesIntegrable.of_continuousOn_of_boundedVariationOn _ hab hf _
+  apply StieltjesIntegrable.of_continuousOn_of_boundedVariationOn hab hf
   convert (MonotoneOn.locallyBoundedVariationOn (s := .Icc a b) _) a b _ _ <;> try grind
   intro x hx y hy hxy; simpa using hxy
 
@@ -994,8 +992,8 @@ Remark: In the use of MV theorem A3, they assume that f is Riemann integrable on
 fact that this will imply that f is bounded. However, for the MVT statement, we need only that f is
 bounded.
 -/
-lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : ℝ → F} {a b ε : ℝ}
-  (B : E →L[ℝ] F →L[ℝ] G) (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hε : 0 < ε)
+lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {ε : ℝ} (hab : a < b)
+  (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hε : 0 < ε)
   (f_bounded : ∃ M > 0, ∀ x ∈ Set.Icc a b, ‖f x‖ < M) : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b,
   a' < b' → b' - a' < δ → ∀ c ∈ Set.Icc a' b', ‖B (f c) (g b' -g a')‖
     ≤ ‖B (f c) (derivWithin g (.Icc a b) c)‖ * (b' - a') + ε * (b' - a') := by
@@ -1025,30 +1023,23 @@ lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : �
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
-theorem variation_of_derivative {a b : ℝ} {g : ℝ → F} (hab : a < b)
-    (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
+theorem variation_of_derivative (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
     (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
-theorem integral_of_derivative {a b : ℝ} {f : ℝ → E} {g : ℝ → F} (hab : a < b)
-    (hg : ContDiffOn ℝ 1 g (.Icc a b))
+theorem integral_of_derivative (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b))
     (hf : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
 
 /-- Theorem A.4. Suppose that g has bounded variation, and put g∗(x) = Varₐˣ g. Then
 ‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dg∗(x),
 provided that both integrals exist. -/
-theorem integral_le_integral_of_variation {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
-    {f : ℝ → E} {g : ℝ → F}
-    (hab : a < b) (hg : BoundedVariationOn g (.Icc a b))
-    (hfg : StieltjesIntegrable a b B f g)
-    (hfabs_gstar : StieltjesIntegrable a b (mul ℝ ℝ) (‖f ·‖)
-      (fun x ↦ (eVariationOn g (.Icc a x)).toReal)) :
-    ‖∫⟨B⟩ x in a..b, f x ∂g‖ ≤ ‖B‖ *
-      ∫⟨mul ℝ ℝ⟩ x in a..b, ‖f x‖ ∂(fun x ↦ (eVariationOn g (.Icc a x)).toReal) := by
-  refine le_of_tendsto_of_tendsto (hfg.hasStieltjesIntegral.lim hab).norm
-    ((hfabs_gstar.hasStieltjesIntegral.lim hab).const_mul ‖B‖)
+theorem integral_le_integral_of_variation (hab : a < b) (hg : BoundedVariationOn g (.Icc a b))
+    {L : G} {L' : ℝ} (hfg : HasStieltjesIntegral a b B f g L)
+    (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (‖f ·‖)
+      (fun x ↦ (eVariationOn g (.Icc a x)).toReal) L') : ‖L‖ ≤ ‖B‖ * L' := by
+  refine le_of_tendsto_of_tendsto (hfg.lim hab).norm ((hfabs_gstar.lim hab).const_mul ‖B‖)
     (Filter.Eventually.of_forall (fun π ↦ ?_))
   simp only [isValue, mul_apply', mul_sum]
   grw [norm_sum_le]
@@ -1133,7 +1124,6 @@ lemma sum_eVariationOn_Icc_toReal_le_eVariationOn (g : ℝ → F) (hab : a < b)
   have hfin : ∀ J ∈ π.boxes, eVariationOn g J.Icc₁ ≠ ⊤ :=
     fun J hJ ↦ hg.mono (Icc_subset_of_box_le_Ioc hab (π.le_of_mem hJ))
   rw [← ENNReal.toReal_sum hfin]
-  exact ENNReal.toReal_mono hg (sum_eVariationOn_Icc_le_eVariationOn a b g hab π)
-
+  exact ENNReal.toReal_mono hg (sum_eVariationOn_Icc_le_eVariationOn g hab π)
 
 end BoxIntegral
