@@ -199,7 +199,14 @@ noncomputable def toPartition {N : ℕ} {a b : ℝ}
             have h := congrFun (congrArg Box.lower hij) 0
             simpa [Ioc.lower (hx i.castSucc_lt_succ),
               Ioc.lower (hx j.castSucc_lt_succ)] using h⟩
-      le_of_mem' := by sorry
+      le_of_mem' := by
+        intro J hJ
+        rw [Finset.mem_map] at hJ
+        obtain ⟨i, _, rfl⟩ := hJ
+        have hi := hx i.castSucc_lt_succ
+        have h0 : a ≤ x i.castSucc := ha ▸ hx.monotone i.castSucc.zero_le
+        have hN : x i.succ ≤ b := hb ▸ hx.monotone i.succ.le_last
+        exact (Ioc_le_Ioc_iff (h0.trans_lt (hi.trans_le hN)) hi).mpr ⟨h0, hN⟩
       pairwiseDisjoint := by sorry
 
 
