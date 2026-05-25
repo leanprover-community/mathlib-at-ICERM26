@@ -10,11 +10,78 @@ was conducted.
 module
 
 public import Mathlib.Analysis.BoxIntegral.Stieltjes.IntegrationByParts
+public import Mathlib.Analysis.BoxIntegral.Stieltjes.ChangeVariables
 
 /-! # Finite sums as Riemann–Stieltjes integrals
 
 In this file we establish how various finite sums relate to the Riemann–Stieltjes integral
 `∫⟨B⟩ x in a..b, f x ∂g` defined in `Analysis.BoxIntegral.Stieltjes.Defs`.
+
+The connection is via *step-function integrators*: when the integrator `g` is constant
+between integers and jumps at integer points (e.g. `g ⌊·⌋` or `g ⌊·⌋₊` for a sequence
+`g : ℤ → F` or `g : ℕ → F`), the Riemann--Stieltjes integral against `g` collapses to a
+finite sum over the integer jumps in the interval.  The dual perspective — the Riemann
+integral against a `C¹` integrator coincides with the Stieltjes integral against the
+derivative — is also developed here, and combining the two perspectives yields the
+classical Abel summation identity.
+
+## Main theorems
+
+### Connection to the standard interval integral
+
+* `BoxIntegral.stieltjesIntegral_eq_intervalIntegral_of_contDiffOn`: if `g` is `C¹` and `f`
+  is Riemann integrable, the Riemann--Stieltjes integral `∫⟨B⟩ x in a..b, f x ∂g` equals
+  the interval integral `∫ x in a..b, B (f x) (deriv g x)`.  A primed variant handles the
+  `a < b` case directly.
+* `BoxIntegral.stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable`: special case
+  with `g = id`, reducing Riemann--Stieltjes to the classical Riemann integral.
+
+### Step-function integrators
+
+* `BoxIntegral.HasStieltjesIntegral.of_fun_floor_right`: for a continuous integrand `f` and
+  a sequence `g : ℤ → F`, the Stieltjes integral of `f` against the step function `g ⌊·⌋`
+  equals the sum `∑ n ∈ Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1))`.  The corresponding
+  integrability statement (`StieltjesIntegrable`) and integral-value statement
+  (`stieltjesIntegral_of_fun_floor_right`) follow.
+* `BoxIntegral.HasStieltjesIntegral.of_fun_Nat_floor_right` and friends: the same family
+  for `g : ℕ → F` and `g ⌊·⌋₊`.
+* `BoxIntegral.RiemannIntegrable.of_fun_floor` and
+  `BoxIntegral.RiemannIntegrable.of_fun_Nat_floor`: the step functions `g ⌊·⌋` and `g ⌊·⌋₊`
+  are themselves Riemann integrable on any `[a, b]`.
+* `BoxIntegral.HasStieltjesIntegral.of_sum_Nat_Iic_right`: expressing
+  `∑ n ∈ Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n)` as a Stieltjes integral against the summatory
+  function `∑ n ≤ x, g n`.
+* `BoxIntegral.HasStieltjesIntegral.of_Nat_floor_right` and
+  `BoxIntegral.HasStieltjesIntegral.of_floor_right`: scalar special cases with integrator
+  `⌊·⌋₊` or `⌊·⌋`, giving the identity `∫ f ∂⌊·⌋ = ∑ n ∈ Ioc ⌊a⌋ ⌊b⌋, f n`.
+* `BoxIntegral.HasStieltjesIntegral.of_Heaviside` and
+  `BoxIntegral.HasStieltjesIntegral.of_shift_Heaviside`: for the Heaviside-style integrator
+  `(Set.Ici x).indicator 1`, the Stieltjes integral of a continuous `f` evaluates to `f x`
+  if `x ∈ Ioc a b` and `0` otherwise — the Stieltjes-integral form of point evaluation.
+
+### Abel summation (Equations (A.5) and (A.6) of Montgomery--Vaughan)
+
+* `BoxIntegral.sum_mul_eq_sub_stieltjes_integral`: Equation (A.5), expressing
+  `∑ n ∈ Ioc 0 N, a n * f n` as a boundary term minus a Stieltjes integral of the
+  partial-sum step function against `f`.
+* `BoxIntegral.sum_mul_eq_sub_integral_mul_deriv`: Equation (A.6), the same identity with
+  the Stieltjes integral converted to a standard interval integral against `deriv f` (when
+  `f` is `C¹`).
+
+### Telescoping identities (top-level, outside `BoxIntegral`)
+
+* `Int.sum_Ioc_floor_telescope` and `Nat.sum_Ioc_floor_telescope`: telescoping identities
+  `∑ n ∈ Ioc ⌊a⌋ ⌊b⌋, (g n - g (n - 1)) = g ⌊b⌋ - g ⌊a⌋` (and ℕ-floor variant), proved as
+  quick consequences of the step-function integration formulas above.
+
+## References
+
+* H. L. Montgomery and R. C. Vaughan, *Multiplicative Number Theory I: Classical Theory*,
+  Cambridge Studies in Advanced Mathematics 97, Cambridge University Press, 2007 (Appendix A).
+
+## Tags
+
+Stieltjes integral, Riemann–Stieltjes, Abel summation, telescoping sum, step function
 
 -/
 
@@ -62,11 +129,7 @@ theorem stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable
     contDiff_id.contDiffOn hf using 3 with x
   simp
 
-/-! ### Sums as Stieltjes integrals
-
-TODO: Stieltjes integration against a Heaviside function
-
--/
+/-! ### Sums as Stieltjes integrals -/
 
 section Sums
 
@@ -188,6 +251,12 @@ theorem stieltjesIntegral_of_fun_floor_right {a b : ℝ} (hab : a ≤ b) {f : �
       ∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, B (f n) (g n - g (n - 1)) :=
   (HasStieltjesIntegral.of_fun_floor_right B hab hf g).stieltjesIntegral_eq
 
+@[simp]
+theorem RiemannIntegrable.of_fun_floor {a b : ℝ} (hab : a ≤ b) (g : ℤ → F) :
+    RiemannIntegrable a b (g ⌊·⌋) := by
+  simp only [RiemannIntegrable, ← StieltjesIntegrable.symm_right]
+  exact StieltjesIntegrable.of_fun_floor_right _ hab (by fun_prop) g
+
 /-- When the integrator is a piecewise step function `fun x ↦ g ⌊x⌋₊` and the integrand
 `f` is continuous, the Stieltjes integral can be expressed as a sum over the natural
 number points. -/
@@ -221,6 +290,12 @@ theorem StieltjesIntegrable.of_fun_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {
     (hf : ContinuousOn f (.Icc a b)) (g : ℕ → F) :
     StieltjesIntegrable a b B f (g ⌊·⌋₊) :=
   (HasStieltjesIntegral.of_fun_Nat_floor_right B hab hf g).stieltjesIntegrable
+
+@[simp]
+theorem RiemannIntegrable.of_fun_Nat_floor {a b : ℝ} (hab : a ≤ b) (g : ℕ → F) :
+    RiemannIntegrable a b (g ⌊·⌋₊) := by
+  simp only [RiemannIntegrable, ← StieltjesIntegrable.symm_right]
+  exact StieltjesIntegrable.of_fun_Nat_floor_right _ hab (by fun_prop) g
 
 @[simp]
 theorem stieltjesIntegral_of_fun_Nat_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
@@ -268,6 +343,49 @@ theorem stieltjesIntegral_of_floor_right {a b : ℝ} (hab : a ≤ b) {f : ℝ �
     ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂(⌊·⌋) = ∑ n ∈ .Ioc ⌊a⌋ ⌊b⌋, f n :=
   (HasStieltjesIntegral.of_floor_right hab hf).stieltjesIntegral_eq
 
+theorem HasStieltjesIntegral.of_Heaviside {a b : ℝ} (hab : a ≤ b) {f : ℝ → E}
+    (hf : ContinuousOn f (.Icc a b)) :
+    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f ((Set.Ici 0).indicator 1)
+    (if 0 ∈ Set.Ioc a b then f 0 else 0) := by
+  have hint : ((Set.Ici (0:ℝ)).indicator (1:ℝ → ℝ)) = (((Set.Ici (0:ℤ)).indicator 1) ⌊·⌋) := by
+    ext; simp [Set.indicator, Int.floor_nonneg]
+  rw [hint]
+  convert of_fun_floor_right (lsmul ℝ ℝ).flip hab hf ((Set.Ici (0:ℤ)).indicator 1) using 1
+  have h_term (n : ℤ) : (lsmul ℝ ℝ).flip (f ↑n)
+        ((Set.Ici 0).indicator (1:ℤ → ℝ) n - (Set.Ici 0).indicator 1 (n-1))
+      = if n = 0 then f 0 else 0 := by
+    obtain rfl | hn := eq_or_ne n 0
+    · simp
+    have hdiff : ((Set.Ici 0).indicator (1:ℤ → ℝ) n - (Set.Ici 0).indicator 1 (n - 1)) = 0 := by
+      simp [Set.indicator, Set.Ici]; grind
+    simp [hdiff, hn]
+  simp_rw [h_term, Finset.sum_ite_eq', ← Int.coe_mem_Ioc_iff]
+  grind
+
+theorem HasStieltjesIntegral.of_shift_Heaviside {a b x : ℝ} (hab : a ≤ b) {f : ℝ → E}
+    (hf : ContinuousOn f (.Icc a b)) :
+    HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f ((Set.Ici x).indicator 1)
+    (if x ∈ Set.Ioc a b then f x else 0) := by
+  have hf' : ContinuousOn (f ∘ (· + x)) (.Icc (a - x) (b - x)) :=
+    hf.comp (Continuous.continuousOn (by fun_prop)) (by intro _ _; grind)
+  have hmono : StrictMonoOn (· - x : ℝ → ℝ) (.Icc a b) := fun _ _ _ _ _ ↦ by linarith
+  convert (of_Heaviside (by linarith) hf').of_comp_strictMono_continuous
+    hab hmono (by fun_prop) using 1
+  · grind
+  · ext y; simp [Set.indicator]
+  · simp
+
+theorem StieltjesIntegrable.of_shift_Heaviside {a b x : ℝ} (hab : a ≤ b) {f : ℝ → E}
+    (hf : ContinuousOn f (.Icc a b)) :
+    StieltjesIntegrable a b (lsmul ℝ ℝ).flip f ((Set.Ici x).indicator 1) :=
+  (HasStieltjesIntegral.of_shift_Heaviside hab hf).stieltjesIntegrable
+
+theorem stieltjesIntegral_of_shift_Heaviside {a b x : ℝ} (hab : a ≤ b) {f : ℝ → E}
+    (hf : ContinuousOn f (.Icc a b)) :
+    ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂((Set.Ici x).indicator 1) =
+      if x ∈ Set.Ioc a b then f x else 0 :=
+  (HasStieltjesIntegral.of_shift_Heaviside hab hf).stieltjesIntegral_eq
+
 /-- Equation (A.5) of Montgomery--Vaughan. -/
 theorem sum_mul_eq_sub_stieltjes_integral {N : ℕ} {a : ℕ → ℂ} {f : ℝ → ℂ}
     (hf : ContinuousOn f (.Icc 0 N)) :
@@ -284,6 +402,21 @@ theorem sum_mul_eq_sub_stieltjes_integral {N : ℕ} {a : ℕ → ℂ} {f : ℝ �
     obtain ⟨m, rfl⟩ := Nat.exists_eq_add_one.mpr hn.1
     simp [mul_comm, Finset.sum_Ioc_succ_top m.zero_le a]
   simp [h0.by_parts.stieltjesIntegral_eq, ← Finset.mul_sum]; ring
+
+/-- Equation (A.6) of Montgomery--Vaughan. -/
+theorem sum_mul_eq_sub_integral_mul_deriv {N : ℕ} {a : ℕ → ℂ} {f : ℝ → ℂ}
+    (hf : ContDiffOn ℝ 1 f (.Icc 0 N)) :
+    ∑ n ∈ .Ioc 0 N, a n * f n = (∑ n ∈ .Ioc 0 N, a n) * f N -
+      ∫ x in 0..N, (∑ n ∈ .Ioc 0 ⌊x⌋₊, a n) * (deriv f x) := by
+  obtain rfl | h0 := eq_or_ne N 0
+  · simp
+  have hN : (0 : ℝ) < N := by exact_mod_cast Nat.pos_of_ne_zero h0
+  rw [sum_mul_eq_sub_stieltjes_integral hf.continuousOn, (integral_of_derivative (lsmul ℝ ℂ).flip
+    hN hf (.of_fun_Nat_floor hN.le (∑ n ∈ .Ioc 0 ·, a n))).stieltjesIntegral_eq]
+  congr 1
+  refine intervalIntegral.integral_congr fun x _ ↦ ?_
+  simp only [flip_apply, lsmul_apply, smul_eq_mul]
+  ring
 
 end Sums
 
