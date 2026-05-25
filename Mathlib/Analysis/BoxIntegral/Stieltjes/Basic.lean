@@ -835,55 +835,45 @@ end Split
 
 /-! ## Main theorems -/
 
-/-- For any valid box partition of (a, b], the sum of the norm of the
-differential `ofDiff g` is bounded by the total variation of g on the interval. -/
-private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → F)
-    (hab : a < b)
-    (hg : BoundedVariationOn g (.Icc a b))
-    (π : Prepartition (Ioc a b)) :
-    ∑ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤
-      ‖B‖ * (eVariationOn g (.Icc a b)).toReal := by
-  have h_term : ∀ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤
-      ‖B‖ * ‖g J.upper₁ - g J.lower₁‖ := by
-    intros
-    simp only [ofDiff_apply, ← map_sub, ← opNorm_flip B, le_opNorm]
-  grw [Finset.sum_le_sum h_term, ← Finset.mul_sum]
-  gcongr
-  rw [←ENNReal.toReal_ofReal (Finset.sum_nonneg fun _ _ ↦ norm_nonneg _)]
-  refine ENNReal.toReal_mono hg ?_
-  simp_rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _), ← dist_eq_norm, ← edist_dist]
-  classical
-  suffices h : ∀ (n : ℕ) (c d : ℝ) (S : Finset (Box (Fin 1))),
-      S.card = n → c ≤ d →
-      (∀ J ∈ S, c ≤ J.lower₁ ∧ J.upper₁ ≤ d) →
-      (S : Set _).Pairwise
-        (Function.onFun Disjoint ((↑) : Box (Fin 1) → Set (Fin 1 → ℝ))) →
-      ∑ J ∈ S, edist (g (J.upper₁)) (g (J.lower₁)) ≤ eVariationOn g (.Icc c d) by
-    exact h π.boxes.card _ _ _ rfl hab.le
-      (fun J hJ ↦ (J.le_Ioc_iff hab).mp (π.le_of_mem' J hJ)) π.pairwiseDisjoint
-  intro n; induction n with
+omit [NormedSpace ℝ F] in
+lemma sum_edist_of_disjoint_le {c d : ℝ} {g : ℝ → F} {S : Finset (Box (Fin 1))}
+    (hcd : c ≤ d) (hsub : ∀ J ∈ S, c ≤ J.lower₁ ∧ J.upper₁ ≤ d)
+    (hdisj : (SetLike.coe S).Pairwise (Function.onFun Disjoint Box.toSet)) :
+    ∑ J ∈ S, edist (g J.upper₁) (g J.lower₁) ≤ eVariationOn g (.Icc c d) := by
+  generalize hcard : S.card = n; revert c d S
+  induction n with
   | zero => intros; simp_all
   | succ n ih =>
-    intro c d S hScard _ hbd hdj
-    obtain ⟨J, hJS, hJ_min⟩ :=
-      S.exists_min_image Box.lower₁ (Finset.card_pos.mp (by omega))
+    intro c d S _ hbd hdj hScard
+    obtain ⟨J, hJS, hJ_min⟩ := S.exists_min_image Box.lower₁ (card_pos.mp (by omega))
     have hJ_bd := hbd J hJS
     have hJ_le : J.lower₁ ≤ J.upper₁ := J.lower_lt_upper₁.le
+    classical
     have hRight : ∀ K ∈ S.erase J, J.upper₁ ≤ K.lower₁ := by
       intro K hKerase
-      have hKS := Finset.mem_of_mem_erase hKerase
-      specialize hJ_min K hKS
-      have := K.lower_lt_upper₁
-      specialize hdj hJS hKS (Finset.mem_erase.mp hKerase).1.symm
-      grind [Box.disjoint_iff₁]
-    have IH := ih (J.upper₁) d (S.erase J)
-      (by rw [Finset.card_erase_of_mem hJS, hScard]; omega) hJ_bd.2
-      (fun K hK ↦ ⟨hRight K hK, (hbd K (Finset.mem_of_mem_erase hK)).2⟩)
-      (hdj.mono (Finset.coe_subset.mpr (Finset.erase_subset _ _)))
-    grw [← Finset.add_sum_erase _ _ hJS, eVariationOn.edist_le g (Set.right_mem_Icc.mpr hJ_le)
+      specialize hdj hJS (mem_of_mem_erase hKerase) (mem_erase.mp hKerase).1.symm
+      grind [Box.disjoint_iff₁, Box.lower_lt_upper₁]
+    have IH := ih hJ_bd.2 (fun K hK ↦ ⟨hRight K hK, (hbd K (mem_of_mem_erase hK)).2⟩)
+      (hdj.mono (coe_subset.mpr (erase_subset _ _)))
+      (by rw [card_erase_of_mem hJS, hScard]; omega)
+    grw [← add_sum_erase _ _ hJS, eVariationOn.edist_le g (Set.right_mem_Icc.mpr hJ_le)
       (Set.left_mem_Icc.mpr hJ_le), IH, ←eVariationOn.mono g (Set.Icc_subset_Icc hJ_bd.1 le_rfl)]
     apply le_of_eq
     simpa using eVariationOn.Icc_add_Icc g hJ_le hJ_bd.2 (Set.mem_univ _)
+
+/-- For any valid box partition of (a, b], the sum of the norm of the
+differential `ofDiff g` is bounded by the total variation of g on the interval. -/
+private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn {a b : ℝ} (g : ℝ → F)
+    (hab : a < b) (hg : BoundedVariationOn g (.Icc a b)) (π : Prepartition (Ioc a b)) :
+    ∑ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤ ‖B‖ * (eVariationOn g (.Icc a b)).toReal := by
+  have h_term : ∀ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤ ‖B‖ * ‖g J.upper₁ - g J.lower₁‖ := by
+    intros; simp only [ofDiff_apply, ← map_sub, ← opNorm_flip B, le_opNorm]
+  grw [sum_le_sum h_term, ← mul_sum]; gcongr
+  rw [← ENNReal.toReal_ofReal (sum_nonneg fun _ _ ↦ norm_nonneg _)]
+  refine ENNReal.toReal_mono hg ?_
+  simp_rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _), ← dist_eq_norm, ← edist_dist]
+  exact sum_edist_of_disjoint_le hab.le
+    (fun J hJ ↦ (J.le_Ioc_iff hab).mp (π.le_of_mem' J hJ)) π.pairwiseDisjoint
 
 /-- Continuous integrand and a
 bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
@@ -917,18 +907,16 @@ private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
       simpa [mem_closedBall, dist_pi_le_iff', Real.dist_eq]
         using hπ₂.isSubordinate.infPrepartition _ J
           (mem_infPrepartition_comm.mp hJτ₁) J.upper_mem_Icc
-    grw [← map_sub, (vol J).le_opNorm]
-    gcongr
+    grw [← map_sub, (vol J).le_opNorm]; gcongr
     apply (hδf _ (by simp_all) _ (by simp_all) _).le
-    linarith [abs_sub_le (τ₁.tag J 0) (J.upper₁) (τ₂.tag J 0)]
+    linarith [abs_sub_le (τ₁.tag J 0) J.upper₁ (τ₂.tag J 0)]
   calc
     dist (integralSum f' vol π₁) (integralSum f' vol π₂)
       = ‖∑ J ∈ π.boxes, (vol J (f (τ₁.tag J 0)) - vol J (f (τ₂.tag J 0)))‖ := by
       simp [dist_eq_norm, hdiff]
     _ ≤ (‖B‖ * V) * η := by
-      grw [norm_sum_le, Finset.sum_le_sum hterm, ← Finset.sum_mul]
-      gcongr
-      exact sum_norm_ofDiff_le_norm_mul_eVariationOn B g hab hg π
+      grw [norm_sum_le, sum_le_sum hterm, ← sum_mul]; gcongr
+      exact sum_norm_ofDiff_le_norm_mul_eVariationOn _ _ hab hg π
     _ ≤ ε := by grind
 
 /-- Theorem A.1 of Montgomery-Vaughan: a continuous integrand and a bounded-variation integrator
@@ -961,7 +949,7 @@ For g C^1[a,b] and ε > 0, there is a δ > 0 such that for all a ≤ a' < b' ≤
 b' - a' < δ, we have that for all c ∈ [a',b'] that
 ‖g(b')-g(a')‖ ≤ ‖g'(c)‖ * (b' - a') + ε * (b' - a')
 -/
-lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
+private lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
   (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hε : 0 < ε)
   : ∃ δ > 0, ∀ a' ∈ Set.Icc a b, ∀ b' ∈ Set.Icc a b,
   |b' - a'| < δ → ∀ c ∈ Set.uIcc a' b', dist (g b' -g a')
@@ -981,7 +969,7 @@ lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
       simp only [add_sub_cancel]
       exact derivWithin_subset hIcc_subset (uniqueDiffOn_Icc (by grind) x hx)
         (hg.differentiableOn one_ne_zero x (hIcc_subset hx))
-     _ = (∫ x in a'..b', g' c) + (∫ x in a'..b', (g' x - g' c)) := by
+     _ = (∫ x in a'..b', g' c) + ∫ x in a'..b', (g' x - g' c) := by
       rw [intervalIntegral.integral_add intervalIntegrable_const]
       exact (hderiv_cont.mono hIcc_subset).intervalIntegrable.sub
         intervalIntegrable_const
@@ -1015,14 +1003,14 @@ lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : �
   · use 1; simp only [gt_iff_lt, zero_lt_one, ge_iff_le, Set.mem_Icc, hB, zero_apply, norm_zero,
     zero_mul, zero_add, and_imp, true_and]; intros; positivity
   obtain ⟨M, hM_pos, hM_bound⟩ := f_bounded
-  have hB_norm_pos : 0 < ‖B‖ := norm_pos_iff.mpr hB
-  obtain ⟨ δ, hδ_pos, hδ_prop⟩ := MVT_with_error hab hg (show 0 < ε / (‖B‖ * M) by positivity)
+  rw [← norm_pos_iff] at hB
+  obtain ⟨δ, hδ_pos, hδ_prop⟩ := MVT_with_error hab hg (show 0 < ε / (‖B‖ * M) by positivity)
   use δ, hδ_pos
   intros a' _ b' _ h_a'b' _ c hc
   specialize hδ_prop a' (by grind) b' (by grind) (by grind) c
     (by simpa [Set.uIcc_of_lt h_a'b'] using hc)
   rw [dist_eq_norm] at hδ_prop
-  have : |b'-a'| = b' - a' := abs_of_pos (by positivity)
+  have : |b' - a'| = b' - a' := abs_of_pos (by positivity)
   calc
     _ = ‖B (f c) ((b' - a') • derivWithin g (.Icc a b) c)
       + B (f c) (g b' - g a' - (b' - a') • derivWithin g (.Icc a b) c)‖ := by simp
@@ -1031,7 +1019,7 @@ lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {f : ℝ → E} {g : �
     _ ≤ _ := by
       simp only [map_smul, norm_smul, Real.norm_eq_abs, this, mul_comm,
         add_le_add_iff_left]
-      grw [B.le_opNorm₂ (f c) _, hδ_prop, hM_bound _ (by grind), this]
+      grw [B.le_opNorm₂, hδ_prop, hM_bound _ (by grind), this]
       field_simp; order
 
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then

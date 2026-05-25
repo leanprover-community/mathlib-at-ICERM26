@@ -122,16 +122,13 @@ lemma HasStieltjesIntegral.symm_iff {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
 
 @[symm]
 lemma HasStieltjesIntegral.symm {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
-    {f : ℝ → E} {g : ℝ → F} {L : G}
-    (h : HasStieltjesIntegral a b B f g L) :
-    HasStieltjesIntegral b a B f g (-L) := by
-  rwa [← symm_iff]
+    {f : ℝ → E} {g : ℝ → F} {L : G} (h : HasStieltjesIntegral a b B f g L) :
+    HasStieltjesIntegral b a B f g (-L) := by rwa [← symm_iff]
 
 /-- `StieltjesIntegrable' a b B f g` asserts that the Riemann–Stieltjes integral of `f` against `g`
 paired by `B` over `(a, b]` exists, i.e. some `L` satisfies `HasStieltjesIntegral' a b B f g L`.
 -/
-def StieltjesIntegrable' : Prop :=
-  ∃ L, HasStieltjesIntegral' a b B f g L
+def StieltjesIntegrable' : Prop := ∃ L, HasStieltjesIntegral' a b B f g L
 
 /-- `StieltjesIntegrable a b B f g` asserts that the Riemann–Stieltjes integral of `f` against `g`
 paired by `B` from `a` to `b` exists, i.e. some `L` satisfies `HasStieltjesIntegral a b B f g L`.
@@ -139,8 +136,7 @@ paired by `B` from `a` to `b` exists, i.e. some `L` satisfies `HasStieltjesInteg
 Prefer this over `StieltjesIntegrable` as it has a better API and remains
 useful even outside of the case `a < b`.
 -/
-def StieltjesIntegrable : Prop :=
-  ∃ L, HasStieltjesIntegral a b B f g L
+def StieltjesIntegrable : Prop := ∃ L, HasStieltjesIntegral a b B f g L
 
 theorem stieltjesIntegrable'_iff_integrable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
     {f : ℝ → E} {g : ℝ → F} :
@@ -250,7 +246,7 @@ theorem stieltjesIntegral.integral_symm : ∫⟨B⟩ x in b..a, f x ∂g = -∫�
   simp [stieltjesIntegral, h_integ, h_integ_symm]
 
 theorem hasStieltjesIntegral'_congr {a b : ℝ} (hab : a < b)
-    (hf : Set.EqOn f₁ f₂ (Set.Icc a b)) (hg : Set.EqOn g₁ g₂ (Set.Icc a b)) :
+    (hf : Set.EqOn f₁ f₂ (.Icc a b)) (hg : Set.EqOn g₁ g₂ (.Icc a b)) :
     HasStieltjesIntegral' a b B f₁ g₁ L ↔ HasStieltjesIntegral' a b B f₂ g₂ L := by
   unfold HasStieltjesIntegral'
   apply BoxIntegral.hasIntegral_congr
@@ -261,7 +257,7 @@ theorem hasStieltjesIntegral'_congr {a b : ℝ} (hab : a < b)
   congr 2 <;> exact hg (by grind)
 
 theorem hasStieltjesIntegral_congr {a b : ℝ}
-    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) (hg : Set.EqOn g₁ g₂ (Set.uIcc a b)) :
+    (hf : Set.EqOn f₁ f₂ (.uIcc a b)) (hg : Set.EqOn g₁ g₂ (.uIcc a b)) :
     HasStieltjesIntegral a b B f₁ g₁ L ↔ HasStieltjesIntegral a b B f₂ g₂ L := by
   rcases lt_trichotomy a b with hab | rfl | hab
   · simp only [hab.le, Set.uIcc_of_le, hab, HasStieltjesIntegral.of_lt] at hf hg ⊢
@@ -272,12 +268,12 @@ theorem hasStieltjesIntegral_congr {a b : ℝ}
   exact hasStieltjesIntegral'_congr hab hf hg
 
 theorem stieltjesIntegrable_congr {a b : ℝ}
-    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) (hg : Set.EqOn g₁ g₂ (Set.uIcc a b)) :
+    (hf : Set.EqOn f₁ f₂ (.uIcc a b)) (hg : Set.EqOn g₁ g₂ (.uIcc a b)) :
     StieltjesIntegrable a b B f₁ g₁ ↔ StieltjesIntegrable a b B f₂ g₂ := by
   simp only [StieltjesIntegrable, hasStieltjesIntegral_congr hf hg]
 
 theorem stieltjesIntegral_congr {a b : ℝ}
-    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) (hg : Set.EqOn g₁ g₂ (Set.uIcc a b)) :
+    (hf : Set.EqOn f₁ f₂ (.uIcc a b)) (hg : Set.EqOn g₁ g₂ (.uIcc a b)) :
     ∫⟨B⟩ x in a..b, f₁ x ∂g₁ = ∫⟨B⟩ x in a..b, f₂ x ∂g₂ := by
   by_cases! h : StieltjesIntegrable a b B (fun x ↦ f₁ x) g₁
     <;> have h' := h <;> rw [stieltjesIntegrable_congr hf hg] at h'
@@ -329,12 +325,12 @@ theorem RiemannIntegrable.iff_integrable {a b : ℝ} (hab : a < b) :
     simp [RiemannIntegrable_def, Integrable, HasRiemannIntegral.iff_hasIntegral, hab]
 
 theorem hasRiemannIntegral_congr {a b : ℝ} {f₁ f₂ : ℝ → E}
-    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) :
+    (hf : Set.EqOn f₁ f₂ (.uIcc a b)) :
     HasRiemannIntegral a b f₁ L ↔ HasRiemannIntegral a b f₂ L :=
   hasStieltjesIntegral_congr hf (Set.graphOn_inj.mp rfl)
 
 theorem riemannIntegrable_congr {a b : ℝ} {f₁ f₂ : ℝ → E}
-    (hf : Set.EqOn f₁ f₂ (Set.uIcc a b)) :
+    (hf : Set.EqOn f₁ f₂ (.uIcc a b)) :
     RiemannIntegrable a b f₁ ↔ RiemannIntegrable a b f₂ :=
   stieltjesIntegrable_congr hf (Set.graphOn_inj.mp rfl)
 
