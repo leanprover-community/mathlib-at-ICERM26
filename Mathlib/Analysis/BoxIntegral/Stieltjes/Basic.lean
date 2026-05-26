@@ -751,7 +751,7 @@ lemma sum_edist_of_disjoint_le {c d : ℝ} {S : Finset (Box (Fin 1))}
     intro c d S _ hbd hdj hScard
     obtain ⟨J, hJS, hJ_min⟩ := S.exists_min_image Box.lower₁ (card_pos.mp (by omega))
     have hJ_bd := hbd J hJS
-    have hJ_le : J.lower₁ ≤ J.upper₁ := J.lower_lt_upper₁.le
+    have hJ_le := J.lower_lt_upper₁.le
     classical
     have hRight : ∀ K ∈ S.erase J, J.upper₁ ≤ K.lower₁ := by
       intro K hKerase
@@ -765,8 +765,6 @@ lemma sum_edist_of_disjoint_le {c d : ℝ} {S : Finset (Box (Fin 1))}
     apply le_of_eq
     simpa using eVariationOn.Icc_add_Icc g hJ_le hJ_bd.2 (Set.mem_univ _)
 
-/-- For any valid box partition of (a, b], the sum of the norm of the
-differential `ofDiff g` is bounded by the total variation of g on the interval. -/
 private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn
     (hab : a < b) (hg : BoundedVariationOn g (.Icc a b)) (π : Prepartition (Ioc a b)) :
     ∑ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤ ‖B‖ * (eVariationOn g (.Icc a b)).toReal := by
@@ -779,16 +777,13 @@ private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn
   exact sum_edist_of_disjoint_le hab.le
     (fun J hJ ↦ (J.le_Ioc_iff hab).mp (π.le_of_mem' J hJ)) π.pairwiseDisjoint
 
-/-- Continuous integrand and a
-bounded-variation integrator give an integrable Riemann-Stieltjes box integrand. -/
-private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G]
-   (hab : a < b) (l : IntegrationParams)
-    (hf : ContinuousOn f (.Icc a b)) (hg : BoundedVariationOn g (.Icc a b)) :
-    Integrable (Ioc a b) l
+private lemma integrable_of_continuousOn_of_boundedVariationOn [CompleteSpace G] (hab : a < b)
+    (l : IntegrationParams) (hf : ContinuousOn f (.Icc a b))
+    (hg : BoundedVariationOn g (.Icc a b)) : Integrable (Ioc a b) l
       (fun x ↦ f (x 0)) (ofDiff (B.flip <| g ·)) := by
   let f' := fun x : Fin 1 → ℝ ↦ f (x 0)
   refine integrable_iff_cauchy_basis.2 fun ε hε ↦ ?_
-  let V : ℝ := (eVariationOn g (.Icc a b)).toReal
+  let V := (eVariationOn g (.Icc a b)).toReal
   rcases exists_pos_mul_lt hε (‖B‖ * V) with ⟨η, hη, hηC⟩
   obtain ⟨δ, hδ, hδf⟩ := hf.metric_uniform η hη
   refine ⟨fun _ _ ↦ ⟨δ/4, by grind⟩, fun _ _ _ ↦ by rfl, fun _ _ π₁ π₂ hπ₁ hpart₁ hπ₂ hpart₂ ↦ ?_⟩
