@@ -27,15 +27,6 @@ classical Abel summation identity.
 
 ## Main theorems
 
-### Connection to the standard interval integral
-
-* `BoxIntegral.stieltjesIntegral_eq_intervalIntegral_of_contDiffOn`: if `g` is `C¹` and `f`
-  is Riemann integrable, the Riemann--Stieltjes integral `∫⟨B⟩ x in a..b, f x ∂g` equals
-  the interval integral `∫ x in a..b, B (f x) (deriv g x)`.  A primed variant handles the
-  `a < b` case directly.
-* `BoxIntegral.stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable`: special case
-  with `g = id`, reducing Riemann--Stieltjes to the classical Riemann integral.
-
 ### Step-function integrators
 
 * `BoxIntegral.HasStieltjesIntegral.of_fun_floor_right`: for a continuous integrand `f` and
@@ -97,36 +88,6 @@ namespace BoxIntegral
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable {a b x y : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ → F}
-
-/-! ### Connection to standard integrals -/
-
-/-- Function-level form of Theorem A.3(b) (`integral_of_contDiffOn`): when `g` is `C¹` on
-`[a, b]` and `f` is Riemann integrable, the Stieltjes integral of `f` against `g` equals the
-Riemann integral of `B (f x) (g' x)`. -/
-theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' (hab : a < b)
-    (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hf : RiemannIntegrable a b f) :
-    ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) :=
-  (integral_of_contDiffOn hab hg hf).stieltjesIntegral_eq
-
-theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn
-    (hg : ContDiffOn ℝ 1 g (.Icc (min a b) (max a b)))
-    (hf : RiemannIntegrable (min a b) (max a b) f) :
-    ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) := by
-  rcases lt_trichotomy a b with hab | rfl | hba
-  · simp only [hab.le, inf_of_le_left, sup_of_le_right] at hg hf
-    exact stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' hab hg hf
-  · simp
-  simp only [hba.le, inf_of_le_right, sup_of_le_left] at hg hf
-  rw [stieltjesIntegral.integral_symm, integral_symm,
-    stieltjesIntegral_eq_intervalIntegral_of_contDiffOn' hba hg hf]
-
-/-- Special case of previous when `g x = x`. -/
-theorem stieltjesIntegral_eq_intervalIntegral_of_riemannIntegrable
-    (hf : RiemannIntegrable (min a b) (max a b) f) :
-    ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id = ∫ x in a..b, f x := by
-  convert stieltjesIntegral_eq_intervalIntegral_of_contDiffOn contDiff_id.contDiffOn hf
-    using 3 with x
-  simp
 
 /-! ### Sums as Stieltjes integrals -/
 
@@ -397,7 +358,7 @@ theorem sum_mul_eq_sub_integral_mul_deriv {N : ℕ} {a : ℕ → ℂ} {f : ℝ �
   obtain rfl | h0 := eq_or_ne N 0
   · simp
   have hN : (0 : ℝ) < N := by exact_mod_cast Nat.pos_of_ne_zero h0
-  rw [sum_mul_eq_sub_stieltjes_integral hf.continuousOn, (integral_of_contDiffOn
+  rw [sum_mul_eq_sub_stieltjes_integral hf.continuousOn, (HasStieltjesIntegral.of_contDiffOn
     hN hf (.of_fun_Nat_floor hN.le (∑ n ∈ .Ioc 0 ·, a n))).stieltjesIntegral_eq]
   congr 1
   refine intervalIntegral.integral_congr fun x _ ↦ ?_

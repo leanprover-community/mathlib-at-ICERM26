@@ -321,7 +321,8 @@ theorem BoundedVariationOn.riemannIntegrable [CompleteSpace E] (hab : a ≤ b)
   · simp
   unfold RiemannIntegrable
   rw [StieltjesIntegrable.symm_right]
-  exact .of_continuousOn_of_boundedVariationOn hab (by fun_prop) hf
+  rw [← Set.uIcc_of_lt hab] at hf
+  exact .of_continuousOn_of_boundedVariationOn (by fun_prop) hf
 
 theorem MonotoneOn.riemannIntegrable {f : ℝ → ℝ} (hab : a ≤ b) (hf : MonotoneOn f (.Icc a b)) :
     RiemannIntegrable a b f := hf.boundedVariationOn.riemannIntegrable hab

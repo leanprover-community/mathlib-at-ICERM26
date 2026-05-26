@@ -124,9 +124,11 @@ theorem norm_stieltjesIntegral_E_le (hab : a < b) (hg : BoundedVariationOn g (.I
       (eVariationOn g (.Icc a b)).toReal := by
   calc
     _ ≤ ‖mul ℝ ℂ‖ * (|ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) * (eVariationOn g (.Icc a b)).toReal) := by
-      apply integral_le_integral_of_variation hab hg
+      apply integral_le_integral_of_variation hab.le
+        (show BoundedVariationOn g (.uIcc a b) by rwa [Set.uIcc_of_lt hab])
         (StieltjesIntegrable.of_continuousOn_of_boundedVariationOn
-          hab (by fun_prop) hg).hasStieltjesIntegral
+          (show ContinuousOn (E ξ) (.uIcc a b) by fun_prop)
+          (show BoundedVariationOn g (.uIcc a b) by rwa [Set.uIcc_of_lt hab])).hasStieltjesIntegral
       simp only [E, inv_neg, mul_inv_rev, inv_I, neg_mul, mul_neg, neg_neg, Complex.norm_mul,
         norm_inv, norm_real, Real.norm_eq_abs, norm_I, Real.pi_nonneg, abs_of_nonneg, norm_ofNat,
         one_mul, norm_e, mul_one]
@@ -140,7 +142,7 @@ against its derivative, here specialized to the Fourier kernel. -/
 theorem hasStieltjesIntegral_E (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0) (hg : RiemannIntegrable a b g) :
     HasStieltjesIntegral a b (mul ℝ ℂ).flip g (E ξ) (∫ x in a..b, e ξ x * g x) := by
   have h (x : ℝ) := hasDerivAt_E x hξ
-  convert integral_of_contDiffOn hab ?_ hg using 3 with x
+  convert HasStieltjesIntegral.of_contDiffOn hab ?_ hg using 3 with x
   · simp [(h x).deriv, mul_comm]
   refine (contDiff_one_iff_deriv.mpr ⟨fun x ↦ (h x).differentiableAt, ?_⟩).contDiffOn
   simp only [ne_eq, hξ, not_false_eq_true, deriv_E]
@@ -151,8 +153,9 @@ Fourier antiderivative, up to the boundary term supplied by integration by parts
 theorem interval_fourierIntegral_eq_boundary_sub_stieltjes
     (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0) (hg : BoundedVariationOn g (.Icc a b)) :
     (∫ x in a..b, e ξ x * g x) = g b * E ξ b - g a * E ξ a - ∫⟨mul ℝ ℂ⟩ x in a..b, E ξ x ∂g := by
-  have hInt : StieltjesIntegrable a b (mul ℝ ℂ) (E ξ) g :=
-    .of_continuousOn_of_boundedVariationOn hab (by fun_prop) hg
+  have hInt : StieltjesIntegrable a b (mul ℝ ℂ) (E ξ) g := by
+    rw [← Set.uIcc_of_lt hab] at hg
+    exact .of_continuousOn_of_boundedVariationOn (by fun_prop) hg
   rw [(hasStieltjesIntegral_E hab hξ (hg.riemannIntegrable hab.le)).stieltjesIntegral_eq.symm,
       stieltjesIntegral.by_parts hInt]
   simp [mul_comm]
