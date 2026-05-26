@@ -644,9 +644,15 @@ def domDomCongr (σ : ι ≃ ι') (f : M [Sym^ι]→ₗ[R] N) : M [Sym^ι']→�
     --     (by simpa using hv) (σ.symm.injective.ne hij)
     map_eq_map_of_swap' v i j inst := by
       classical
+      --rename_i f₀ v
+      have aux := f.map_eq_map_of_swap' (v ∘ σ) (σ.symm i) (σ.symm j)
+      simp only [MultilinearMap.toFun_eq_coe, coe_multilinearMap] at aux
+      rw [← aux]
+      simp only [map_eq_map_of_swap]
+      --simp
       sorry--apply f.map_eq_map_of_swap' (v ∘ σ) (i := σ.symm i) (j := σ.symm j)
        }
-
+#exit
 @[simp]
 theorem domDomCongr_refl (f : M [Sym^ι]→ₗ[R] N) : f.domDomCongr (Equiv.refl ι) = f := rfl
 
