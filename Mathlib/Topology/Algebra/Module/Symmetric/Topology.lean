@@ -386,4 +386,10 @@ def continuousSymmetricMapCongr (e : E ≃L[𝕜] E') (e' : F ≃L[𝕜] G) :
     (E [Sym^ι]→L[𝕜] F) ≃L[𝕜] (E' [Sym^ι]→L[𝕜] G) :=
   e.continuousSymmetricMapCongrLeft.trans <| e'.continuousSymmetricMapCongrRight
 
+lemma coe_continuousSymmetricMapCongr (e : E ≃L[𝕜] E') (e' : F ≃L[𝕜] G) :
+    (e.continuousSymmetricMapCongr e' (ι := ι) : (E [Sym^ι]→L[𝕜] F) →L[𝕜] (E' [Sym^ι]→L[𝕜] G)) =
+      ContinuousLinearMap.compContinuousSymmetricMapCLM 𝕜 E' F G ι (e' : F →L[𝕜] G) ∘L
+        ContinuousSymmetricMap.compContinuousLinearMapCLM e.symm :=
+  rfl
+
 end ContinuousLinearEquiv
