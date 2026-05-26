@@ -920,7 +920,12 @@ theorem HasStieltjesIntegral.cauchy_of_uniformCauchy_of_boundedVariationOn
     Cauchy (l.map Ln) := by
   -- WLOG `a ≤ b` (the `b < a` case follows by `symm`-flipping the integrals).
   wlog hab : a ≤ b with H
-  · sorry
+  · have hfn' : ∀ n, HasStieltjesIntegral b a B (fn n) g (-(Ln n)) := fun n ↦ (hfn n).symm
+    rw [Set.uIcc_comm] at hg hCauchy
+    have h_neg := H hfn' hg hCauchy (by order)
+    have h := h_neg.map uniformContinuous_neg
+    rwa [Filter.map_map, show (Neg.neg : G → G) ∘ (fun n ↦ -(Ln n)) = Ln from
+      funext fun _ ↦ neg_neg _] at h
   -- `V` = total variation of `g` on `[a, b]` — non-negative.
   set V := (eVariationOn g (.Icc a b)).toReal
   have hV : 0 ≤ V := ENNReal.toReal_nonneg
@@ -973,12 +978,18 @@ theorem HasStieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
   -- Step 3: Show `HasStieltjesIntegral a b B f g L`.
   -- WLOG `a ≤ b` (the `b < a` case via `symm`: negate `Ln`, `L`, swap `a, b`).
   wlog hab : a ≤ b with H
-  · sorry
+  · rw [HasStieltjesIntegral.symm_iff]
+    have h_cauchy_neg : Cauchy (l.map (fun n ↦ -(Ln n))) := by
+      have := hCauchy.map uniformContinuous_neg
+      rwa [Filter.map_map] at this
+    have h_tendsto_neg : l.Tendsto (fun n ↦ -(Ln n)) (nhds (-L)) := Filter.Tendsto.neg hL
+    exact H (fun n ↦ (hfn n).symm) (Set.uIcc_comm a b ▸ hg) hlim h_cauchy_neg
+      (-L) h_tendsto_neg (not_le.mp hab).le
   -- Degenerate `a = b` case: every `Ln n = 0`, hence `L = 0`, conclusion trivial.
   obtain rfl | hab := hab.eq_or_lt
-  · replace hLn : Ln = 0 := by ext x; simpa using hfn x
-    simp [hLn] at hL ⊢ 
-    sorry
+  · have hLn : Ln = 0 := by ext x; simpa using hfn x
+    have : L = 0 := tendsto_nhds_unique hL (by rw [hLn]; exact tendsto_const_nhds)
+    simp [this]
   -- Main case `a < b`: unfold to the ε-δ form.
   simp only [Set.uIcc_of_lt, hab] at hg
   rw [hasStieltjesIntegral_iff_lim_sum hab]
