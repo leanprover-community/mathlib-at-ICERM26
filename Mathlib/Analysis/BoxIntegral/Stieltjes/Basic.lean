@@ -985,6 +985,13 @@ Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 theorem variation_of_derivative (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
     (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
 
+/-- The product of a Riemann integrable function and a continuous function is also
+Riemann integrable. -/
+theorem RiemannIntegrable.mul_continuous (hab : a < b) {f : ℝ → E} {g : ℝ → F}
+    (hf : RiemannIntegrable a b f) (hg : ContinuousOn g (.Icc a b)) :
+    RiemannIntegrable a b (fun x ↦ B (f x) (g x)) := by
+  sorry
+
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
 theorem integral_of_derivative (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b))
