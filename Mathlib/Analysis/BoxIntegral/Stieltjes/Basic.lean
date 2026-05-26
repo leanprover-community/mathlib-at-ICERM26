@@ -768,7 +768,6 @@ theorem stieltjesIntegral.add_adjacent (h : StieltjesIntegrable a c B f g)
 of Montgomery--Vaughan. -/
 
 end Split
-
 section UpperBound
 
 /-! ### Upper bound on the Stieltjes integral -/
@@ -898,10 +897,11 @@ theorem riemannIntegral_le_bound_mul_length {M : E} {M' : ℝ} (hab : a ≤ b)
   have h := stieltjesIntegral_le_bound_mul hab hB hg hf hfS
   rwa [one_mul, eVariationOn_id_Icc hab, ENNReal.toReal_ofReal (by linarith)] at h
 
-theorem HasStieltjesIntegral.cauchy_of_uniform_of_boundedVariationOn
+theorem HasStieltjesIntegral.cauchy_of_uniformCauchy_of_boundedVariationOn
     {ι : Type*} {l : Filter ι} {fn : ι → ℝ → E} {Ln : ι → G}
     (hfn : ∀ n, HasStieltjesIntegral a b B (fn n) g (Ln n))
-    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    (hg : BoundedVariationOn g (.uIcc a b))
+    (hCauchy : UniformCauchySeqOn fn l (Set.uIcc a b)) :
     Cauchy (l.map Ln) := by
   -- use stieltjesIntegral_le_bound_mul
   sorry
@@ -959,6 +959,57 @@ theorem riemannIntegral.of_uniform [CompleteSpace E]
   rw [hL.riemannIntegral_eq]; exact hLn
 
 end UpperBound
+
+section Cut
+/-! ## Cutting by indicator functions -/
+
+variable {f : ℝ → E} {g : ℝ → F} {L : G} {B : E →L[ℝ] F →L[ℝ] G} {a b c : ℝ}
+
+theorem HasStieltjesIntegral.mul_indicator_left {hab : a ≤ b} (hc : c ∈ Set.Icc a b)
+    (h : HasStieltjesIntegral a c B f g L) (hg : ContinuousAt g c)
+    (hfbound : Bornology.IsBounded (f '' (Set.Icc a b))) :
+      HasStieltjesIntegral a b B ((Set.Ioc a c).indicator f) g L := by
+  -- take a fine partition of `Set.Icc a b` and cut it at `c`.  There is one interval that
+  -- gets cut, but the continuity of g and the bound on f will show that the effect of this cut
+  -- is small.
+  sorry
+
+theorem HasStieltjesIntegral.mul_indicator_right {hab : a ≤ b} (hc : c ∈ Set.Icc a b)
+    (h : HasStieltjesIntegral c b B f g L) (hg : ContinuousAt g c)
+    (hfbound : Bornology.IsBounded (f '' (Set.Icc a b))) :
+      HasStieltjesIntegral a b B ((Set.Ioc c b).indicator f) g L := by
+  sorry
+
+theorem StieltjesIntegrable.mul_indicator_left {hab : a ≤ b} (hc : c ∈ Set.Icc a b)
+    (h : StieltjesIntegrable a c B f g) (hg : ContinuousAt g c)
+    (hfbound : Bornology.IsBounded (f '' (Set.Icc a b))) :
+      StieltjesIntegrable a b B ((Set.Ioc a c).indicator f) g := by
+  sorry
+
+theorem StieltjesIntegrable.mul_indicator_right {hab : a ≤ b} (hc : c ∈ Set.Icc a b)
+    (h : StieltjesIntegrable c b B f g) (hg : ContinuousAt g c)
+    (hfbound : Bornology.IsBounded (f '' (Set.Icc a b))) :
+      StieltjesIntegrable a b B ((Set.Ioc c b).indicator f) g := by
+  sorry
+
+-- TODO: define the notion of a simple function
+
+-- TODO: show that when g is continuous and f is bounded, Stieltjes integrability is preserved by
+-- multiplication by simple functions
+
+-- TODO: show that Riemann integrability is preserved by
+-- multiplication by simple functions
+
+-- TODO: show that continuous functions are uniform limits of simple functions
+
+/-- The product of a Riemann integrable function and a continuous function is also
+Riemann integrable. TODO: remove the `a < b` hypothesis. -/
+theorem RiemannIntegrable.mul_continuous (hab : a < b) {f : ℝ → E} {g : ℝ → F}
+    (hf : RiemannIntegrable a b f) (hg : ContinuousOn g (.Icc a b)) :
+    RiemannIntegrable a b (fun x ↦ B (f x) (g x)) := by
+  sorry
+
+end Cut
 
 /-! ## Bounded variation integrators -/
 
@@ -1124,13 +1175,6 @@ Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
 theorem variation_of_contDiffOn (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
     (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
-
-/-- The product of a Riemann integrable function and a continuous function is also
-Riemann integrable. TODO: remove the `a < b` hypothesis. -/
-theorem RiemannIntegrable.mul_continuous (hab : a < b) {f : ℝ → E} {g : ℝ → F}
-    (hf : RiemannIntegrable a b f) (hg : ContinuousOn g (.Icc a b)) :
-    RiemannIntegrable a b (fun x ↦ B (f x) (g x)) := by
-  sorry
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. TODO: remove the `a < b` hypothesis. -/
