@@ -29,8 +29,8 @@ of the Riemann--Stieltjes integral.
   the ordering of `a`, `b`, `c`.
 * `BoxIntegral.exists_of_continuousOn_of_boundedVariationOn` (Theorem A.1): if `f` is continuous
   and `g` has bounded variation on `[a, b]`, then the Riemann–Stieltjes integral exists.
-* `BoxIntegral.variation_of_derivative` (Theorem A.3(a)) and
-  `BoxIntegral.integral_of_derivative` (Theorem A.3(b)): when `g` is `C¹`, the total variation
+* `BoxIntegral.variation_of_contDiffOn` (Theorem A.3(a)) and
+  `BoxIntegral.integral_of_contDiffOn` (Theorem A.3(b)): when `g` is `C¹`, the total variation
   and the Riemann–Stieltjes integral can be computed by `g′`.
 * `BoxIntegral.integral_le_integral_of_variation` (Theorem A.4): a norm bound on the integral
   in terms of the variation of `g`.
@@ -982,7 +982,7 @@ lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {ε : ℝ} (hab : a < b
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
-theorem variation_of_derivative (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
+theorem variation_of_contDiffOn (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
     (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
 
 /-- The product of a Riemann integrable function and a continuous function is also
@@ -994,7 +994,7 @@ theorem RiemannIntegrable.mul_continuous (hab : a < b) {f : ℝ → E} {g : ℝ 
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
-theorem integral_of_derivative (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b))
+theorem integral_of_contDiffOn (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b))
     (hf : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
 

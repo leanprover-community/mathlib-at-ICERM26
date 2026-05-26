@@ -140,7 +140,7 @@ against its derivative, here specialized to the Fourier kernel. -/
 theorem hasStieltjesIntegral_E (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0) (hg : RiemannIntegrable a b g) :
     HasStieltjesIntegral a b (mul ℝ ℂ).flip g (E ξ) (∫ x in a..b, e ξ x * g x) := by
   have h (x : ℝ) := hasDerivAt_E x hξ
-  convert integral_of_derivative hab ?_ hg using 3 with x
+  convert integral_of_contDiffOn hab ?_ hg using 3 with x
   · simp [(h x).deriv, mul_comm]
   refine (contDiff_one_iff_deriv.mpr ⟨fun x ↦ (h x).differentiableAt, ?_⟩).contDiffOn
   simp only [ne_eq, hξ, not_false_eq_true, deriv_E]
@@ -212,7 +212,7 @@ lemma fourier_bounded_variation (hg1 : Integrable g) (hg2 : BoundedVariationOn g
 end FourierTransform
 
 -- The old proof of `hasStieltjesIntegral_E`, given below,
--- could be useful to prove `integral_of_derivative`.
+-- could be useful to prove `integral_of_contDiffOn`.
 
 -- lemma integrableOn_Icc_of_boundedVariationOn_real {f : ℝ → ℝ}
 --     (hf : BoundedVariationOn f (.Icc a b)) : IntegrableOn f (.Icc a b) := by
