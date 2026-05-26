@@ -40,7 +40,11 @@ lemma isClosed_range_toContinuousMultilinearMap [ContinuousSMul 𝕜 E] [T2Space
       ContinuousMultilinearMap 𝕜 (fun _ : ι ↦ E) F)) := by
   simp only [range_toContinuousMultilinearMap, setOf_forall]
   repeat refine isClosed_iInter fun _ ↦ ?_
-  sorry -- TODO: need a new argument, but is clearly true
+  rename_i f i j _
+  let A : ContinuousMultilinearMap 𝕜 (fun x ↦ E) F → F := fun x ↦ x (f ∘ ⇑(Equiv.swap i j)) - x f
+  convert isClosed_singleton (x := 0).preimage (by fun_prop : Continuous A)
+  ext x
+  simp [A, sub_eq_iff_eq_add]
 
 end IsClosedRange
 
