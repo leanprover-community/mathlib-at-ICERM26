@@ -627,16 +627,31 @@ variable {R M N ι : Type*} [Semiring R] [AddCommMonoid M] [Module R M] [Topolog
   [AddCommGroup N] [Module R N] [TopologicalSpace N] [IsTopologicalAddGroup N] [Fintype ι]
   [DecidableEq ι] (f : ContinuousMultilinearMap R (fun _ : ι ↦ M) N)
 
+-- TODO: move (or find a better abstraction)
+@[simps]
+def _root_.Equiv.Perm.compLeft {ι : Type*} (σ : Equiv.Perm ι) : Equiv.Perm (Equiv.Perm ι) where
+  toFun := fun τ ↦ σ.trans τ
+  invFun := fun τ ↦ σ.symm.trans τ
+  left_inv σ := by ext; simp
+  right_inv σ := by ext; simp
+
+@[simps]
+def _root_.Equiv.Perm.compRight {ι : Type*} (σ : Equiv.Perm ι) : Equiv.Perm (Equiv.Perm ι) where
+  toFun := fun τ ↦ τ.trans σ
+  invFun := fun τ ↦ τ.trans σ.symm
+  left_inv σ := by ext; simp
+  right_inv σ := by ext; simp
+
 /-- Symmetrization of a continuous multilinear map. -/
 @[simps -isSimp apply_toContinuousMultilinearMap]
 def symmetrization : ContinuousMultilinearMap R (fun _ : ι ↦ M) N →+ M [Sym^ι]→L[R] N where
   toFun f :=
     { toContinuousMultilinearMap := ∑ σ : Equiv.Perm ι, f.domDomCongr σ
-      --map_eq_zero_of_eq' := fun v i j hv hne ↦ by
-      --  simpa [MultilinearMap.alternatization_apply]
-      --    using f.1.alternatization.map_eq_zero_of_eq' v i j hv hne
       map_eq_map_of_swap' v i j _ := by
-        sorry }
+        simp only [MultilinearMap.toFun_eq_coe, coe_coe, sum_apply, domDomCongr_apply, comp_apply]
+        rw [Finset.sum_bijective (Equiv.swap i j).compRight (Equiv.swap i j).compRight.bijective]
+        · simp
+        simp [Equiv.Perm.compRight] }
   map_zero' := by ext; simp
   map_add' _ _ := by ext; simp [Finset.sum_add_distrib]
 
