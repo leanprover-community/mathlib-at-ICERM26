@@ -302,6 +302,7 @@ theorem stieltjesIntegral.by_parts (h : StieltjesIntegrable a b B f g) :
   rw [h.hasStieltjesIntegral.by_parts.stieltjesIntegral_eq,
     h.hasStieltjesIntegral.stieltjesIntegral_eq]
 
+/-- ## Some applications of integration by parts -/
 theorem HasStieltjesIntegral.of_const :
     HasStieltjesIntegral a b B (fun _ ↦ c) g (B c (g b) - B c (g a)) := by
   convert by_parts (B := B.flip) (f := g) (g := fun _ ↦ c) (L := 0) (by simp [const_right]) using 1
@@ -314,6 +315,37 @@ theorem StieltjesIntegrable.of_const : StieltjesIntegrable a b B (fun _ ↦ c) g
 @[simp]
 theorem stieltjesIntegral.of_const : ∫⟨B⟩ _ in a..b, c ∂g = B c (g b) - B c (g a) :=
   HasStieltjesIntegral.of_const.stieltjesIntegral_eq
+
+theorem HasRiemannIntegral.of_const : HasRiemannIntegral a b (fun _ ↦ c) ((b - a) • c) := by
+  unfold HasRiemannIntegral; convert HasStieltjesIntegral.of_const using 1
+  simp; module
+
+@[simp]
+theorem RiemannIntegrable.of_const : RiemannIntegrable a b (fun _ ↦ c) :=
+  HasRiemannIntegral.of_const.riemannIntegrable
+
+@[simp]
+theorem riemannIntegral.of_const : riemannIntegral a b (fun _ ↦ c) = (b - a) • c :=
+  HasRiemannIntegral.of_const.riemannIntegral_eq
+
+open ContinuousLinearMap in
+theorem riemannIntegral_le_integral_of_bound {M : E} {L' : ℝ} {S : ℝ → ℝ} (hab : a ≤ b)
+    (hf : HasRiemannIntegral a b f M) (hfS : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ S x)
+    (hS : HasRiemannIntegral a b S L') : ‖M‖ ≤ L' := by
+  have : mul ℝ ℝ = (lsmul ℝ ℝ).flip := by aesop
+  convert stieltjesIntegral_le_integral_bound_of_variation (L' := L') (K := 1) hab
+    (by simp [ContinuousLinearMap.opNorm_lsmul_le]) .id_of_Icc hf hfS ?_ using 1
+  · simp
+  rw [hasStieltjesIntegral_congr (g₂ := id - (fun _ ↦ a)) (Set.eqOn_refl _ _)]
+  · rw [this]; convert hS.sub_right (L₁ := L') (L₂ := 0) ?_ <;> simp
+  intro x hx; simp [hab] at hx; simp [hx]
+
+theorem riemannIntegral_le_bound_mul_length {M : E} {M' : ℝ} (hab : a ≤ b)
+    (hf : HasRiemannIntegral a b f M) (hfS : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ M')
+    : ‖M‖ ≤ (b - a) * M' := by
+  convert riemannIntegral_le_integral_of_bound hab hf (S := fun _ ↦ M') ?_ ?_
+  · aesop
+  simpa using HasRiemannIntegral.of_const (a := a) (b := b) (c := M')
 
 theorem BoundedVariationOn.riemannIntegrable [CompleteSpace E] (hab : a ≤ b)
     (hf : BoundedVariationOn f (.Icc a b)) : RiemannIntegrable a b f := by

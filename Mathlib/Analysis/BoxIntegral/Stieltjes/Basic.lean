@@ -32,7 +32,7 @@ of the Riemann--Stieltjes integral.
 * `BoxIntegral.variation_of_contDiffOn` (Theorem A.3(a)) and
   `BoxIntegral.HasStieltjesIntegral.of_contDiffOn` (Theorem A.3(b)): when `g` is `C¹`, the total
   variation and the Riemann–Stieltjes integral can be computed by `g′`.
-* `BoxIntegral.integral_le_integral_of_variation` (Theorem A.4): a norm bound on the integral
+* `BoxIntegral.integral_le_integral_norm_of_variation` (Theorem A.4): a norm bound on the integral
   in terms of the variation of `g`.
 
 ## AI usage
@@ -53,6 +53,7 @@ existing Mathlib examples and style guides.
 * Other variants of Stieltjes integration, such as the Henstock-Stieltjes integral
 * Interpretation of `ofDiff` as a signed measure (assuming bounded variation and right continuity).
 This requires the development of signed measures in Mathlib.
+* Show that the Riemann integral is equivalent to the Darboux integral
 
 ## Tags
 
@@ -75,6 +76,37 @@ lemma ContinuousOn.metric_uniform {E : Type*} [NormedAddCommGroup E] {a b : ℝ}
   ∃ δ > 0, ∀ x ∈ Set.Icc a b, ∀ y ∈ Set.Icc a b, |x - y| < δ → ‖f x - f y‖ < ε := by
   simpa [dist_eq_norm] using Metric.uniformContinuousOn_iff.mp
     (isCompact_Icc.uniformContinuousOn_of_continuous hf) ε hε
+
+@[simp]
+lemma BoundedVariationOn.ofSubsingleton {α : Type*} [LinearOrder α] {E : Type*}
+[PseudoEMetricSpace E] {f : α → E} {s : Set α} (h : s.Subsingleton) : BoundedVariationOn f s := by
+  simp [BoundedVariationOn, h]
+
+/-- Move to Mathlib.Topology.EMetricSpace.BoundedVariation -/
+@[simp]
+theorem MonotoneOn.eVariationOn_eq {α : Type*} [LinearOrder α] {f : α → ℝ} {s : Set α}
+    (hf : MonotoneOn f s) {a b : α} (hab : a ≤ b) (as : a ∈ s) (bs : b ∈ s) :
+    eVariationOn f (s ∩ Set.Icc a b) = ENNReal.ofReal (f b - f a) := by
+  have h : BoundedVariationOn f (s ∩ Set.Icc a b) := hf.locallyBoundedVariationOn a b as bs
+  apply eq_of_le_of_ge (eVariationOn_le hf as bs) (ENNReal.ofReal_le_of_le_toReal _)
+  grw [← BoundedVariationOn.dist_le h (x := a) (y := b)] <;> grind [Real.dist_eq]
+
+/-- Move to Mathlib.Topology.EMetricSpace.BoundedVariation -/
+@[simp]
+lemma eVariationOn_id {a b : ℝ} (hab : a ≤ b) {s : Set ℝ} (as : a ∈ s) (bs : b ∈ s) :
+    eVariationOn id (s ∩ Set.Icc a b) = ENNReal.ofReal (b - a) := by
+  convert MonotoneOn.eVariationOn_eq ?_ hab as bs
+  intro x _ y _ hxy; simpa using hxy
+
+@[simp]
+lemma eVariationOn_id_Icc {a b : ℝ} (hab : a ≤ b) :
+  eVariationOn id (Set.Icc a b) = ENNReal.ofReal (b - a) := by
+  simpa using eVariationOn_id hab (s := Set.univ) (by simp) (by simp)
+
+/-- Move somewhere -/
+@[simp]
+lemma BoundedVariationOn.id_of_Icc {a b : ℝ} :  BoundedVariationOn id (.Icc a b) := by
+  rcases lt_or_ge b a with hab | hab <;> simp [hab, BoundedVariationOn, eVariationOn_id_Icc]
 
 open BoxIntegral
 open BoxAdditiveMap hiding zero_apply
@@ -737,6 +769,51 @@ of Montgomery--Vaughan. -/
 
 end Split
 
+section UpperBound
+
+/-! ### Upper bound on the Stieltjes integral -/
+
+variable {L : G} {L' K : ℝ} {S : ℝ → ℝ}
+
+theorem stieltjesIntegral_le_integral_bound_of_variation (hab : a ≤ b) (hK : ‖B‖ ≤ K)
+    (hg : BoundedVariationOn g (.uIcc a b)) (hfg : HasStieltjesIntegral a b B f g L)
+    (hfS : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ S x) (hS : HasStieltjesIntegral a b (mul ℝ ℝ) S
+      (fun x ↦ (eVariationOn g (.Icc a x)).toReal) L') : ‖L‖ ≤ K * L' := by
+  obtain rfl | hab := hab.eq_or_lt
+  · simp_all
+  simp only [Set.uIcc_of_lt, hab] at hg
+  refine le_of_tendsto_of_tendsto (hfg.lim hab).norm ((hS.lim hab).const_mul K)
+    (Filter.Eventually.of_forall (fun π ↦ ?_))
+  simp only [isValue, mul_apply', mul_sum]
+  grw [norm_sum_le]
+  apply sum_le_sum; intro J hJ
+  specialize hfS (π.tag J 0) (by simpa [hab] using π.tag_mem_Icc J)
+  grw [le_opNorm, le_opNorm, mul_assoc]; gcongr
+  · grw [← hK, ← norm_nonneg]
+  · grw [← hfS, ← norm_nonneg]
+  replace hJ := π.le_of_mem hJ
+  have hJ' := J.lower_lt_upper₁
+  have := Box.Icc₁_subset_Icc₁ hJ
+  simp only [Box.Icc₁, Box.le_iff₁, hab, Ioc.lower₁, Ioc.upper₁] at this hJ
+  have h1 : eVariationOn g (.Icc a J.lower₁) ≠ ⊤ := hg.mono (by grind)
+  have h2 : eVariationOn g (.Icc J.lower₁ J.upper₁) ≠ ⊤ := hg.mono (by grind)
+  grw [← dist_eq_norm, (hg.mono this).dist_le (by grind) (by grind)]
+  rw [le_sub_iff_add_le', ← ENNReal.toReal_add h1 h2,
+    ENNReal.toReal_le_toReal (ENNReal.Finiteness.add_ne_top h1 h2) (hg.mono (by grind))]
+  convert le_of_eq (eVariationOn.Icc_add_Icc (s := .univ) g hJ.1 hJ'.le (by simp)) <;> simp
+
+/-- Theorem A.4. Suppose that g has bounded variation. Then
+‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dVarₐˣ g,
+provided that both integrals exist. -/
+theorem stieltjesIntegral_le_integral_of_norm_of_variation (hab : a ≤ b)
+    (hg : BoundedVariationOn g (.uIcc a b)) (hfg : HasStieltjesIntegral a b B f g L)
+    (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (‖f ·‖)
+      (fun x ↦ (eVariationOn g (.Icc a x)).toReal) L') : ‖L‖ ≤ ‖B‖ * L' :=
+  stieltjesIntegral_le_integral_bound_of_variation hab (le_refl _) hg hfg
+  (fun _ _ ↦ le_refl _) hfabs_gstar
+
+end UpperBound
+
 /-! ## Bounded variation integrators -/
 
 omit [NormedSpace ℝ F] in
@@ -836,14 +913,10 @@ theorem StieltjesIntegrable.of_continuousOn_of_boundedVariationOn [CompleteSpace
   simp [HasStieltjesIntegral, HasStieltjesIntegral', hab.ne, hab, hL]
 
 theorem RiemannIntegrable.of_continuousOn [CompleteSpace E] {a b : ℝ} {f : ℝ → E}
-    (hab : a < b) (hf : ContinuousOn f (.Icc a b)) :
-    RiemannIntegrable a b f := by
+    (hab : a < b) (hf : ContinuousOn f (.Icc a b)) : RiemannIntegrable a b f := by
   rw [← Set.uIcc_of_lt hab] at hf
   apply StieltjesIntegrable.of_continuousOn_of_boundedVariationOn hf
-  rw [Set.uIcc_of_lt hab]
-  convert (MonotoneOn.locallyBoundedVariationOn (s := .Icc a b) _) a b _ _ <;> try grind
-  intro x hx y hy hxy; simpa using hxy
-
+  simp [Set.uIcc_of_lt hab]
 
 /-! ### Continuously differentiable integrators -/
 
@@ -969,34 +1042,7 @@ theorem riemannIntegral_eq_intervalIntegral (hf : RiemannIntegrable a b f) :
     using 3 with x
   simp
 
-/-! ### Upper bound on the Stieltjes integral -/
 
-/-- Theorem A.4. Suppose that g has bounded variation. Then
-‖∫ₐᵇ f(x) dg(x)‖ ≤ ∫ₐᵇ ‖f(x)‖ dVarₐˣ g,
-provided that both integrals exist. -/
-theorem integral_le_integral_of_variation (hab : a ≤ b) (hg : BoundedVariationOn g (.uIcc a b))
-    {L : G} {L' : ℝ} (hfg : HasStieltjesIntegral a b B f g L)
-    (hfabs_gstar : HasStieltjesIntegral a b (mul ℝ ℝ) (‖f ·‖)
-      (fun x ↦ (eVariationOn g (.Icc a x)).toReal) L') : ‖L‖ ≤ ‖B‖ * L' := by
-  obtain rfl | hab := hab.eq_or_lt
-  · simp_all
-  simp only [Set.uIcc_of_lt, hab] at hg
-  refine le_of_tendsto_of_tendsto (hfg.lim hab).norm ((hfabs_gstar.lim hab).const_mul ‖B‖)
-    (Filter.Eventually.of_forall (fun π ↦ ?_))
-  simp only [isValue, mul_apply', mul_sum]
-  grw [norm_sum_le]
-  apply sum_le_sum; intro J hJ
-  grw [le_opNorm, le_opNorm, mul_assoc]; gcongr
-  replace hJ := π.le_of_mem hJ
-  have hJ' := J.lower_lt_upper₁
-  have := Box.Icc₁_subset_Icc₁ hJ
-  simp only [Box.Icc₁, Box.le_iff₁, hab, Ioc.lower₁, Ioc.upper₁] at this hJ
-  have h1 : eVariationOn g (.Icc a J.lower₁) ≠ ⊤ := hg.mono (by grind)
-  have h2 : eVariationOn g (.Icc J.lower₁ J.upper₁) ≠ ⊤ := hg.mono (by grind)
-  grw [← dist_eq_norm, (hg.mono this).dist_le (by grind) (by grind)]
-  rw [le_sub_iff_add_le', ← ENNReal.toReal_add h1 h2,
-    ENNReal.toReal_le_toReal (ENNReal.Finiteness.add_ne_top h1 h2) (hg.mono (by grind))]
-  convert le_of_eq (eVariationOn.Icc_add_Icc (s := .univ) g hJ.1 hJ'.le (by simp)) <;> simp
 
 -- The material below is not currently in use.
 

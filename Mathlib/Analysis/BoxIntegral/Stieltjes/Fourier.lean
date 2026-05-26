@@ -124,7 +124,7 @@ theorem norm_stieltjesIntegral_E_le (hab : a < b) (hg : BoundedVariationOn g (.I
       (eVariationOn g (.Icc a b)).toReal := by
   calc
     _ ≤ ‖mul ℝ ℂ‖ * (|ξ|⁻¹ * (Real.pi⁻¹ * 2⁻¹) * (eVariationOn g (.Icc a b)).toReal) := by
-      apply integral_le_integral_of_variation hab.le
+      apply stieltjesIntegral_le_integral_of_norm_of_variation hab.le
         (show BoundedVariationOn g (.uIcc a b) by rwa [Set.uIcc_of_lt hab])
         (StieltjesIntegrable.of_continuousOn_of_boundedVariationOn
           (show ContinuousOn (E ξ) (.uIcc a b) by fun_prop)
