@@ -487,8 +487,8 @@ map. -/
 def compLinearMap (f : M [Sym^ι]→ₗ[R] N) (g : M₂ →ₗ[R] M) : M₂ [Sym^ι]→ₗ[R] N :=
   { (f : MultilinearMap R (fun _ : ι ↦ M) N).compLinearMap fun _ ↦ g with
     map_eq_map_of_swap' v i j _ := by
-      simp -- TODO: not hard, but need to think!
-      sorry }
+      have aux := f.map_eq_map_of_swap' (g ∘ v) i j
+      simpa }
 
 theorem coe_compLinearMap (f : M [Sym^ι]→ₗ[R] N) (g : M₂ →ₗ[R] M) :
     ⇑(f.compLinearMap g) = f ∘ (g ∘ ·) :=
