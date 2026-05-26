@@ -264,7 +264,7 @@ theorem HasStieltjesIntegral.map (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
   · rw [symm_iff] at h ⊢
     convert this hB h (by order) using 1
     simp
-  obtain rfl | hab := eq_or_lt_of_le hab
+  obtain rfl | hab := hab.eq_or_lt
   · simp_all
   simp only [hab, of_lt] at h ⊢
   exact HasIntegral.map φ Ψ (fun _ _ ↦ by simp [hB]) h
@@ -336,7 +336,7 @@ theorem HasStieltjesIntegral.add_left
   · rw [symm_iff] at h₁ h₂ ⊢
     convert this h₁ h₂ (by order) using 1
     abel
-  obtain rfl | h := eq_or_lt_of_le h
+  obtain rfl | h := h.eq_or_lt
   · simp_all
   simp only [h, of_lt] at h₁ h₂ ⊢
   exact HasIntegral.add h₁ h₂
@@ -468,7 +468,7 @@ theorem HasStieltjesIntegral.const_right (c : F) :
     HasStieltjesIntegral a b B f (fun _ ↦ c) 0 := by
   wlog hab : a ≤ b
   · rw [symm_iff]; simpa using this c (by order)
-  obtain rfl | hab := eq_or_lt_of_le hab
+  obtain rfl | hab := hab.eq_or_lt
   · simp
   simp [hab, of_lt, HasStieltjesIntegral', ofDiff_const, hasIntegral_zero_vol]
 
@@ -500,7 +500,7 @@ theorem HasStieltjesIntegral.add_right
   · rw [symm_iff] at h₁ h₂ ⊢
     convert this h₁ h₂ (by order) using 1
     abel
-  obtain rfl | hab := eq_or_lt_of_le hab
+  obtain rfl | hab := hab.eq_or_lt
   · simp_all
   simp only [hab, of_lt, HasStieltjesIntegral'] at h₁ h₂ ⊢
   rw [show (B.flip <| (g₁ + g₂) ·) = (B.flip <| g₁ ·) + (B.flip <| g₂ ·) from by ext; simp,
@@ -592,7 +592,7 @@ theorem stieltjesIntegral_finset_sum_right {g : ι → ℝ → F}
 theorem HasStieltjesIntegral.zero_bil : HasStieltjesIntegral a b 0 f g (0 : G) := by
   wlog hab : a ≤ b
   · rw [symm_iff]; simpa using this (by order)
-  obtain rfl | hab := eq_or_lt_of_le hab
+  obtain rfl | hab := hab.eq_or_lt
   · simp
   simp [hab, of_lt, HasStieltjesIntegral', hasIntegral_zero_vol]
 
@@ -612,7 +612,7 @@ theorem HasStieltjesIntegral.add_bil
   · rw [symm_iff] at h₁ h₂ ⊢
     convert this h₁ h₂ (by order) using 1
     abel
-  obtain rfl | hab := eq_or_lt_of_le hab
+  obtain rfl | hab := hab.eq_or_lt
   · simp_all
   simp only [hab, of_lt, HasStieltjesIntegral'] at h₁ h₂ ⊢
   rw [show ((B₁ + B₂).flip <| g ·) = (B₁.flip <| g ·) + (B₂.flip <| g ·) from by ext; simp,
@@ -697,7 +697,7 @@ theorem StieltjesIntegrable.to_subinterval (hab : a < b) (hc : c ∈ Set.Icc a b
     StieltjesIntegrable c d B f g := by
   wlog hcd : c ≤ d
   · rw [symm_iff]; exact this hab hd hc h (by order)
-  obtain rfl | hcd := eq_or_lt_of_le hcd
+  obtain rfl | hcd := hcd.eq_or_lt
   · simp
   simp only [Set.mem_Icc, of_lt, hab, hcd, stieltjesIntegrable'_iff_integrable] at hc hd h ⊢
   exact .to_subbox h (by simp [hab, hcd, hc.1, hd.2])

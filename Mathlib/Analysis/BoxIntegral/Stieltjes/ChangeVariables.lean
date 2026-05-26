@@ -198,7 +198,7 @@ theorem HasStieltjesIntegral.of_reflect
   wlog hab : a ≤ b
   · rw [HasStieltjesIntegral.symm_iff] at h ⊢
     simpa using this h (by order)
-  obtain rfl | hab := eq_or_lt_of_le hab
+  obtain rfl | hab := hab.eq_or_lt
   · simp_all
   have hab' : -b < -a := by grind
   simp only [hab, hasStieltjesIntegral_iff_lim_sum, gt_iff_lt, mesh_size_le_iff₁, mem_boxes,
