@@ -55,11 +55,6 @@ tagged partition `π` of `(a, b]` tends to `0`.  We implement this via the
 The Riemann--Stieltjes integral is also extended to the `a = b` and `a > b` cases by antisymmetry.
 In all cases, we denote the integral by `∫⟨B⟩ x in a..b, f x ∂g`.
 
-As is traditional, the Riemann--Stieltjes integral is defined in terms of `Ioc` intervals.  No
-API is directly provided for the `Ico` variant of this integral, but as a workaround one could
-apply a reflection `x ↦ -x` change of variable to the concepts introduced here to define
-such an integral.
-
 ## Tags
 
 Stieltjes integral, Riemann–Stieltjes, Riemann integral
@@ -123,7 +118,10 @@ The notation parallels Mathlib's `∫ x in a..b, f x ∂μ` for `intervalIntegra
 scoped notation3 "∫⟨"B"⟩ "(...)" in "a".."b", "r:60:(scoped f => f)" ∂"g:70 =>
   stieltjesIntegral a b B r g
 
-variable (f : ℝ → E) (L : E)
+/-! ### The Riemann integral
+-/
+
+variable (L : E)
 
 /-- `HasRiemannIntegral a b f L` is defined to equal
 `HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f id L`.  Use `unfold HasRiemannIntegral` or similar
@@ -138,6 +136,7 @@ def RiemannIntegrable := StieltjesIntegrable a b (lsmul ℝ ℝ).flip f id
 /-- `riemannIntegral a b f` is defined to equal `∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id`.
 Use `unfold riemannIntegral` or similar to access the Stieltjes integral API. -/
 noncomputable def riemannIntegral : E := ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂id
+
 
 end Defs
 
@@ -290,7 +289,7 @@ section Riemann
 
 /-! ## The Riemann integral -/
 
-variable {a b : ℝ} {f f₁ f₂ : ℝ → E} {L : E}
+variable {a b : ℝ} {f f₁ f₂ : ℝ → E} {L L₁ L₂ : E}
 
 theorem HasRiemannIntegral.iff_hasIntegral (hab : a < b) :
     HasRiemannIntegral a b f L ↔
@@ -301,15 +300,49 @@ theorem HasRiemannIntegral.iff_hasIntegral (hab : a < b) :
 
 lemma RiemannIntegrable_def : RiemannIntegrable a b f ↔ ∃ L, HasRiemannIntegral a b f L := by rfl
 
+lemma HasRiemannIntegral.symm_iff : HasRiemannIntegral a b f L ↔ HasRiemannIntegral b a f (-L) :=
+  HasStieltjesIntegral.symm_iff
+
+@[symm]
+lemma HasRiemannIntegral.symm (h : HasRiemannIntegral a b f L) :
+    HasRiemannIntegral b a f (-L) := HasStieltjesIntegral.symm h
+
+@[symm]
 lemma RiemannIntegrable.symm (h : RiemannIntegrable a b f) : RiemannIntegrable b a f
     := StieltjesIntegrable.symm h
 
 @[simp]
+lemma HasRiemannIntegral.of_eq_iff_zero : HasRiemannIntegral a a f L ↔ L = 0 :=
+  HasStieltjesIntegral.of_eq_iff_zero
+
+@[simp]
 lemma RiemannIntegrable.of_eq : RiemannIntegrable a a f := StieltjesIntegrable.of_eq
+
+@[simp]
+theorem riemannIntegral.of_eq : riemannIntegral a a f = 0 := stieltjesIntegral.of_eq
 
 theorem RiemannIntegrable.iff_integrable (hab : a < b) : RiemannIntegrable a b f ↔
       Integrable (Ioc a b) IntegrationParams.Riemann (fun x ↦ f (x 0)) BoxAdditiveMap.volume := by
     simp [RiemannIntegrable_def, Integrable, HasRiemannIntegral.iff_hasIntegral, hab]
+
+theorem HasRiemannIntegral.unique
+    (h₁ : HasRiemannIntegral a b f L₁) (h₂ : HasRiemannIntegral a b f L₂) :
+    L₁ = L₂ := HasStieltjesIntegral.unique h₁ h₂
+
+theorem HasRiemannIntegral.riemannIntegrable
+    (h : HasRiemannIntegral a b f L) : RiemannIntegrable a b f := ⟨L, h⟩
+
+theorem RiemannIntegrable.hasRiemannIntegral (h : RiemannIntegrable a b f) :
+    HasRiemannIntegral a b f (riemannIntegral a b f) :=
+  StieltjesIntegrable.hasStieltjesIntegral h
+
+theorem HasRiemannIntegral.riemannIntegral_eq
+    (h : HasRiemannIntegral a b f L) : riemannIntegral a b f = L :=
+  HasStieltjesIntegral.stieltjesIntegral_eq h
+
+theorem RiemannIntegrable.hasRiemannIntegral_iff (h : RiemannIntegrable a b f) (L : E) :
+    HasRiemannIntegral a b f L ↔ riemannIntegral a b f = L :=
+  StieltjesIntegrable.hasStieltjesIntegral_iff h L
 
 theorem hasRiemannIntegral_congr (hf : Set.EqOn f₁ f₂ (.uIcc a b)) :
     HasRiemannIntegral a b f₁ L ↔ HasRiemannIntegral a b f₂ L :=
@@ -318,6 +351,13 @@ theorem hasRiemannIntegral_congr (hf : Set.EqOn f₁ f₂ (.uIcc a b)) :
 theorem riemannIntegrable_congr (hf : Set.EqOn f₁ f₂ (.uIcc a b)) :
     RiemannIntegrable a b f₁ ↔ RiemannIntegrable a b f₂ :=
   stieltjesIntegrable_congr hf (Set.graphOn_inj.mp rfl)
+
+@[simp]
+theorem riemannIntegral.of_not_integrable (h : ¬RiemannIntegrable a b f) :
+    riemannIntegral a b f = 0 := stieltjesIntegral.of_not_integrable h
+
+theorem riemannIntegral.integral_symm : riemannIntegral b a f = -riemannIntegral a b f :=
+  stieltjesIntegral.integral_symm
 
 end Riemann
 

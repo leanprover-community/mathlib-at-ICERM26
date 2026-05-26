@@ -50,10 +50,9 @@ existing Mathlib examples and style guides.
 ## TODO
 
 * Develop a higher-dimensional Stieltjes integral (exists in the literature, but is rarely used)
-* Develop a Stieltjes integral based around `Ico` intervals rather than `Ioc` intervals
 * Other variants of Stieltjes integration, such as the Henstock-Stieltjes integral
 * Interpretation of `ofDiff` as a signed measure (assuming bounded variation and right continuity).
-This requires the development of signed measures in Mathlib
+This requires the development of signed measures in Mathlib.
 
 ## Tags
 
@@ -254,11 +253,6 @@ variable {E' F' G' : Type*} [NormedAddCommGroup E'] [NormedSpace ℝ E']
     {φ : E →L[ℝ] E'} {ψ : F →L[ℝ] F'} {Ψ : G →L[ℝ] G'}
     {B' : E' →L[ℝ] F' →L[ℝ] G'}
 
-private theorem HasStieltjesIntegral'.map (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
-    (h : HasStieltjesIntegral' a b B f g L) :
-    HasStieltjesIntegral' a b B' (φ ∘ f) (ψ ∘ g) (Ψ L) :=
-  HasIntegral.map φ Ψ (fun _ _ ↦ by simp [hB]) h
-
 /-- If a bilinear pairing `B : E →L[ℝ] F →L[ℝ] G` and CLMs `φ : E →L[ℝ] E'`, `ψ : F →L[ℝ] F'`,
 `Ψ : G →L[ℝ] G'` satisfy the compatibility `Ψ (B e y) = B' (φ e) (ψ y)` for all `e, y`, then
 `HasStieltjesIntegral` transports along `(φ, ψ, Ψ)`: applying `φ` to the integrand, `ψ` to the
@@ -266,14 +260,14 @@ integrator and `Ψ` to the integral preserves the Stieltjes-integral relation. -
 theorem HasStieltjesIntegral.map (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     (h : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b B' (φ ∘ f) (ψ ∘ g) (Ψ L) := by
-  rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab] at h ⊢
-    exact h.map hB
+  wlog hab : a ≤ b
+  · rw [symm_iff] at h ⊢
+    convert this hB h (by order) using 1
+    simp
+  obtain rfl | hab := eq_or_lt_of_le hab
   · simp_all
-  rw [symm_iff] at h ⊢
   simp only [hab, of_lt] at h ⊢
-  convert h.map hB using 1
-  simp
+  exact HasIntegral.map φ Ψ (fun _ _ ↦ by simp [hB]) h
 
 theorem HasRiemannIntegral.map (h : HasRiemannIntegral a b f M) :
     HasRiemannIntegral a b (φ ∘ f) (φ M) := by
@@ -311,16 +305,13 @@ variable {a b : ℝ} {B B₁ B₂ : E →L[ℝ] F →L[ℝ] G} {f f₁ f₂ : �
 
 /-! ### In the integrand -/
 
-private theorem HasStieltjesIntegral'.zero_left : HasStieltjesIntegral' a b B 0 g 0 :=
-  hasIntegral_zero
-
 @[simp]
 theorem HasStieltjesIntegral.zero_left : HasStieltjesIntegral a b B 0 g 0 := by
-  rcases lt_trichotomy a b with h | rfl | h
-  · simp only [of_lt, h, HasStieltjesIntegral'.zero_left]
+  wlog h : a ≤ b
+  · rw [symm_iff]; simpa using this (by order)
+  obtain rfl | h := eq_or_lt_of_le h
   · simp
-  rw [symm_iff]
-  simp only [neg_zero, h, of_lt, HasStieltjesIntegral'.zero_left]
+  simp [h, of_lt, HasStieltjesIntegral', hasIntegral_zero]
 
 @[simp]
 theorem HasRiemannIntegral.zero : HasRiemannIntegral a b (0 : ℝ  → E) 0 :=
@@ -338,21 +329,17 @@ theorem RiemannIntegrable.zero : RiemannIntegrable a b (0 : ℝ  → E) :=
 theorem stieltjesIntegral_zero_left : ∫⟨B⟩ _ in a..b, 0 ∂g = 0 :=
   HasStieltjesIntegral.zero_left.stieltjesIntegral_eq
 
-private theorem HasStieltjesIntegral'.add_left
-    (h₁ : HasStieltjesIntegral' a b B f₁ g L₁) (h₂ : HasStieltjesIntegral' a b B f₂ g L₂) :
-    HasStieltjesIntegral' a b B (f₁ + f₂) g (L₁ + L₂) :=
-  HasIntegral.add h₁ h₂
-
 theorem HasStieltjesIntegral.add_left
     (h₁ : HasStieltjesIntegral a b B f₁ g L₁) (h₂ : HasStieltjesIntegral a b B f₂ g L₂) :
     HasStieltjesIntegral a b B (f₁ + f₂) g (L₁ + L₂) := by
-  rcases lt_trichotomy a b with h | rfl | h
-  · simp only [of_lt, h] at h₁ h₂ ⊢
-    exact h₁.add_left h₂
+  wlog h : a ≤ b
+  · rw [symm_iff] at h₁ h₂ ⊢
+    convert this h₁ h₂ (by order) using 1
+    abel
+  obtain rfl | h := eq_or_lt_of_le h
   · simp_all
-  rw [symm_iff] at h₁ h₂ ⊢
-  simp only [h, of_lt, neg_add] at h₁ h₂ ⊢
-  exact h₁.add_left h₂
+  simp only [h, of_lt] at h₁ h₂ ⊢
+  exact HasIntegral.add h₁ h₂
 
 theorem HasRiemannIntegral.add
     (h₁ : HasRiemannIntegral a b f₁ M₁) (h₂ : HasRiemannIntegral a b f₂ M₂) :
@@ -476,20 +463,14 @@ theorem stieltjesIntegral_finset_sum_left {f : ι → ℝ → E}
 
 /-! ### In the integrator -/
 
-private theorem HasStieltjesIntegral'.const_right (c : F) :
-    HasStieltjesIntegral' a b B f (fun _ ↦ c) 0 := by
-  simp only [HasStieltjesIntegral', isValue, ofDiff_const, hasIntegral_zero_vol]
-
 @[simp]
 theorem HasStieltjesIntegral.const_right (c : F) :
     HasStieltjesIntegral a b B f (fun _ ↦ c) 0 := by
-  rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab]
-    apply HasStieltjesIntegral'.const_right
-  · simp_all
-  rw [symm_iff]
-  simp only [neg_zero, hab, of_lt]
-  apply HasStieltjesIntegral'.const_right
+  wlog hab : a ≤ b
+  · rw [symm_iff]; simpa using this c (by order)
+  obtain rfl | hab := eq_or_lt_of_le hab
+  · simp
+  simp [hab, of_lt, HasStieltjesIntegral', ofDiff_const, hasIntegral_zero_vol]
 
 @[simp]
 theorem HasStieltjesIntegral.zero_right : HasStieltjesIntegral a b B f 0 0 :=
@@ -512,25 +493,19 @@ theorem stieltjesIntegral_const_right (c : F) : ∫⟨B⟩ x in a..b, f x ∂(fu
 theorem stieltjesIntegral_zero_right : ∫⟨B⟩ x in a..b, f x ∂0 = 0 :=
   stieltjesIntegral_const_right 0
 
-private theorem HasStieltjesIntegral'.add_right
-    (h₁ : HasStieltjesIntegral' a b B f g₁ L₁) (h₂ : HasStieltjesIntegral' a b B f g₂ L₂) :
-    HasStieltjesIntegral' a b B f (g₁ + g₂) (L₁ + L₂) := by
-  unfold HasStieltjesIntegral' at h₁ h₂ ⊢
-  have h : (B.flip <| (g₁ + g₂) ·) = (B.flip <| g₁ ·) + (B.flip <| g₂ ·) := by ext; simp
-  rw [h, map_add]
-  exact h₁.add_vol h₂
-
 theorem HasStieltjesIntegral.add_right
     (h₁ : HasStieltjesIntegral a b B f g₁ L₁) (h₂ : HasStieltjesIntegral a b B f g₂ L₂) :
     HasStieltjesIntegral a b B f (g₁ + g₂) (L₁ + L₂) := by
-  rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab] at h₁ h₂ ⊢
-    exact h₁.add_right h₂
+  wlog hab : a ≤ b
+  · rw [symm_iff] at h₁ h₂ ⊢
+    convert this h₁ h₂ (by order) using 1
+    abel
+  obtain rfl | hab := eq_or_lt_of_le hab
   · simp_all
-  rw [symm_iff] at h₁ h₂ ⊢
-  simp only [hab, of_lt] at h₁ h₂ ⊢
-  convert h₁.add_right h₂ using 1
-  abel
+  simp only [hab, of_lt, HasStieltjesIntegral'] at h₁ h₂ ⊢
+  rw [show (B.flip <| (g₁ + g₂) ·) = (B.flip <| g₁ ·) + (B.flip <| g₂ ·) from by ext; simp,
+    map_add]
+  exact h₁.add_vol h₂
 
 theorem StieltjesIntegrable.add_right
     (h₁ : StieltjesIntegrable a b B f g₁) (h₂ : StieltjesIntegrable a b B f g₂) :
@@ -613,18 +588,13 @@ theorem stieltjesIntegral_finset_sum_right {g : ι → ℝ → F}
 
 /-! ### In the bilinear form -/
 
-private theorem HasStieltjesIntegral'.zero_bil : HasStieltjesIntegral' a b 0 f g (0 : G) := by
-  simp [HasStieltjesIntegral', hasIntegral_zero_vol]
-
 @[simp]
 theorem HasStieltjesIntegral.zero_bil : HasStieltjesIntegral a b 0 f g (0 : G) := by
-  rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab]
-    apply HasStieltjesIntegral'.zero_bil
-  · simp_all
-  rw [symm_iff]
-  simp only [neg_zero, hab, of_lt]
-  apply HasStieltjesIntegral'.zero_bil
+  wlog hab : a ≤ b
+  · rw [symm_iff]; simpa using this (by order)
+  obtain rfl | hab := eq_or_lt_of_le hab
+  · simp
+  simp [hab, of_lt, HasStieltjesIntegral', hasIntegral_zero_vol]
 
 @[simp]
 theorem StieltjesIntegrable.zero_bil : StieltjesIntegrable (G := G) a b 0 f g :=
@@ -634,26 +604,20 @@ theorem StieltjesIntegrable.zero_bil : StieltjesIntegrable (G := G) a b 0 f g :=
 theorem stieltjesIntegral_zero_bil : ∫⟨0⟩ x in a..b, f x ∂g = (0 : G) :=
   HasStieltjesIntegral.zero_bil.stieltjesIntegral_eq
 
-private theorem HasStieltjesIntegral'.add_bil
-    (h₁ : HasStieltjesIntegral' a b B₁ f g L₁) (h₂ : HasStieltjesIntegral' a b B₂ f g L₂) :
-    HasStieltjesIntegral' a b (B₁ + B₂) f g (L₁ + L₂) := by
-  unfold HasStieltjesIntegral' at h₁ h₂ ⊢
-  have h : ((B₁ + B₂).flip <| g ·) = (B₁.flip <| g ·) + (B₂.flip <| g ·) := by ext; simp
-  rw [h, map_add]
-  exact h₁.add_vol h₂
-
 @[simp]
 theorem HasStieltjesIntegral.add_bil
     (h₁ : HasStieltjesIntegral a b B₁ f g L₁) (h₂ : HasStieltjesIntegral a b B₂ f g L₂) :
     HasStieltjesIntegral a b (B₁ + B₂) f g (L₁ + L₂) := by
-  rcases lt_trichotomy a b with hab | rfl | hab
-  · simp only [of_lt, hab] at h₁ h₂ ⊢
-    exact h₁.add_bil h₂
+  wlog hab : a ≤ b
+  · rw [symm_iff] at h₁ h₂ ⊢
+    convert this h₁ h₂ (by order) using 1
+    abel
+  obtain rfl | hab := eq_or_lt_of_le hab
   · simp_all
-  rw [symm_iff] at h₁ h₂ ⊢
-  simp only [hab, of_lt] at h₁ h₂ ⊢
-  convert h₁.add_bil h₂ using 1
-  abel
+  simp only [hab, of_lt, HasStieltjesIntegral'] at h₁ h₂ ⊢
+  rw [show ((B₁ + B₂).flip <| g ·) = (B₁.flip <| g ·) + (B₂.flip <| g ·) from by ext; simp,
+    map_add]
+  exact h₁.add_vol h₂
 
 theorem HasStieltjesIntegral.smul_bil (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
     HasStieltjesIntegral a b (c • B) f g (c • L) := by
@@ -726,22 +690,17 @@ section Subinterval
 
 variable [CompleteSpace G] {f : ℝ → E} {g : ℝ → F} {a b c d : ℝ} {B : E →L[ℝ] F →L[ℝ] G}
 
-private theorem StieltjesIntegrable'.to_subinterval
-    (hab : a < b) (hcd : c < d) (hac : a ≤ c) (hdb : d ≤ b) (h : StieltjesIntegrable' a b B f g) :
-    StieltjesIntegrable' c d B f g := by
-  simp only [stieltjesIntegrable'_iff_integrable, isValue] at h ⊢
-  exact .to_subbox h (by simp [hab, hcd, hac, hdb])
-
 /-- If `f` is Stieltjes-integrable from `a` to `b` (with `a < b`) against `g`, then
 it is also Stieltjes-integrable on any sub-interval of `(a, b]`. -/
 theorem StieltjesIntegrable.to_subinterval (hab : a < b) (hc : c ∈ Set.Icc a b)
     (hd : d ∈ Set.Icc a b) (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable c d B f g := by
-  simp only [Set.mem_Icc, of_lt, hab] at hc hd h
-  rcases lt_trichotomy c d with _ | rfl | _
-  · grind [of_lt, StieltjesIntegrable'.to_subinterval]
+  wlog hcd : c ≤ d
+  · rw [symm_iff]; exact this hab hd hc h (by order)
+  obtain rfl | hcd := eq_or_lt_of_le hcd
   · simp
-  · grind [of_lt, StieltjesIntegrable'.to_subinterval, symm_iff]
+  simp only [Set.mem_Icc, of_lt, hab, hcd, stieltjesIntegrable'_iff_integrable] at hc hd h ⊢
+  exact .to_subbox h (by simp [hab, hcd, hc.1, hd.2])
 
 theorem RiemannIntegrable.to_subinterval [CompleteSpace E] (hab : a < b)
     (hc : c ∈ Set.Icc a b) (hd : d ∈ Set.Icc a b) (h : RiemannIntegrable a b f) :
