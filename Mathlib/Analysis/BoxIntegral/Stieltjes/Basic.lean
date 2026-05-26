@@ -108,7 +108,7 @@ lemma eVariationOn_id_Icc {a b : ℝ} (hab : a ≤ b) :
 lemma BoundedVariationOn.id_of_Icc {a b : ℝ} :  BoundedVariationOn id (.Icc a b) := by
   rcases lt_or_ge b a with hab | hab <;> simp [hab, BoundedVariationOn, eVariationOn_id_Icc]
 
-open BoxIntegral
+open BoxIntegral ENNReal Metric Filter
 open BoxAdditiveMap hiding zero_apply
 open ContinuousLinearMap TaggedPrepartition intervalIntegral Metric
 open Prepartition hiding mem_mk
@@ -772,7 +772,7 @@ section UpperBound
 
 /-! ### Upper bound on the Stieltjes integral -/
 
-variable {L : G} {L' K : ℝ} {S : ℝ → ℝ} {M : E} {ι : Type*} {l : Filter ι} [Filter.NeBot l]
+variable {L : G} {L' K : ℝ} {S : ℝ → ℝ} {M : E} {ι : Type*} {l : Filter ι} [NeBot l]
 variable {fn : ι → ℝ → E} {Ln : ι → G} {Mn : ι → E}
 
 omit [NormedSpace ℝ F] in
@@ -809,9 +809,9 @@ private lemma sum_norm_ofDiff_le_norm_mul_eVariationOn
   have h_term : ∀ J ∈ π.boxes, ‖(ofDiff (B.flip <| g ·)) J‖ ≤ ‖B‖ * ‖g J.upper₁ - g J.lower₁‖ := by
     intros; simp only [ofDiff_apply, ← map_sub, ← opNorm_flip B, le_opNorm]
   grw [sum_le_sum h_term, ← mul_sum]; gcongr
-  rw [← ENNReal.toReal_ofReal (sum_nonneg fun _ _ ↦ norm_nonneg _)]
-  refine ENNReal.toReal_mono hg ?_
-  simp_rw [ENNReal.ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _), ← dist_eq_norm, ← edist_dist]
+  rw [← toReal_ofReal (sum_nonneg fun _ _ ↦ norm_nonneg _)]
+  refine toReal_mono hg ?_
+  simp_rw [ofReal_sum_of_nonneg (fun _ _ ↦ norm_nonneg _), ← dist_eq_norm, ← edist_dist]
   exact sum_edist_of_disjoint_le hab.le
     (fun J hJ ↦ (J.le_Ioc_iff hab).mp (π.le_of_mem' J hJ)) π.pairwiseDisjoint
 
@@ -823,7 +823,7 @@ theorem stieltjesIntegral_le_integral_bound_of_variation (hab : a ≤ b) (hK : �
   · simp_all
   simp only [Set.uIcc_of_lt, hab] at hg
   refine le_of_tendsto_of_tendsto (hfg.lim hab).norm ((hS.lim hab).const_mul K)
-    (Filter.Eventually.of_forall (fun π ↦ ?_))
+    (Eventually.of_forall (fun π ↦ ?_))
   simp only [isValue, mul_apply', mul_sum]
   grw [norm_sum_le]
   apply sum_le_sum; intro J hJ
@@ -838,8 +838,8 @@ theorem stieltjesIntegral_le_integral_bound_of_variation (hab : a ≤ b) (hK : �
   have h1 : eVariationOn g (.Icc a J.lower₁) ≠ ⊤ := hg.mono (by grind)
   have h2 : eVariationOn g (.Icc J.lower₁ J.upper₁) ≠ ⊤ := hg.mono (by grind)
   grw [← dist_eq_norm, (hg.mono this).dist_le (by grind) (by grind)]
-  rw [le_sub_iff_add_le', ← ENNReal.toReal_add h1 h2,
-    ENNReal.toReal_le_toReal (ENNReal.Finiteness.add_ne_top h1 h2) (hg.mono (by grind))]
+  rw [le_sub_iff_add_le', ← toReal_add h1 h2, toReal_le_toReal (Finiteness.add_ne_top h1 h2)
+    (hg.mono (by grind))]
   convert le_of_eq (eVariationOn.Icc_add_Icc (s := .univ) g hJ.1 hJ'.le (by simp)) <;> simp
 
 theorem riemannIntegral_le_integral_of_bound {M : E} {L' : ℝ} {S : ℝ → ℝ} (hab : a ≤ b)
@@ -847,7 +847,7 @@ theorem riemannIntegral_le_integral_of_bound {M : E} {L' : ℝ} {S : ℝ → ℝ
     (hS : HasRiemannIntegral a b S L') : ‖M‖ ≤ L' := by
   have : mul ℝ ℝ = (lsmul ℝ ℝ).flip := by aesop
   convert stieltjesIntegral_le_integral_bound_of_variation (L' := L') (K := 1) hab
-    (by simp [ContinuousLinearMap.opNorm_lsmul_le]) .id_of_Icc hf hfS ?_ using 1
+    (by simp [opNorm_lsmul_le]) .id_of_Icc hf hfS ?_ using 1
   · simp
   rw [hasStieltjesIntegral_congr (g₂ := id - (fun _ ↦ a)) (Set.eqOn_refl _ _)]
   · rw [this]; convert hS.sub_right (L₁ := L') (L₂ := 0) ?_ <;> simp
@@ -863,12 +863,6 @@ theorem stieltjesIntegral_le_integral_of_norm_of_variation (hab : a ≤ b)
   stieltjesIntegral_le_integral_bound_of_variation hab (le_refl _) hg hfg
   (fun _ _ ↦ le_refl _) hfabs_gstar
 
-/-- Per-partition variant of `stieltjesIntegral_le_bound_mul`: if `‖f‖ ≤ L'` on `[a, b]` and
-`g` has bounded variation, then for any tagged prepartition `π` of `Ioc a b`, the Riemann–Stieltjes
-sum is bounded by `L' * (‖B‖ * V)` where `V = (eVariationOn g (.Icc a b)).toReal`.
-
-This is the core estimate underlying `stieltjesIntegral_le_bound_mul` (and also useful for
-extracting `Cauchy` conclusions about integral sums without yet knowing the limit exists). -/
 private lemma norm_sum_B_le_of_norm_le_of_boundedVariationOn (hab : a < b)
     (hg : BoundedVariationOn g (.Icc a b))
     (hL' : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ L')
@@ -877,19 +871,12 @@ private lemma norm_sum_B_le_of_norm_le_of_boundedVariationOn (hab : a < b)
       L' * (‖B‖ * (eVariationOn g (.Icc a b)).toReal) := by
   grw [norm_sum_le]
   have hL'_nn : 0 ≤ L' := (norm_nonneg _).trans (hL' a (by grind))
-  calc ∑ J ∈ π.boxes, ‖B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁)‖
-      ≤ ∑ J ∈ π.boxes, L' * ‖(ofDiff (B.flip <| g ·)) J‖ := by
-        apply Finset.sum_le_sum
-        intro J _
-        specialize hL' (π.tag J 0) (by simpa [hab] using π.tag_mem_Icc J)
-        have h_eq : B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁) =
-                    (ofDiff (B.flip <| g ·)) J (f (π.tag J 0)) := by
-          simp [ofDiff_apply, ContinuousLinearMap.sub_apply, ContinuousLinearMap.flip_apply,
-            ContinuousLinearMap.map_sub]
-        rw [h_eq, mul_comm]
-        grw [le_opNorm, hL']
-    _ ≤ L' * (‖B‖ * (eVariationOn g (.Icc a b)).toReal) := by
-      grw [← mul_sum, sum_norm_ofDiff_le_norm_mul_eVariationOn hab hg]
+  calc
+    _ ≤ ∑ J ∈ π.boxes, L' * ‖(ofDiff (B.flip <| g ·)) J‖ := by
+        apply Finset.sum_le_sum; intro J _
+        grw [(show B _ _ = (ofDiff (B.flip <| g ·)) J (f (π.tag J 0)) by simp),
+          mul_comm, le_opNorm, hL' (π.tag J 0) (by simpa [hab] using π.tag_mem_Icc J)]
+    _ ≤ _ := by grw [← mul_sum, sum_norm_ofDiff_le_norm_mul_eVariationOn hab hg]
 
 theorem stieltjesIntegral_le_bound_mul (hab : a ≤ b) (hK : ‖B‖ ≤ K)
     (hg : BoundedVariationOn g (.uIcc a b)) (hfg : HasStieltjesIntegral a b B f g L)
@@ -905,62 +892,37 @@ theorem stieltjesIntegral_le_bound_mul (hab : a ≤ b) (hK : ‖B‖ ≤ K)
 theorem riemannIntegral_le_bound_mul_length {M : E} {M' : ℝ} (hab : a ≤ b)
     (hf : HasRiemannIntegral a b f M) (hfS : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ M')
     : ‖M‖ ≤ M' * (b - a) := by
-  have hB : ‖((lsmul ℝ ℝ).flip : E →L[ℝ] ℝ →L[ℝ] E)‖ ≤ 1 := by
-    simp [ContinuousLinearMap.opNorm_lsmul_le]
-  have hg : BoundedVariationOn (id : ℝ → ℝ) (.uIcc a b) := by
-    rw [Set.uIcc_of_le hab]; exact .id_of_Icc
-  have h := stieltjesIntegral_le_bound_mul hab hB hg hf hfS
-  rwa [one_mul, eVariationOn_id_Icc hab, ENNReal.toReal_ofReal (by linarith)] at h
+  have hB : ‖((lsmul ℝ ℝ).flip : E →L[ℝ] ℝ →L[ℝ] E)‖ ≤ 1 := by simp [opNorm_lsmul_le]
+  have h := stieltjesIntegral_le_bound_mul hab hB (Set.uIcc_of_le hab ▸ .id_of_Icc) hf hfS
+  rwa [one_mul, eVariationOn_id_Icc hab, toReal_ofReal (by linarith)] at h
 
 theorem HasStieltjesIntegral.cauchy_of_uniformCauchy_of_boundedVariationOn
-    {fn : ι → ℝ → E} {Ln : ι → G}
-    (hfn : ∀ n, HasStieltjesIntegral a b B (fn n) g (Ln n))
-    (hg : BoundedVariationOn g (.uIcc a b))
-    (hCauchy : UniformCauchySeqOn fn l (Set.uIcc a b)) :
+    {fn : ι → ℝ → E} {Ln : ι → G} (hfn : ∀ n, HasStieltjesIntegral a b B (fn n) g (Ln n))
+    (hg : BoundedVariationOn g (.uIcc a b)) (hCauchy : UniformCauchySeqOn fn l (Set.uIcc a b)) :
     Cauchy (l.map Ln) := by
-  -- WLOG `a ≤ b` (the `b < a` case follows by `symm`-flipping the integrals).
   wlog hab : a ≤ b with H
-  · have hfn' : ∀ n, HasStieltjesIntegral b a B (fn n) g (-(Ln n)) := fun n ↦ (hfn n).symm
-    rw [Set.uIcc_comm] at hg hCauchy
-    have h_neg := H hfn' hg hCauchy (by order)
-    have h := h_neg.map uniformContinuous_neg
+  · rw [Set.uIcc_comm] at hg hCauchy
+    have h := (H (fun n ↦ (hfn n).symm) hg hCauchy (by order)).map uniformContinuous_neg
     rwa [Filter.map_map, show (Neg.neg : G → G) ∘ (fun n ↦ -(Ln n)) = Ln from
       funext fun _ ↦ neg_neg _] at h
-  -- `V` = total variation of `g` on `[a, b]` — non-negative.
   set V := (eVariationOn g (.Icc a b)).toReal
-  have hV : 0 ≤ V := ENNReal.toReal_nonneg
-  -- Translate `Cauchy` into its metric form: for every `δ > 0`, an eventual `δ`-bound.
+  have hV : 0 ≤ V := toReal_nonneg
   rw [Metric.cauchy_iff]
   refine ⟨inferInstance, fun δ hδ ↦ ?_⟩
-  -- Pick `ε` such that `ε * (‖B‖ * V) < δ`. The `+ 1` handles the `V = 0` and `‖B‖ = 0`
-  -- edge cases without case-splitting (denominator is bounded below by `2`).
   set ε := δ / (2 * (‖B‖ * V + 1))
   have hε : 0 < ε := by positivity
-  have hε_bd : ε * (‖B‖ * V) < δ := by
-    have h_nn : 0 ≤ ‖B‖ * V := mul_nonneg (norm_nonneg _) hV
-    change δ / (2 * (‖B‖ * V + 1)) * (‖B‖ * V) < δ
-    rw [div_mul_eq_mul_div, div_lt_iff₀ (by linarith)]
-    nlinarith
-  -- From `hCauchy`: eventually `‖fn n x - fn m x‖ ≤ ε` on `[a, b]`.
   have h_pw : ∀ᶠ nm : ι × ι in l ×ˢ l,
       ∀ x ∈ Set.Icc a b, ‖fn nm.1 x - fn nm.2 x‖ ≤ ε := by
     rw [Set.uIcc_of_le hab] at hCauchy
-    filter_upwards [hCauchy _ (Metric.dist_mem_uniformity hε)] with nm hnm x hx
+    filter_upwards [hCauchy _ (dist_mem_uniformity hε)] with nm hnm x hx
     rw [← dist_eq_norm]; exact (hnm x hx).le
-  -- Extract a basic prod-set from `∀ᶠ` on `l ×ˢ l`.
-  rw [Filter.eventually_prod_iff] at h_pw
-  obtain ⟨pa, hpa, pb, hpb, hpw⟩ := h_pw
-  -- `Ln '' {x | pa x ∧ pb x} ∈ l.map Ln` and every pair in it is within `δ`.
-  refine ⟨Ln '' {x | pa x ∧ pb x}, Filter.image_mem_map (Filter.inter_mem hpa hpb), ?_⟩
+  obtain ⟨pa, hpa, pb, hpb, hpw⟩ := eventually_prod_iff.mp h_pw
+  refine ⟨Ln '' {x | pa x ∧ pb x}, image_mem_map (inter_mem hpa hpb), ?_⟩
   rintro _ ⟨n, ⟨hpan, _⟩, rfl⟩ _ ⟨m, ⟨_, hpbm⟩, rfl⟩
-  -- `Ln n - Ln m = ∫(fn n - fn m) dg`, bounded by `ε * (‖B‖ * V) < δ`.
-  have h_sub := (hfn n).sub_left (hfn m)
-  have h_bd : ∀ x ∈ Set.Icc a b, ‖(fn n - fn m) x‖ ≤ ε := fun x hx ↦ by
-    simpa using hpw hpan hpbm x hx
-  calc dist (Ln n) (Ln m)
-      = ‖Ln n - Ln m‖ := dist_eq_norm _ _
-    _ ≤ ε * (‖B‖ * V) := stieltjesIntegral_le_bound_mul hab le_rfl hg h_sub h_bd
-    _ < δ := hε_bd
+  grw [dist_eq_norm, stieltjesIntegral_le_bound_mul hab le_rfl hg ((hfn n).sub_left (hfn m))
+    (fun x hx ↦ by simpa using hpw hpan hpbm x hx)]
+  have : ε * (2 * (‖B‖ * V + 1)) = δ := by unfold ε; field_simp
+  nlinarith [mul_nonneg (norm_nonneg B) hV, hε.le]
 
 /-- Uniform limit of Stieltjes integrable functions against a bounded variation integrator
 remains Stieltjes integrable. -/
@@ -968,90 +930,40 @@ theorem HasStieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
     (hfn : ∀ n, HasStieltjesIntegral a b B (fn n) g (Ln n))
     (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
     ∃ L, l.Tendsto Ln (nhds L) ∧ HasStieltjesIntegral a b B f g L := by
-  -- Step 1: `Ln` is Cauchy along `l` (apply the previous Cauchy theorem).
-  have hCauchy : Cauchy (l.map Ln) :=
-    HasStieltjesIntegral.cauchy_of_uniformCauchy_of_boundedVariationOn hfn hg
-      hlim.tendstoUniformlyOn.uniformCauchySeqOn
-  -- Step 2: Extract limit `L` via completeness of `G`.
-  obtain ⟨L, hL⟩ := CompleteSpace.complete hCauchy
+  obtain ⟨L, hL⟩ := CompleteSpace.complete
+    (cauchy_of_uniformCauchy_of_boundedVariationOn hfn hg
+      hlim.tendstoUniformlyOn.uniformCauchySeqOn)
   refine ⟨L, hL, ?_⟩
-  -- Step 3: Show `HasStieltjesIntegral a b B f g L`.
-  -- WLOG `a ≤ b` (the `b < a` case via `symm`: negate `Ln`, `L`, swap `a, b`).
   wlog hab : a ≤ b with H
-  · rw [HasStieltjesIntegral.symm_iff]
-    have h_cauchy_neg : Cauchy (l.map (fun n ↦ -(Ln n))) := by
-      have := hCauchy.map uniformContinuous_neg
-      rwa [Filter.map_map] at this
-    have h_tendsto_neg : l.Tendsto (fun n ↦ -(Ln n)) (nhds (-L)) := Filter.Tendsto.neg hL
-    exact H (fun n ↦ (hfn n).symm) (Set.uIcc_comm a b ▸ hg) hlim h_cauchy_neg
-      (-L) h_tendsto_neg (not_le.mp hab).le
-  -- Degenerate `a = b` case: every `Ln n = 0`, hence `L = 0`, conclusion trivial.
+  · rw [symm_iff]
+    exact H (fun n ↦ (hfn n).symm) (Set.uIcc_comm a b ▸ hg) hlim (-L) (Tendsto.neg hL) (by order)
   obtain rfl | hab := hab.eq_or_lt
   · have hLn : Ln = 0 := by ext x; simpa using hfn x
     have : L = 0 := tendsto_nhds_unique hL (by rw [hLn]; exact tendsto_const_nhds)
     simp [this]
-  -- Main case `a < b`: unfold to the ε-δ form.
-  simp only [Set.uIcc_of_lt, hab] at hg
-  rw [hasStieltjesIntegral_iff_lim_sum hab]
+  simp only [Set.uIcc_of_lt, hab, hasStieltjesIntegral_iff_lim_sum] at hg ⊢
   intro ε hε
-  -- Setup variation `V` and a safety scale `ε_s` (using the `+ 1` trick).
   set V := (eVariationOn g (.Icc a b)).toReal
-  have hV : 0 ≤ V := ENNReal.toReal_nonneg
+  have hV : 0 ≤ V := toReal_nonneg
   set ε_s := ε / (3 * (‖B‖ * V + 1))
   have hε_s : 0 < ε_s := by positivity
-  -- Pick a specific `n` eventually in `l` satisfying two safety conditions simultaneously:
-  --   (i)  `dist (f x) (fn n x) < ε_s` for all `x` (uniform convergence).
-  --   (ii) `dist (Ln n) L < ε / 3` (from `hL`).
-  have h_eventual : ∀ᶠ n in l,
-      (∀ x, dist (f x) (fn n x) < ε_s) ∧ dist (Ln n) L < ε / 3 := by
-    filter_upwards [hlim _ (Metric.dist_mem_uniformity hε_s),
-      (Metric.tendsto_nhds.mp hL) (ε / 3) (by positivity)] with n h1 h2
-    exact ⟨h1, h2⟩
-  obtain ⟨n, h_unif, h_int⟩ := h_eventual.exists
-  -- For this `n`, use integrability of `fn n` (with target `ε / 3`) to get `δ`.
+  obtain ⟨n, h_unif, h_int⟩ := ((hlim _ (dist_mem_uniformity hε_s)).and
+    ((Metric.tendsto_nhds.mp hL) (ε / 3) (by positivity))).exists
   obtain ⟨δ, hδ, hδ_bd⟩ :=
     (hasStieltjesIntegral_iff_lim_sum hab).mp (hfn n) (ε / 3) (by positivity)
   refine ⟨δ, hδ, fun π hH hP hM ↦ ?_⟩
-  -- Pointwise bound for `f - fn n` on `[a, b]`.
-  let f' : ℝ → E := fun x ↦ f x - fn n x
-  have h_diff_bd : ∀ x ∈ Set.Icc a b, ‖f' x‖ ≤ ε_s := fun x _ ↦ by
-    simp only [f', ← dist_eq_norm]
-    exact (h_unif x).le
-  -- Apply the per-partition helper to `f'`.
-  have h_first := norm_sum_B_le_of_norm_le_of_boundedVariationOn (B := B) (f := f') (L' := ε_s)
-    hab hg h_diff_bd π
-  -- The summand `B (f' tag) (g diff)` is the difference of the two sums.
-  have h_sum_diff :
-      ∑ J ∈ π.boxes, B (f' (π.tag J 0)) (g J.upper₁ - g J.lower₁) =
-      (∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁)) -
-      ∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁) := by
-    rw [← Finset.sum_sub_distrib]
-    refine Finset.sum_congr rfl fun J _ ↦ ?_
-    change B (f (π.tag J 0) - fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁) = _
-    rw [B.map_sub, ContinuousLinearMap.sub_apply]
-  rw [h_sum_diff] at h_first
-  -- `ε_s * (‖B‖ * V) ≤ ε / 3` (the `+ 1` trick).
   have h_first_third : ε_s * (‖B‖ * V) ≤ ε / 3 := by
-    calc ε_s * (‖B‖ * V)
-        ≤ ε_s * (‖B‖ * V + 1) := by nlinarith [hε_s.le]
-      _ = ε / 3 := by
-          change ε / (3 * (‖B‖ * V + 1)) * (‖B‖ * V + 1) = ε / 3
-          field_simp
-  -- Triangle inequality.
-  calc dist (∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁)) L
-      ≤ dist (∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁))
-          (∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁)) +
-        dist (∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁)) L :=
-          dist_triangle _ _ _
-    _ ≤ ε / 3 + dist (∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁)) L := by
-          gcongr
-          rw [dist_eq_norm]
-          exact h_first.trans h_first_third
-    _ ≤ ε / 3 + (dist (∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁)) (Ln n) +
-                  dist (Ln n) L) := by
-          gcongr
-          exact dist_triangle _ _ _
-    _ < ε := by linarith [hδ_bd π hH hP hM, h_int]
+    have h_eq : ε_s * (‖B‖ * V + 1) = ε / 3 := by unfold ε_s; field_simp
+    nlinarith [hε_s.le]
+  have : dist (∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁))
+      (∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁)) ≤ ε / 3 := by
+    simp_rw [dist_eq_norm, ← Finset.sum_sub_distrib, ← (B _).sub_apply, ← B.map_sub]
+    refine (norm_sum_B_le_of_norm_le_of_boundedVariationOn (B := B) (L' := ε_s)
+      (f := fun x ↦ f x - fn n x) hab hg ?_ π).trans h_first_third
+    exact fun x _ ↦ by rw [← dist_eq_norm]; exact (h_unif x).le
+  have := dist_triangle4 (∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁))
+    (∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁)) (Ln n) L
+  linarith [hδ_bd π hH hP hM, h_int]
 
 theorem StieltjesIntegrable.of_uniform_of_boundedVariationOn [CompleteSpace G]
     (hfn : ∀ n, StieltjesIntegrable a b B (fn n) g)
@@ -1070,14 +982,12 @@ theorem stieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
   rw [hL.stieltjesIntegral_eq]; exact hLn
 
 theorem HasRiemannIntegral.of_uniform [CompleteSpace E]
-    (hfn : ∀ n, HasRiemannIntegral a b (fn n) (Mn n))
-    (hlim : TendstoUniformly fn f l) :
+    (hfn : ∀ n, HasRiemannIntegral a b (fn n) (Mn n)) (hlim : TendstoUniformly fn f l) :
     ∃ L, l.Tendsto Mn (nhds L) ∧ HasRiemannIntegral a b f L :=
   HasStieltjesIntegral.of_uniform_of_boundedVariationOn hfn .id_of_Icc hlim
 
 theorem RiemannIntegrable.of_uniform [CompleteSpace E]
-    (hfn : ∀ n, RiemannIntegrable a b (fn n))
-    (hlim : TendstoUniformly fn f l) :
+    (hfn : ∀ n, RiemannIntegrable a b (fn n)) (hlim : TendstoUniformly fn f l) :
     RiemannIntegrable a b f := by
   obtain ⟨_, _, hL⟩ := HasRiemannIntegral.of_uniform
     (fun n ↦ (hfn n).hasRiemannIntegral) hlim
@@ -1401,7 +1311,7 @@ lemma sum_eVariationOn_Icc_toReal_le_eVariationOn (g : ℝ → F) (hab : a < b)
       (eVariationOn g (Set.Icc a b)).toReal := by
   have hfin : ∀ J ∈ π.boxes, eVariationOn g J.Icc₁ ≠ ⊤ :=
     fun J hJ ↦ hg.mono (Icc_subset_of_box_le_Ioc hab (π.le_of_mem hJ))
-  rw [← ENNReal.toReal_sum hfin]
-  exact ENNReal.toReal_mono hg (sum_eVariationOn_Icc_le_eVariationOn g hab π)
+  rw [← toReal_sum hfin]
+  exact toReal_mono hg (sum_eVariationOn_Icc_le_eVariationOn g hab π)
 
 end BoxIntegral
