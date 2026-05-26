@@ -816,6 +816,8 @@ end UpperBound
 
 /-! ## Bounded variation integrators -/
 
+section BoundedVariation
+
 omit [NormedSpace ℝ F] in
 lemma sum_edist_of_disjoint_le {c d : ℝ} {S : Finset (Box (Fin 1))}
     (hcd : c ≤ d) (hsub : ∀ J ∈ S, c ≤ J.lower₁ ∧ J.upper₁ ≤ d)
@@ -917,6 +919,54 @@ theorem RiemannIntegrable.of_continuousOn [CompleteSpace E] {a b : ℝ} {f : ℝ
   rw [← Set.uIcc_of_lt hab] at hf
   apply StieltjesIntegrable.of_continuousOn_of_boundedVariationOn hf
   simp [Set.uIcc_of_lt hab]
+
+/-- Uniform limit of Stieltjes integrable functions against a bounded variation integrator
+remains Stieltjes integrable. -/
+theorem HasStieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
+    {ι : Type*} {l : Filter ι} {fn : ι → ℝ → E} {Ln : ι → G}
+    (hfn : ∀ n, HasStieltjesIntegral a b B (fn n) g (Ln n))
+    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    ∃ L, l.Tendsto Ln (nhds L) ∧ HasStieltjesIntegral a b B f g L := by
+  sorry
+
+theorem StieltjesIntegrable.of_uniform_of_boundedVariationOn [CompleteSpace G]
+    {ι : Type*} {l : Filter ι} {fn : ι → ℝ → E} {Ln : ι → G}
+    (hfn : ∀ n, StieltjesIntegrable a b B (fn n) g)
+    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    StieltjesIntegrable a b B f g := by
+  sorry
+
+theorem stieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
+    {ι : Type*} {l : Filter ι} {fn : ι → ℝ → E} {Ln : ι → G}
+    (hfn : ∀ n, StieltjesIntegrable a b B (fn n) g)
+    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    l.Tendsto (fun n ↦ ∫⟨B⟩ x in a..b, (fn n) x ∂g) (nhds (∫⟨B⟩ x in a..b, f x ∂g)) := by
+  sorry
+
+theorem HasRiemannIntegral.of_uniform [CompleteSpace E]
+    {ι : Type*} {l : Filter ι} {fn : ι → ℝ → E} {Mn : ι → E}
+    (hfn : ∀ n, HasRiemannIntegral a b (fn n) (Mn n))
+    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    ∃ L, l.Tendsto Mn (nhds L) ∧ HasRiemannIntegral a b f L := by
+  sorry
+
+theorem RiemannIntegrable.of_uniform [CompleteSpace E]
+    {ι : Type*} {l : Filter ι} {fn : ι → ℝ → E} {Mn : ι → E}
+    (hfn : ∀ n, RiemannIntegrable a b (fn n))
+    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    RiemannIntegrable a b f := by
+  sorry
+
+theorem riemannIntegral.of_uniform [CompleteSpace E]
+    {ι : Type*} {l : Filter ι} {fn : ι → ℝ → E} {Mn : ι → E}
+    (hfn : ∀ n, RiemannIntegrable a b (fn n))
+    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    l.Tendsto (fun n ↦ riemannIntegral a b (fn n)) (nhds (riemannIntegral a b f)) := by
+  sorry
+
+end BoundedVariation
+
+
 
 /-! ### Continuously differentiable integrators -/
 
