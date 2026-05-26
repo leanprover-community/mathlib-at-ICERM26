@@ -192,9 +192,35 @@ noncomputable def toPartition {N : ℕ} {a b : ℝ}
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
     (ha : (x 0) = a) (hb : x (Fin.last N) = b) : Prepartition (Ioc a b) where
       boxes := (Finset.univ : Finset (Fin N)).map
-        ⟨fun i ↦ Ioc (x i.castSucc) (x i.succ), by sorry⟩
-      le_of_mem' := by sorry
-      pairwiseDisjoint := by sorry
+        ⟨fun i ↦ Ioc (x i.castSucc) (x i.succ), by
+          intro i j hij
+          apply Fin.castSucc_injective
+          exact hx.injective <| by
+            have h := congrFun (congrArg Box.lower hij) 0
+            simpa [Ioc.lower (hx i.castSucc_lt_succ),
+              Ioc.lower (hx j.castSucc_lt_succ)] using h⟩
+      le_of_mem' := by
+        intro J hJ
+        rw [Finset.mem_map] at hJ
+        obtain ⟨i, _, rfl⟩ := hJ
+        have hi := hx i.castSucc_lt_succ
+        have h0 : a ≤ x i.castSucc := ha ▸ hx.monotone i.castSucc.zero_le
+        have hN : x i.succ ≤ b := hb ▸ hx.monotone i.succ.le_last
+        exact (Ioc_le_Ioc_iff (h0.trans_lt (hi.trans_le hN)) hi).mpr ⟨h0, hN⟩
+      --TODO(bmgeorgiev): Golf the disjointness proof.
+      pairwiseDisjoint := by
+        intro _ hJ _ hK hne
+        rw [Finset.mem_coe, Finset.mem_map] at hJ hK
+        obtain ⟨i, _, rfl⟩ := hJ
+        obtain ⟨j, _, rfl⟩ := hK
+        simp only [Function.Embedding.coeFn_mk, Function.onFun, Box.disjoint_iff₁,
+          Ioc.lower₁ (hx i.castSucc_lt_succ), Ioc.upper₁ (hx i.castSucc_lt_succ),
+          Ioc.lower₁ (hx j.castSucc_lt_succ), Ioc.upper₁ (hx j.castSucc_lt_succ)]
+        rcases lt_trichotomy i j with hij | rfl | hji
+        · exact Or.inl (hx.monotone (Fin.succ_le_castSucc_iff.mpr hij))
+        · exact absurd rfl hne
+        · exact Or.inr (hx.monotone (Fin.succ_le_castSucc_iff.mpr hji))
+
 
 noncomputable def toTaggedPartition {N : ℕ} {a b : ℝ}
     (x : Fin (N + 1) → ℝ) (hx : StrictMono x)
