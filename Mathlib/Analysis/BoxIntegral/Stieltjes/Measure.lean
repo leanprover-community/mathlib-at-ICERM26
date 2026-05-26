@@ -77,10 +77,7 @@ theorem HasStieltjesIntegral.of_continuous_of_Stieltjes (hf : ContinuousOn f (.u
       IntervalIntegrable (J.toSet₁.indicator (fun _ ↦ f (π.tag J 0))) μ a b := by
     rw [intervalIntegrable_iff_integrableOn_Ioc_of_le hab.le]
     refine .indicator ?_ measurableSet_Ioc
-    rw [← intervalIntegrable_iff_integrableOn_Ioc_of_le hab.le]
-    refine (intervalIntegrable_const_iff enorm_ne_top).mpr (Or.inr ?_)
-    simp [uIoc_of_le hab.le, μ, measure_Ioc]
-  have hstep_int : IntervalIntegrable step μ a b := .sum π.boxes (fun J _ ↦ hindicator_int J)
+    simp [← intervalIntegrable_iff_integrableOn_Ioc_of_le hab.le]
   have hstep_integral : ∫ x in a..b, step x ∂μ =
         ∑ J ∈ π.boxes, (g J.upper₁ - g J.lower₁) • f (π.tag J 0) := by
     simp only [step, Finset.sum_apply, μ]
@@ -93,10 +90,7 @@ theorem HasStieltjesIntegral.of_continuous_of_Stieltjes (hf : ContinuousOn f (.u
     rw [inter_eq_right.mpr hJ_sub]
     simp [measureReal_def, measure_Ioc, μ,
       ENNReal.toReal_ofReal (sub_nonneg.mpr (g.mono J.lower_le_upper₁))]
-  have hsum_eq :
-      ∑ J ∈ π.boxes, ((lsmul ℝ ℝ).flip (f (π.tag J 0))) (g J.upper₁ - g J.lower₁)
-        = ∫ x in a..b, step x ∂μ := by simpa using hstep_integral.symm
-  rw [hsum_eq]
+  simp only [Fin.isValue, lsmul_flip_apply, toSpanSingleton_apply, ← hstep_integral, gt_iff_lt]
   have hbound_ae : ∀ᵐ x ∂μ, x ∈ Set.Ioc a b → ‖step x - f x‖ ≤ η := by
     refine Filter.Eventually.of_forall fun x hx ↦ ?_
     simp only [step, Finset.sum_apply]
@@ -107,15 +101,14 @@ theorem HasStieltjesIntegral.of_continuous_of_Stieltjes (hf : ContinuousOn f (.u
       exact π.toPrepartition.eq_of_mem_of_mem hK hJπ (by simpa [Box.mem₁] using hxK) hxJ
     rw [J.toSet₁.indicator_of_mem hxJ']
     have htag : π.tag J 0 ∈ J.Icc₁ := by simpa [Box.mem_Icc₁] using hhen J hJπ
-    have hmesh_J : J.upper₁ - J.lower₁ < δ := by
-      simp only [mesh_size_le_iff₁, δ', NNReal.coe_mk] at hmesh
-      linarith [hmesh J hJπ]
+    simp only [mesh_size_le_iff₁, δ', NNReal.coe_mk] at hmesh
     have htag_x : |π.tag J 0 - x| < δ := by
       simp only [Box.toSet₁_def, Set.mem_Ioc, abs_sub_lt_iff] at hxJ' ⊢
-      refine ⟨?_, ?_⟩ <;> linarith [htag.1, htag.2, hxJ'.1.le, hxJ'.2]
+      refine ⟨?_, ?_⟩ <;> linarith [htag.1, htag.2, hxJ'.1.le, hxJ'.2, hmesh J hJπ]
     have htag_mem := Icc_subset_of_box_le_Ioc hab (π.le_of_mem hJπ) htag
     exact (hδf _ htag_mem _ (Ioc_subset_Icc_self hx) htag_x).le
-  rw [dist_eq_norm, ← intervalIntegral.integral_sub hstep_int (hf.intervalIntegrable_of_Icc hab.le)]
+  rw [dist_eq_norm, ← intervalIntegral.integral_sub (.sum π.boxes (fun J _ ↦ hindicator_int J))
+    (hf.intervalIntegrable_of_Icc hab.le)]
   calc
     _ ≤ ∫ _ in a..b, η ∂μ :=
           intervalIntegral.norm_integral_le_of_norm_le hab.le hbound_ae intervalIntegrable_const
