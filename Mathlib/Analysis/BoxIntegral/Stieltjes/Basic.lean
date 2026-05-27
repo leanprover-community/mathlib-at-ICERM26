@@ -32,8 +32,14 @@ of the Riemann--Stieltjes integral.
 * `BoxIntegral.variation_of_contDiffOn` (Theorem A.3(a)) and
   `BoxIntegral.HasStieltjesIntegral.of_contDiffOn` (Theorem A.3(b)): when `g` is `C¹`, the total
   variation and the Riemann–Stieltjes integral can be computed by `g′`.
-* `BoxIntegral.integral_le_integral_norm_of_variation` (Theorem A.4): a norm bound on the integral
-  in terms of the variation of `g`.
+* `BoxIntegral.stieltjesIntegral_le_integral_of_norm_of_variation` (Theorem A.4): a norm bound
+  on the integral in terms of the variation of `g`.
+* `BoxIntegral.stieltjesIntegral_le_bound_mul`: a uniform pointwise bound `‖f x‖ ≤ L'` on
+  `[a, b]` yields `‖∫⟨B⟩ x in a..b, f x ∂g‖ ≤ L' * (‖B‖ * Var[a,b] g)`.
+* `BoxIntegral.HasStieltjesIntegral.of_uniform_of_boundedVariationOn`: when `g` has bounded
+  variation, the Riemann–Stieltjes integral is continuous in the integrand under uniform
+  convergence — if `fn → f` uniformly and each `fn` is integrable against `g`, then `f` is
+  integrable against `g` and `∫⟨B⟩ x in a..b, fn x ∂g → ∫⟨B⟩ x in a..b, f x ∂g`.
 
 ## AI usage
 
@@ -864,8 +870,7 @@ theorem stieltjesIntegral_le_integral_of_norm_of_variation (hab : a ≤ b)
   (fun _ _ ↦ le_refl _) hfabs_gstar
 
 private lemma norm_sum_B_le_of_norm_le_of_boundedVariationOn (hab : a < b)
-    (hg : BoundedVariationOn g (.Icc a b))
-    (hL' : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ L')
+    (hg : BoundedVariationOn g (.Icc a b)) (hL' : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ L')
     (π : TaggedPrepartition (Ioc a b)) :
     ‖∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁)‖ ≤
       L' * (‖B‖ * (eVariationOn g (.Icc a b)).toReal) := by
@@ -922,7 +927,7 @@ theorem HasStieltjesIntegral.cauchy_of_uniformCauchy_of_boundedVariationOn
   grw [dist_eq_norm, stieltjesIntegral_le_bound_mul hab le_rfl hg ((hfn n).sub_left (hfn m))
     (fun x hx ↦ by simpa using hpw hpan hpbm x hx)]
   have : ε * (2 * (‖B‖ * V + 1)) = δ := by unfold ε; field_simp
-  nlinarith [mul_nonneg (norm_nonneg B) hV, hε.le]
+  nlinarith [mul_nonneg (norm_nonneg B) hV]
 
 /-- Uniform limit of Stieltjes integrable functions against a bounded variation integrator
 remains Stieltjes integrable. -/
@@ -939,7 +944,7 @@ theorem HasStieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
     exact H (fun n ↦ (hfn n).symm) (Set.uIcc_comm a b ▸ hg) hlim (-L) (Tendsto.neg hL) (by order)
   obtain rfl | hab := hab.eq_or_lt
   · have hLn : Ln = 0 := by ext x; simpa using hfn x
-    have : L = 0 := tendsto_nhds_unique hL (by rw [hLn]; exact tendsto_const_nhds)
+    have : L = 0 := tendsto_nhds_unique hL (hLn ▸ tendsto_const_nhds)
     simp [this]
   simp only [Set.uIcc_of_lt, hab, hasStieltjesIntegral_iff_lim_sum] at hg ⊢
   intro ε hε
@@ -954,16 +959,16 @@ theorem HasStieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
   refine ⟨δ, hδ, fun π hH hP hM ↦ ?_⟩
   have h_first_third : ε_s * (‖B‖ * V) ≤ ε / 3 := by
     have h_eq : ε_s * (‖B‖ * V + 1) = ε / 3 := by unfold ε_s; field_simp
-    nlinarith [hε_s.le]
+    nlinarith
   have : dist (∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁))
       (∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁)) ≤ ε / 3 := by
     simp_rw [dist_eq_norm, ← Finset.sum_sub_distrib, ← (B _).sub_apply, ← B.map_sub]
     refine (norm_sum_B_le_of_norm_le_of_boundedVariationOn (B := B) (L' := ε_s)
       (f := fun x ↦ f x - fn n x) hab hg ?_ π).trans h_first_third
-    exact fun x _ ↦ by rw [← dist_eq_norm]; exact (h_unif x).le
+    intro x _; rw [← dist_eq_norm]; exact (h_unif x).le
   have := dist_triangle4 (∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁))
     (∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁)) (Ln n) L
-  linarith [hδ_bd π hH hP hM, h_int]
+  grind
 
 theorem StieltjesIntegrable.of_uniform_of_boundedVariationOn [CompleteSpace G]
     (hfn : ∀ n, StieltjesIntegrable a b B (fn n) g)
