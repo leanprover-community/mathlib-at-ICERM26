@@ -328,7 +328,7 @@ section Linearity
 
 /-! ## Linearity
 
-The API provided here demonstrates that the Riemann--Stieltjes integral `∫⟨B⟩ x in a..b, f x ∂g` is
+The Riemann--Stieltjes integral `∫⟨B⟩ x in a..b, f x ∂g` is
 linear in each of the inputs `f`, `g`, `B`.
 -/
 
@@ -344,7 +344,7 @@ theorem HasStieltjesIntegral.zero_left : HasStieltjesIntegral a b B 0 g 0 := by
   obtain rfl | h := eq_or_lt_of_le h <;> simp [h, of_lt, HasStieltjesIntegral', hasIntegral_zero]
 
 @[simp]
-theorem HasRiemannIntegral.zero : HasRiemannIntegral a b (0 : ℝ  → E) 0 :=
+theorem HasRiemannIntegral.zero : HasRiemannIntegral a b (0 : ℝ → E) 0 :=
   HasStieltjesIntegral.zero_left
 
 @[simp]
@@ -352,7 +352,7 @@ theorem StieltjesIntegrable.zero_left : StieltjesIntegrable a b B 0 g :=
   HasStieltjesIntegral.zero_left.stieltjesIntegrable
 
 @[simp]
-theorem RiemannIntegrable.zero : RiemannIntegrable a b (0 : ℝ  → E) :=
+theorem RiemannIntegrable.zero : RiemannIntegrable a b (0 : ℝ → E) :=
   HasRiemannIntegral.zero.stieltjesIntegrable
 
 @[simp]
@@ -416,13 +416,26 @@ theorem HasRiemannIntegral.neg (h : HasRiemannIntegral a b f M) :
 theorem StieltjesIntegrable.neg_left (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable a b B (-f) g := h.hasStieltjesIntegral.neg_left.stieltjesIntegrable
 
+theorem StieltjesIntegrable.neg_left_iff : StieltjesIntegrable a b B f g ↔
+    StieltjesIntegrable a b B (-f) g := ⟨ neg_left, fun h ↦ by simpa using neg_left h ⟩
+
 theorem RiemannIntegrable.neg (h : RiemannIntegrable a b f) : RiemannIntegrable a b (-f) :=
   StieltjesIntegrable.neg_left h
 
+theorem RiemannIntegrable.neg_iff : RiemannIntegrable a b f ↔ RiemannIntegrable a b (-f) :=
+  ⟨ neg, fun h ↦ by simpa using neg h ⟩
+
 @[simp]
-theorem stieltjesIntegral_neg_left (h : StieltjesIntegrable a b B f g) :
-    ∫⟨B⟩ x in a..b, (-f) x ∂g = -∫⟨B⟩ x in a..b, f x ∂g :=
-  h.hasStieltjesIntegral.neg_left.stieltjesIntegral_eq
+theorem stieltjesIntegral_neg_left :
+    ∫⟨B⟩ x in a..b, (-f) x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
+  by_cases! h : StieltjesIntegrable a b B f g
+  · exact h.hasStieltjesIntegral.neg_left.stieltjesIntegral_eq
+  have := h; rw [StieltjesIntegrable.neg_left_iff] at h
+  simp [this, h, -Pi.neg_apply]
+
+@[simp]
+theorem riemannIntegral_neg : riemannIntegral a b (-f) = -riemannIntegral a b f :=
+  stieltjesIntegral_neg_left
 
 theorem HasStieltjesIntegral.sub_left (h₁ : HasStieltjesIntegral a b B f₁ g L₁)
     (h₂ : HasStieltjesIntegral a b B f₂ g L₂) : HasStieltjesIntegral a b B (f₁ - f₂) g (L₁ - L₂)
@@ -479,8 +492,7 @@ theorem HasStieltjesIntegral.const_right (c : F) :
     HasStieltjesIntegral a b B f (fun _ ↦ c) 0 := by
   wlog hab : a ≤ b
   · rw [symm_iff]; simpa using this c (by order)
-  obtain rfl | hab := hab.eq_or_lt <;>
-    simp [hab, of_lt, HasStieltjesIntegral']
+  obtain rfl | hab := hab.eq_or_lt <;> simp [hab, of_lt, HasStieltjesIntegral']
 
 @[simp]
 theorem HasStieltjesIntegral.zero_right : HasStieltjesIntegral a b B f 0 0 := const_right 0
@@ -541,10 +553,15 @@ theorem HasStieltjesIntegral.neg_right (h : HasStieltjesIntegral a b B f g L) :
 theorem StieltjesIntegrable.neg_right (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable a b B f (-g) := h.hasStieltjesIntegral.neg_right.stieltjesIntegrable
 
+theorem StieltjesIntegrable.neg_right_iff : StieltjesIntegrable a b B f g ↔
+    StieltjesIntegrable a b B f (-g) := ⟨ neg_right, fun h ↦ by simpa using neg_right h ⟩
+
 @[simp]
-theorem stieltjesIntegral_neg_right (h : StieltjesIntegrable a b B f g) :
-    ∫⟨B⟩ x in a..b, f x ∂(-g) = -∫⟨B⟩ x in a..b, f x ∂g :=
-  h.hasStieltjesIntegral.neg_right.stieltjesIntegral_eq
+theorem stieltjesIntegral_neg_right : ∫⟨B⟩ x in a..b, f x ∂(-g) = -∫⟨B⟩ x in a..b, f x ∂g := by
+  by_cases! h : StieltjesIntegrable a b B f g
+  · exact h.hasStieltjesIntegral.neg_right.stieltjesIntegral_eq
+  have := h; rw [StieltjesIntegrable.neg_right_iff] at h
+  simp [this, h, -Pi.neg_apply]
 
 theorem HasStieltjesIntegral.sub_right (h₁ : HasStieltjesIntegral a b B f g₁ L₁)
     (h₂ : HasStieltjesIntegral a b B f g₂ L₂) : HasStieltjesIntegral a b B f (g₁ - g₂) (L₁ - L₂)
@@ -626,10 +643,18 @@ theorem stieltjesIntegral_smul_bil (h : StieltjesIntegrable a b B f g) (c : ℝ)
 theorem HasStieltjesIntegral.neg_bil (h : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b (-B) f g (-L) := by convert h.smul_bil (-1) <;> ext <;> simp
 
+theorem StieltjesIntegrable.neg_bil (h : StieltjesIntegrable a b B f g) :
+    StieltjesIntegrable a b (-B) f g := (h.hasStieltjesIntegral.neg_bil).stieltjesIntegrable
+
+theorem StieltjesIntegrable.neg_bil_iff : StieltjesIntegrable a b B f g ↔
+    StieltjesIntegrable a b (-B) f g := ⟨ neg_bil, fun h ↦ by simpa using neg_bil h ⟩
+
 @[simp]
-theorem stieltjesIntegral_neg_bil (h : StieltjesIntegrable a b B f g) :
-    ∫⟨-B⟩ x in a..b, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g :=
-  h.hasStieltjesIntegral.neg_bil.stieltjesIntegral_eq
+theorem stieltjesIntegral_neg_bil : ∫⟨-B⟩ x in a..b, f x ∂g = -∫⟨B⟩ x in a..b, f x ∂g := by
+  by_cases! h : StieltjesIntegrable a b B f g
+  · exact h.hasStieltjesIntegral.neg_bil.stieltjesIntegral_eq
+  have := h; rw [StieltjesIntegrable.neg_bil_iff] at h
+  simp [this, h]
 
 theorem HasStieltjesIntegral.sub_bil (h₁ : HasStieltjesIntegral a b B₁ f g L₁)
     (h₂ : HasStieltjesIntegral a b B₂ f g L₂) : HasStieltjesIntegral a b (B₁ - B₂) f g (L₁ - L₂)
@@ -1038,10 +1063,15 @@ theorem StieltjesIntegrable.mul_indicator_right {hab : a ≤ b} (hc : c ∈ Set.
 -- TODO: show that continuous functions are uniform limits of simple functions
 
 /-- The product of a Riemann integrable function and a continuous function is also
-Riemann integrable. TODO: remove the `a < b` hypothesis. -/
-theorem RiemannIntegrable.mul_continuous (hab : a < b) {f : ℝ → E} {g : ℝ → F}
-    (hf : RiemannIntegrable a b f) (hg : ContinuousOn g (.Icc a b)) :
+Riemann integrable. -/
+theorem RiemannIntegrable.mul_continuous {f : ℝ → E} {g : ℝ → F}
+    (hf : RiemannIntegrable a b f) (hg : ContinuousOn g (.uIcc a b)) :
     RiemannIntegrable a b (fun x ↦ B (f x) (g x)) := by
+  wlog hab : a ≤ b
+  · symm at hf ⊢; rw [Set.uIcc_comm] at hg
+    exact this hf hg (by order)
+  obtain rfl | hab := hab.eq_or_lt
+  · simp
   sorry
 
 end Cut
