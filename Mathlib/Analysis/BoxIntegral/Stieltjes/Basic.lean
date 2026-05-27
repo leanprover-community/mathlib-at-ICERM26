@@ -78,7 +78,7 @@ lemma Int.coe_mem_Ioc_iff {α : Type*} [Ring α] [LinearOrder α] [FloorRing α]
 
 /-- move somewhere? -/
 lemma ContinuousOn.metric_uniform {E : Type*} [NormedAddCommGroup E] {a b : ℝ} {f : ℝ → E}
-  (hf : ContinuousOn f (Set.Icc a b)) (ε : ℝ) (hε : ε > 0) :
+  (hf : ContinuousOn f (.Icc a b)) (ε : ℝ) (hε : ε > 0) :
   ∃ δ > 0, ∀ x ∈ Set.Icc a b, ∀ y ∈ Set.Icc a b, |x - y| < δ → ‖f x - f y‖ < ε := by
   simpa [dist_eq_norm] using Metric.uniformContinuousOn_iff.mp
     (isCompact_Icc.uniformContinuousOn_of_continuous hf) ε hε
@@ -92,21 +92,21 @@ lemma BoundedVariationOn.ofSubsingleton {α : Type*} [LinearOrder α] {E : Type*
 @[simp]
 theorem MonotoneOn.eVariationOn_eq {α : Type*} [LinearOrder α] {f : α → ℝ} {s : Set α}
     (hf : MonotoneOn f s) {a b : α} (hab : a ≤ b) (as : a ∈ s) (bs : b ∈ s) :
-    eVariationOn f (s ∩ Set.Icc a b) = ENNReal.ofReal (f b - f a) := by
-  have h : BoundedVariationOn f (s ∩ Set.Icc a b) := hf.locallyBoundedVariationOn a b as bs
+    eVariationOn f (s ∩ .Icc a b) = ENNReal.ofReal (f b - f a) := by
+  have h : BoundedVariationOn f (s ∩ .Icc a b) := hf.locallyBoundedVariationOn a b as bs
   apply eq_of_le_of_ge (eVariationOn_le hf as bs) (ENNReal.ofReal_le_of_le_toReal _)
   grw [← BoundedVariationOn.dist_le h (x := a) (y := b)] <;> grind [Real.dist_eq]
 
 /-- Move to Mathlib.Topology.EMetricSpace.BoundedVariation -/
 @[simp]
 lemma eVariationOn_id {a b : ℝ} (hab : a ≤ b) {s : Set ℝ} (as : a ∈ s) (bs : b ∈ s) :
-    eVariationOn id (s ∩ Set.Icc a b) = ENNReal.ofReal (b - a) := by
+    eVariationOn id (s ∩ .Icc a b) = ENNReal.ofReal (b - a) := by
   convert MonotoneOn.eVariationOn_eq ?_ hab as bs
   intro x _ y _ hxy; simpa using hxy
 
 @[simp]
 lemma eVariationOn_id_Icc {a b : ℝ} (hab : a ≤ b) :
-  eVariationOn id (Set.Icc a b) = ENNReal.ofReal (b - a) := by
+  eVariationOn id (.Icc a b) = ENNReal.ofReal (b - a) := by
   simpa using eVariationOn_id hab (s := Set.univ) (by simp) (by simp)
 
 /-- Move somewhere -/
@@ -150,16 +150,14 @@ theorem HasStieltjesIntegral.lim (hab : a < b) (h : HasStieltjesIntegral a b B f
 
 /-- The predicate `HasStieltjesIntegral` matches the usual epsilon-delta definition, at least if
 one uses unordered partitions of the interval. -/
-theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) :
-    HasStieltjesIntegral a b B f g L ↔
+theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) : HasStieltjesIntegral a b B f g L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
      dist (∑ x ∈ π.boxes, ((B (f (π.tag x 0))) (g x.upper₁ - g x.lower₁))) L < ε := by
   simp [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral',
     HasIntegral_Riemann_iff, integralSum]
 
-theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) {L : E} :
-    HasRiemannIntegral a b f L ↔
+theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) {L : E} : HasRiemannIntegral a b f L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
      dist (∑ x ∈ π.boxes, ((x.upper₁ - x.lower₁) • (f (π.tag x 0)))) L < ε :=
@@ -343,9 +341,7 @@ variable {a b : ℝ} {B B₁ B₂ : E →L[ℝ] F →L[ℝ] G} {f f₁ f₂ : �
 theorem HasStieltjesIntegral.zero_left : HasStieltjesIntegral a b B 0 g 0 := by
   wlog h : a ≤ b
   · rw [symm_iff]; simpa using this (by order)
-  obtain rfl | h := eq_or_lt_of_le h
-  · simp
-  simp [h, of_lt, HasStieltjesIntegral', hasIntegral_zero]
+  obtain rfl | h := eq_or_lt_of_le h <;> simp [h, of_lt, HasStieltjesIntegral', hasIntegral_zero]
 
 @[simp]
 theorem HasRiemannIntegral.zero : HasRiemannIntegral a b (0 : ℝ  → E) 0 :=
@@ -483,9 +479,8 @@ theorem HasStieltjesIntegral.const_right (c : F) :
     HasStieltjesIntegral a b B f (fun _ ↦ c) 0 := by
   wlog hab : a ≤ b
   · rw [symm_iff]; simpa using this c (by order)
-  obtain rfl | hab := hab.eq_or_lt
-  · simp
-  simp [hab, of_lt, HasStieltjesIntegral', ofDiff_const, hasIntegral_zero_vol]
+  obtain rfl | hab := hab.eq_or_lt <;>
+    simp [hab, of_lt, HasStieltjesIntegral']
 
 @[simp]
 theorem HasStieltjesIntegral.zero_right : HasStieltjesIntegral a b B f 0 0 := const_right 0
@@ -514,8 +509,7 @@ theorem HasStieltjesIntegral.add_right (h₁ : HasStieltjesIntegral a b B f g₁
   obtain rfl | hab := hab.eq_or_lt
   · simp_all
   simp only [hab, of_lt, HasStieltjesIntegral'] at h₁ h₂ ⊢
-  rw [show (B.flip <| (g₁ + g₂) ·) = (B.flip <| g₁ ·) + (B.flip <| g₂ ·) from by ext; simp,
-    map_add]
+  rw [show (B.flip <| (g₁ + g₂) ·) = (B.flip <| g₁ ·) + (B.flip <| g₂ ·) by ext; simp, map_add]
   exact h₁.add_vol h₂
 
 theorem StieltjesIntegrable.add_right (h₁ : StieltjesIntegrable a b B f g₁)
@@ -592,9 +586,7 @@ theorem stieltjesIntegral_finset_sum_right {g : ι → ℝ → F}
 theorem HasStieltjesIntegral.zero_bil : HasStieltjesIntegral a b 0 f g (0 : G) := by
   wlog hab : a ≤ b
   · rw [symm_iff]; simpa using this (by order)
-  obtain rfl | hab := hab.eq_or_lt
-  · simp
-  simp [hab, of_lt, HasStieltjesIntegral', hasIntegral_zero_vol]
+  obtain rfl | hab := hab.eq_or_lt <;> simp [hab, of_lt, HasStieltjesIntegral']
 
 @[simp]
 theorem StieltjesIntegrable.zero_bil : StieltjesIntegrable (G := G) a b 0 f g :=
@@ -615,8 +607,7 @@ theorem HasStieltjesIntegral.add_bil (h₁ : HasStieltjesIntegral a b B₁ f g L
   obtain rfl | hab := hab.eq_or_lt
   · simp_all
   simp only [hab, of_lt, HasStieltjesIntegral'] at h₁ h₂ ⊢
-  rw [show ((B₁ + B₂).flip <| g ·) = (B₁.flip <| g ·) + (B₂.flip <| g ·) from by ext; simp,
-    map_add]
+  rw [show ((B₁ + B₂).flip <| g ·) = (B₁.flip <| g ·) + (B₂.flip <| g ·) by ext; simp, map_add]
   exact h₁.add_vol h₂
 
 theorem HasStieltjesIntegral.smul_bil (h : HasStieltjesIntegral a b B f g L) (c : ℝ) :
@@ -703,7 +694,7 @@ end Subinterval
 section Split
 /-! ## Splitting over adjacent intervals -/
 
-variable {f : ℝ → E} {g : ℝ → F} {L L' L'' : G} {a b c : ℝ}
+variable {f : ℝ → E} {g : ℝ → F} {L L' L'' : G} {a b c : ℝ} {M M' : E}
   {B : E →L[ℝ] F →L[ℝ] G} [CompleteSpace G]
 
 private theorem HasStieltjesIntegral.add_adjacent_prelim (hab : a < b) (hbc : b < c)
@@ -753,10 +744,9 @@ theorem HasStieltjesIntegral.add_adjacent (h : StieltjesIntegrable a c B f g)
   · have := add_adjacent_prelim hcb hba h₂.symm h₁.symm h₃.symm
     grind
 
-theorem HasRiemannIntegral.add_adjacent [CompleteSpace E] {M M' : E}
-    (h : RiemannIntegrable a c f) (h₁ : HasRiemannIntegral a b f M)
-    (h₂ : HasRiemannIntegral b c f M') : HasRiemannIntegral a c f (M + M') :=
-  HasStieltjesIntegral.add_adjacent h h₁ h₂
+theorem HasRiemannIntegral.add_adjacent [CompleteSpace E] (h : RiemannIntegrable a c f)
+    (h₁ : HasRiemannIntegral a b f M) (h₂ : HasRiemannIntegral b c f M') :
+    HasRiemannIntegral a c f (M + M') := HasStieltjesIntegral.add_adjacent h h₁ h₂
 
 theorem riemannIntegral.add_adjacent [CompleteSpace E] (h : RiemannIntegrable a c f)
     (h₁ : RiemannIntegrable a b f) (h₂ : RiemannIntegrable b c f) :
@@ -770,13 +760,13 @@ theorem stieltjesIntegral.add_adjacent (h : StieltjesIntegrable a c B f g)
     h₂.hasStieltjesIntegral).stieltjesIntegral_eq
 
 /- Note: the gluing claim that if the Stieltjes integral is well-defined on `a..b` and
-`b..c`, then it is  well-defined in `a..c`, is in fact false; see Exercise A.9
-of Montgomery--Vaughan. -/
+`b..c`, then it is well-defined in `a..c`, is in fact false without additional assumptions;
+see Exercise A.9 of Montgomery--Vaughan. -/
 
 end Split
 section UpperBound
 
-/-! ### Upper bound on the Stieltjes integral -/
+/-! ### Upper bounds on the Stieltjes and Riemann integrals -/
 
 variable {L : G} {L' K : ℝ} {S : ℝ → ℝ} {M : E} {ι : Type*} {l : Filter ι} [NeBot l]
 variable {fn : ι → ℝ → E} {Ln : ι → G} {Mn : ι → E}
@@ -874,10 +864,10 @@ private lemma norm_sum_B_le_of_norm_le_of_boundedVariationOn (hab : a < b)
     (π : TaggedPrepartition (Ioc a b)) :
     ‖∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁)‖ ≤
       L' * (‖B‖ * (eVariationOn g (.Icc a b)).toReal) := by
-  grw [norm_sum_le]
   have hL'_nn : 0 ≤ L' := (norm_nonneg _).trans (hL' a (by grind))
   calc
     _ ≤ ∑ J ∈ π.boxes, L' * ‖(ofDiff (B.flip <| g ·)) J‖ := by
+        grw [norm_sum_le]
         apply Finset.sum_le_sum; intro J _
         grw [(show B _ _ = (ofDiff (B.flip <| g ·)) J (f (π.tag J 0)) by simp),
           mul_comm, le_opNorm, hL' (π.tag J 0) (by simpa [hab] using π.tag_mem_Icc J)]
@@ -994,15 +984,13 @@ theorem HasRiemannIntegral.of_uniform [CompleteSpace E]
 theorem RiemannIntegrable.of_uniform [CompleteSpace E]
     (hfn : ∀ n, RiemannIntegrable a b (fn n)) (hlim : TendstoUniformly fn f l) :
     RiemannIntegrable a b f := by
-  obtain ⟨_, _, hL⟩ := HasRiemannIntegral.of_uniform
-    (fun n ↦ (hfn n).hasRiemannIntegral) hlim
+  obtain ⟨_, _, hL⟩ := HasRiemannIntegral.of_uniform (fun n ↦ (hfn n).hasRiemannIntegral) hlim
   exact hL.riemannIntegrable
 
 theorem riemannIntegral.of_uniform [CompleteSpace E]
     (hfn : ∀ n, RiemannIntegrable a b (fn n)) (hlim : TendstoUniformly fn f l) :
     l.Tendsto (fun n ↦ riemannIntegral a b (fn n)) (nhds (riemannIntegral a b f)) := by
-  obtain ⟨_, hLn, hL⟩ := HasRiemannIntegral.of_uniform
-    (fun n ↦ (hfn n).hasRiemannIntegral) hlim
+  obtain ⟨_, hLn, hL⟩ := HasRiemannIntegral.of_uniform (fun n ↦ (hfn n).hasRiemannIntegral) hlim
   rw [hL.riemannIntegral_eq]; exact hLn
 
 end UpperBound
@@ -1117,18 +1105,14 @@ theorem StieltjesIntegrable.of_continuousOn_of_boundedVariationOn [CompleteSpace
   simp only [Set.uIcc_of_lt, hab] at hf hg
   obtain ⟨L, hL⟩ := integrable_of_continuousOn_of_boundedVariationOn (B := B)
     hab IntegrationParams.Riemann hf hg
-  use L
-  simp [HasStieltjesIntegral, HasStieltjesIntegral', hab.ne, hab, hL]
+  exact ⟨L, by simp [HasStieltjesIntegral, HasStieltjesIntegral', hab.ne, hab, hL]⟩
 
 theorem RiemannIntegrable.of_continuousOn [CompleteSpace E] {a b : ℝ} {f : ℝ → E}
-    (hab : a < b) (hf : ContinuousOn f (.Icc a b)) : RiemannIntegrable a b f := by
-  rw [← Set.uIcc_of_lt hab] at hf
+    (hf : ContinuousOn f (.uIcc a b)) : RiemannIntegrable a b f := by
   apply StieltjesIntegrable.of_continuousOn_of_boundedVariationOn hf
-  simp [Set.uIcc_of_lt hab]
+  simp [Set.uIcc]
 
 end BoundedVariation
-
-
 
 /-! ### Continuously differentiable integrators -/
 
@@ -1220,27 +1204,34 @@ private lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {ε : ℝ} (hab
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
-theorem variation_of_contDiffOn (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
-    (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by sorry
+theorem variation_of_contDiffOn (hab : a ≤ b) (hg : ContDiffOn ℝ 1 g (.uIcc a b)) :
+    (eVariationOn g (.uIcc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by
+  obtain rfl | hab := hab.eq_or_lt
+  · simp
+  sorry
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
-Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. TODO: remove the `a < b` hypothesis. -/
-theorem HasStieltjesIntegral.of_contDiffOn (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b))
+Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
+theorem HasStieltjesIntegral.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
     (hf : RiemannIntegrable a b f) :
-    HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by sorry
+    HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by
+  wlog hab : a ≤ b
+  · rw [symm_iff, ←integral_symm]
+    exact this ((Set.uIcc_comm a b) ▸ hg) hf.symm (by order)
+  obtain rfl | hab := hab.eq_or_lt
+  · simp
+  sorry
+
+theorem StieltjesIntegrable.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
+    (hf : RiemannIntegrable a b f) : StieltjesIntegrable a b B f g :=
+  (HasStieltjesIntegral.of_contDiffOn hg hf).stieltjesIntegrable
 
 theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn
     (hg : ContDiffOn ℝ 1 g (.uIcc a b)) (hf : RiemannIntegrable a b f) :
-    ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) := by
-  wlog hab : a ≤ b
-  · rw [Set.uIcc_comm] at hg
-    rw [stieltjesIntegral.integral_symm, integral_symm, this hg hf.symm (by order)]
-  obtain rfl | hab := hab.eq_or_lt
-  · simp
-  simp only [Set.uIcc_of_lt, hab] at hg
-  exact (HasStieltjesIntegral.of_contDiffOn hab hg hf).stieltjesIntegral_eq
+    ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) :=
+  (HasStieltjesIntegral.of_contDiffOn hg hf).stieltjesIntegral_eq
 
-/-- Special case of previous when `g x = x`. -/
+/-- The Riemann integral agrees with the interval integral. -/
 theorem riemannIntegral_eq_intervalIntegral (hf : RiemannIntegrable a b f) :
     riemannIntegral a b f = ∫ x in a..b, f x := by
   convert stieltjesIntegral_eq_intervalIntegral_of_contDiffOn contDiff_id.contDiffOn hf

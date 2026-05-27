@@ -974,6 +974,7 @@ theorem integralSum_smul_vol (c : ℝ) (f : (ι → ℝ) → E) (vol : ι →ᵇ
 
 variable [Fintype ι] {f : (ι → ℝ) → E}
 
+@[simp]
 theorem hasIntegral_zero_vol : HasIntegral I l f (0 : ι →ᵇᵃ E →L[ℝ] F) 0 := by
   unfold HasIntegral
   rw [funext (integralSum_zero_vol f) (g := (0 : TaggedPrepartition I → F))]
