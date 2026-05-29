@@ -21,7 +21,11 @@ In this file we define the interval `(a, b]` as a `Box (Fin 1)`, and provide API
 
 namespace BoxIntegral
 
-/-! ## Intervals -/
+/-! ## One-dimensional boxes
+
+We specialize some API for `Box` to `Box (Fin 1)`, subscripting with `₁` to indicate the
+one-dimensionality.
+-/
 
 variable {a b c d : ℝ}
 
@@ -36,19 +40,16 @@ lemma Box.lower_le_upper₁ (J : Box (Fin 1)) : J.lower₁ ≤ J.upper₁ := J.l
 def Box.toSet₁ (J : Box (Fin 1)) : Set ℝ := Set.Ioc J.lower₁ J.upper₁
 
 @[simp]
-lemma Box.toSet₁_def (J : Box (Fin 1)) :
-    J.toSet₁ = Set.Ioc J.lower₁ J.upper₁ := rfl
+lemma Box.toSet₁_def (J : Box (Fin 1)) : J.toSet₁ = Set.Ioc J.lower₁ J.upper₁ := rfl
 
 @[simp]
 lemma Box.mem₁ (x : Fin 1 → ℝ) (J : Box (Fin 1)) :
   x ∈ J ↔ x 0 ∈ J.toSet₁ := by simp [mem_def, lower₁, upper₁]
 
-lemma Box.congr₁ (J K : Box (Fin 1)) :
-    J = K ↔ J.lower₁ = K.lower₁ ∧ J.upper₁ = K.upper₁ :=
+lemma Box.congr₁ (J K : Box (Fin 1)) : J = K ↔ J.lower₁ = K.lower₁ ∧ J.upper₁ = K.upper₁ :=
   ⟨ by grind, fun ⟨ hlow, hup ⟩ ↦ by ext; simp [hlow, hup] ⟩
 
-lemma Box.le_iff₁ (J K : Box (Fin 1)) :
-    J ≤ K ↔ K.lower₁ ≤ J.lower₁ ∧ J.upper₁ ≤ K.upper₁ := by
+lemma Box.le_iff₁ (J K : Box (Fin 1)) : J ≤ K ↔ K.lower₁ ≤ J.lower₁ ∧ J.upper₁ ≤ K.upper₁ := by
   simp [Box.le_iff_bounds, Pi.le_def, lower₁, upper₁]
 
 lemma Box.disjoint_iff₁ {J J' : Box (Fin 1)} :
@@ -66,20 +67,21 @@ lemma Box.disjoint_iff_disjoint₁ {J J' : Box (Fin 1)} :
 def Box.Icc₁ (J : Box (Fin 1)) : Set ℝ := Set.Icc J.lower₁ J.upper₁
 
 @[simp]
-lemma Box.Icc₁_def (J : Box (Fin 1)) :
-    J.Icc₁ = Set.Icc J.lower₁ J.upper₁ := rfl
+lemma Box.Icc₁_def (J : Box (Fin 1)) : J.Icc₁ = Set.Icc J.lower₁ J.upper₁ := rfl
 
 @[simp]
 lemma Box.Icc₁_eq (J : Box (Fin 1)) : J.Icc = {x | x 0 ∈ J.Icc₁ } := by
   ext; simp [Box.Icc_def, Pi.le_def, upper₁, lower₁]
 
-lemma Box.mem_Icc₁ (x : Fin 1 → ℝ) (J : Box (Fin 1)) :
-    x ∈ J.Icc ↔ x 0 ∈ J.Icc₁ := by simp
+lemma Box.mem_Icc₁ (x : Fin 1 → ℝ) (J : Box (Fin 1)) : x ∈ J.Icc ↔ x 0 ∈ J.Icc₁ := by simp
 
 lemma Box.Icc₁_subset_Icc₁ {J J' : Box (Fin 1)} (h : J ≤ J') : J.Icc₁ ⊆ J'.Icc₁ := by
   grind [le_iff₁, Icc₁]
 
-/-- The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(-1, 1]` if `a = b`,
+/--
+## Ioc intervals
+
+The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(-1, 1]` if `a = b`,
 and `(b, a]` if `a > b` (to give symmetry)).
 
 Instances of `Box` are required to be non-empty, so one cannot use the empty set as the junk case.
@@ -128,34 +130,26 @@ lemma Ioc.symm : Ioc a b = Ioc b a := by
   simp [Ioc]; grind
 
 lemma Box.eq_Ioc (J : Box (Fin 1)) : J = Ioc J.lower₁ J.upper₁ := by
-  ext
-  rw [Ioc.of_lt J.lower_lt_upper₁]
-  simp [mem₁]
+  ext; simp [mem₁, Ioc.of_lt J.lower_lt_upper₁]
 
-lemma mem_Ioc (hab : a < b) (x : Fin 1 → ℝ) : x ∈ Ioc a b ↔ x 0 ∈ Set.Ioc a b := by
-  simp [hab]
+lemma mem_Ioc (hab : a < b) (x : Fin 1 → ℝ) : x ∈ Ioc a b ↔ x 0 ∈ Set.Ioc a b := by simp [hab]
 
 @[simp]
 lemma Ioc_le_Ioc_iff (hab : a < b) (hcd : c < d) : Ioc c d ≤ Ioc a b ↔ a ≤ c ∧ d ≤ b := by
   simp [Box.le_iff₁, hab, hcd]
 
-lemma Icc_of_Ioc (hab : a < b) : Box.Icc (Ioc a b) = { x | x 0 ∈ Set.Icc a b } := by
-  simp [hab]
+lemma Icc_of_Ioc (hab : a < b) : Box.Icc (Ioc a b) = { x | x 0 ∈ Set.Icc a b } := by simp [hab]
 
 lemma Box.le_Ioc_iff (hab : a < b) (J : Box (Fin 1)) :
-  J ≤ Ioc a b ↔ a ≤ J.lower₁ ∧ J.upper₁ ≤ b := by
-  simp [Box.le_iff₁, hab]
+  J ≤ Ioc a b ↔ a ≤ J.lower₁ ∧ J.upper₁ ≤ b := by simp [Box.le_iff₁, hab]
 
 lemma Box.ge_Ioc_iff (hab : a < b) (J : Box (Fin 1)) :
-  Ioc a b ≤ J ↔ J.lower₁ ≤ a ∧ b ≤ J.upper₁ := by
-  simp [Box.le_iff₁, hab]
+  Ioc a b ≤ J ↔ J.lower₁ ≤ a ∧ b ≤ J.upper₁ := by simp [Box.le_iff₁, hab]
 
 lemma Box.mem_of_le (hab : a < b) {J : Box (Fin 1)} (hJ : J ≤ Ioc a b) :
   J.lower₁ ∈ Set.Icc a b ∧ J.upper₁ ∈ Set.Icc a b := by
-  rw [le_Ioc_iff hab] at hJ
   have := J.lower_lt_upper₁
-  grind
-
+  grind [le_Ioc_iff]
 
 /-! ## Mapping an interval -/
 
@@ -164,25 +158,21 @@ variable (φ : ℝ → ℝ)
 noncomputable def Ioc.comp (J : Box (Fin 1)) := Ioc (φ J.lower₁) (φ J.upper₁)
 
 @[simp]
-lemma Ioc.comp_apply (hab : a < b) : comp φ (Ioc a b) = Ioc (φ a) (φ b) := by
-  simp [comp, hab]
+lemma Ioc.comp_apply (hab : a < b) : comp φ (Ioc a b) = Ioc (φ a) (φ b) := by simp [comp, hab]
 
 /-- The map `Ioc.comp φ` is injective on any set of boxes contained in `Ioc a b`, provided `φ` is
 strictly monotone on `[a, b]`. -/
-lemma Ioc.comp_injOn_of_strictMonoOn {a b : ℝ} {φ : ℝ → ℝ} {S : Set (Box (Fin 1))}
-    (hab : a < b) (hS : ∀ J ∈ S, J ≤ Ioc a b)
-    (hmono : StrictMonoOn φ (Set.Icc a b)) :
+lemma Ioc.comp_injOn_of_strictMonoOn {φ : ℝ → ℝ} {S : Set (Box (Fin 1))}
+    (hab : a < b) (hS : ∀ J ∈ S, J ≤ Ioc a b) (hmono : StrictMonoOn φ (Set.Icc a b)) :
     Set.InjOn (Ioc.comp φ) S := by
   intro I hI J hJ hIJ
   have hI' := Box.mem_of_le hab (hS I hI)
   have hJ' := Box.mem_of_le hab (hS J hJ)
-  have hIlt : φ I.lower₁ < φ I.upper₁ := hmono hI'.1 hI'.2 I.lower_lt_upper₁
-  have hJlt : φ J.lower₁ < φ J.upper₁ := hmono hJ'.1 hJ'.2 J.lower_lt_upper₁
-  have hl : φ I.lower₁ = φ J.lower₁ := by
-    simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.lower₁ hIJ
-  have hu : φ I.upper₁ = φ J.upper₁ := by
-    simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.upper₁ hIJ
-  exact (Box.congr₁ I J).mpr ⟨hmono.injOn hI'.1 hJ'.1 hl, hmono.injOn hI'.2 hJ'.2 hu⟩
+  have hIlt := hmono hI'.1 hI'.2 I.lower_lt_upper₁
+  have hJlt := hmono hJ'.1 hJ'.2 J.lower_lt_upper₁
+  rw [Box.congr₁]; refine ⟨hmono.injOn hI'.1 hJ'.1 ?_, hmono.injOn hI'.2 hJ'.2 ?_⟩
+  · simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.lower₁ hIJ
+  · simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.upper₁ hIJ
 
 /-! ## Lexicographic ordering of one-dimensional boxes
 
@@ -190,15 +180,13 @@ This code is not currently in use.
 
 -/
 
-def Box.lexKey (J : Box (Fin 1)) : ℝ ×ₗ ℝ :=
-  toLex (J.lower₁, J.upper₁)
+def Box.lexKey (J : Box (Fin 1)) : ℝ ×ₗ ℝ := toLex (J.lower₁, J.upper₁)
 
 lemma Box.lexKey_injective : Function.Injective Box.lexKey := by
   intro J K h
   simpa [Box.lexKey, Box.congr₁] using h
 
-def Box.lex_le (J K : Box (Fin 1)) : Prop :=
-  Box.lexKey J ≤ Box.lexKey K
+def Box.lex_le (J K : Box (Fin 1)) : Prop := Box.lexKey J ≤ Box.lexKey K
 
 noncomputable instance Box.instDecidableLexLe : DecidableRel Box.lex_le := by
   classical
@@ -209,11 +197,9 @@ instance Box.instIsTransLexLe : IsTrans _ lex_le := ⟨fun _ _ _ ↦ le_trans⟩
 instance Box.instIsAntisymmLexLe : Std.Antisymm lex_le :=
   ⟨fun _ _ h₁ h₂ ↦ lexKey_injective (le_antisymm h₁ h₂)⟩
 
-instance Box.instIsTotalLexLe : Std.Total lex_le :=
-  ⟨fun _ _ ↦ le_total _ _⟩
+instance Box.instIsTotalLexLe : Std.Total lex_le := ⟨fun _ _ ↦ le_total _ _⟩
 
-instance Box.instIsReflLexLe : Std.Refl lex_le :=
-  ⟨fun _ ↦ le_rfl⟩
+instance Box.instIsReflLexLe : Std.Refl lex_le := ⟨fun _ ↦ le_rfl⟩
 
 /-- Disjoint one-dimensional boxes have disjoint underlying real half-open intervals. -/
 lemma disjoint_Ioc_of_disjoint_box {J K : Box (Fin 1)}
@@ -231,7 +217,6 @@ lemma upper_le_lower_of_disjoint_box_of_lower_le {J K : Box (Fin 1)}
   grind [Box.lower_lt_upper₁]
 
 lemma Icc_subset_of_box_le_Ioc {J : Box (Fin 1)} (hab : a < b) (hJ : J ≤ Ioc a b) :
-    J.Icc₁ ⊆ Set.Icc a b := by
-  simp; grind [Box.le_Ioc_iff]
+    J.Icc₁ ⊆ Set.Icc a b := by simp; grind [Box.le_Ioc_iff]
 
 end BoxIntegral

@@ -1173,8 +1173,7 @@ private lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
   have h_ftc := calc
      g b' - g a' = ∫ x in a'..b', g' c + (g' x - g' c) := by
       rw [← integral_derivWithin_uIcc_of_contDiffOn_uIcc (hg.mono hIcc_subset)]
-      apply integral_congr
-      intro x hx
+      apply integral_congr; intro x hx
       simp only [add_sub_cancel]
       exact derivWithin_subset hIcc_subset (uniqueDiffOn_Icc (by grind) x hx)
         (hg.differentiableOn one_ne_zero x (hIcc_subset hx))
