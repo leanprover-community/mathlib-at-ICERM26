@@ -1284,8 +1284,9 @@ theorem variation_of_contDiffOn [CompleteSpace F] (hab : a ≤ b) (hg : ContDiff
   rw [←ofReal_le_iff_le_toReal this]
   apply ENNReal.le_of_forall_pos_le_add
   rintro ε hε _
-  have δ : ℝ := by sorry
-  have hδ : δ > 0 := by sorry
+  have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
+  obtain ⟨δ, hδ, hδ_prop⟩ := hg'.metric_uniform (ε / (2 * (b-a))) (by positivity)
+  set g' := derivWithin g (.Icc a b)
   let N := ⌈(b - a) / δ⌉₊
   have hN : N > 0 := by positivity
   have hab' : 0 < b - a := by positivity
@@ -1304,7 +1305,70 @@ theorem variation_of_contDiffOn [CompleteSpace F] (hab : a ≤ b) (hg : ContDiff
   simp only [edist_dist, ge_iff_le]
   grw [←ofReal_sum_of_nonneg (by intros; positivity), coe_nnreal_eq ε, ←ofReal_add_le]
   apply ofReal_le_ofReal
-  sorry
+  simp only [Set.mem_Icc] at zmem
+  have incl {i : ℕ} (hi : i < N) : Set.Icc (z i) (z (i + 1)) ⊆ .Icc a b := by
+    apply Set.Icc_subset_Icc <;> grind
+  have incl_o {i : ℕ} (hi : i < N) : Set.Ioo (z i) (z (i + 1)) ⊆ .Ioo a b := by
+    apply Set.Ioo_subset_Ioo <;> grind
+  have incl_u {i : ℕ} (hi : i < N) : Set.uIcc (z i) (z (i + 1)) ⊆ .Icc a b := by
+    simp [Set.uIcc_of_lt (zmono i), incl hi]
+  have hsmall (i : ℕ) : z (i + 1) - z i ≤ δ := by
+    simp [zdiff, N]; field_simp; grw [←Nat.le_ceil]; field_simp; norm_num
+  calc
+    _ = ∫ x in (z 0)..(z N), ‖g' x‖  := by rw [z0, zN]
+    _ = ∑ i ∈ range N, ∫ x in (z i)..(z (i + 1)), ‖g' x‖  :=
+      (sum_integral_adjacent_intervals (fun i hi ↦
+      (hg'.mono (incl_u hi)).norm.intervalIntegrable)).symm
+    _ ≤ ∑ i ∈ range N, (dist (g (z (i + 1))) (g (z i)) + ↑ε/N) := by
+      apply sum_le_sum; intro i hi; rw [mem_range] at hi
+      calc
+        _ = ∫ x in z i..z (i + 1), ‖g' (z i) + (g' x - g' (z i))‖ := by
+          congr with x; rw [add_sub_cancel]
+        _ ≤ ∫ x in z i..z (i + 1), (‖g' (z i)‖ + ε / (2 * (b-a))) := by
+          apply intervalIntegral.integral_mono_on_of_le_Ioo (zmono i).le <;>
+             try exact (ContinuousOn.mono (by fun_prop) (incl_u hi)).intervalIntegrable
+          intro x hx; grw [norm_add_le, hδ_prop]
+          · exact Set.Ioo_subset_Icc_self (incl_o hi hx)
+          · grind
+          simp only [Set.mem_Ioo, abs_lt, neg_lt_sub_iff_lt_add] at ⊢ hx
+          split_ands <;> linarith [hsmall i, hx.1, hx.2]
+        _ = ‖∫ x in z i..z (i + 1), g' (z i)‖ + ε / (2 * N) := by
+          simp only [enorm_norm, ne_eq, enorm_ne_top, not_false_eq_true, intervalIntegrable_const,
+            intervalIntegral.integral_add, intervalIntegral.integral_const, smul_eq_mul,
+            integral_div, norm_smul, Real.norm_eq_abs]
+          rw [abs_of_pos (by linarith [zmono i])]; congr 1
+          simp [zdiff]; field_simp
+        _ = ‖(∫ x in z i..z (i + 1), g' x) + ∫ x in z i..z (i + 1), g' (z i) - g' x‖
+            + ε / (2 * N) := by
+          congr
+          convert intervalIntegral.integral_add ?_ ?_
+          · abel
+          · exact (hg'.mono (incl_u hi)).intervalIntegrable
+          exact (ContinuousOn.mono (by fun_prop) (incl_u hi)).intervalIntegrable
+        _ ≤ ‖∫ x in z i..z (i + 1), g' x‖ + ε / (2 * N) + ε / (2 * N) := by
+          grw [norm_add_le]; gcongr
+          grw [norm_integral_le_integral_norm (zmono i).le]; calc
+            _ ≤ ∫ x in z i..z (i + 1), ε / (2 * (b - a)) := by
+              apply intervalIntegral.integral_mono_on_of_le_Ioo (zmono i).le <;>
+                try exact (ContinuousOn.mono (by fun_prop) (incl_u hi)).intervalIntegrable
+              intro x hx; grw [hδ_prop]
+              · exact incl hi (Set.left_mem_Icc.mpr (zmono i).le)
+              · exact Set.Ioo_subset_Icc_self (incl_o hi hx)
+              simp only [Set.mem_Ioo, abs_lt, neg_lt_sub_iff_lt_add] at ⊢ hx
+              split_ands <;> linarith [hsmall i, hx.1, hx.2]
+            _ = _ := by simp [zdiff]; field_simp
+        _ = _ := by
+          rw [dist_eq_norm, ←integral_derivWithin_Icc_of_contDiffOn_Icc (hg.mono (incl hi))
+              (zmono i).le, add_assoc]
+          congr 2
+          · apply intervalIntegral.integral_congr_uIoo; intro x hx
+            unfold g'
+            simp only [Set.uIoo_of_lt (zmono i)] at hx
+            rw [derivWithin_of_mem_nhds, derivWithin_of_mem_nhds] <;>
+              simp only [← mem_interior_iff_mem_nhds, interior_Icc, hx, incl_o hi hx]
+          field_simp; norm_num
+    _ = _ := by
+      simp [sum_add_distrib]; field_simp
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
