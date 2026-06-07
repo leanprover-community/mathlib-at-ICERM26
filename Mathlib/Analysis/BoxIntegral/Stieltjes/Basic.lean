@@ -1247,32 +1247,30 @@ theorem variation_of_contDiffOn [CompleteSpace F] (hab : a ≤ b) (hg : ContDiff
   · simp
   have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
   refine eq_of_le_of_ge (toReal_le_of_le_ofReal ?_ ?_) ?_
-  · apply intervalIntegral.integral_nonneg_of_forall hab.le; intros; positivity
+  · apply integral_nonneg_of_forall hab.le; intros; positivity
   · convert iSup_le ?_; rintro ⟨ n, ⟨ y, hmono, hmem ⟩ ⟩
     simp only [edist_dist]
     rw [←ofReal_sum_of_nonneg (by intros; positivity)]
     apply ofReal_le_ofReal
     calc
       _ ≤ ∑ i ∈ range n, ∫ x in (y i)..(y (i + 1)), ‖derivWithin g (.Icc a b) x‖ := by
-        apply Finset.sum_le_sum; intro i hi
+        apply sum_le_sum; intro i hi
         replace hmono : y i ≤ y (i + 1) := hmono (by omega)
-        have : Set.Icc (y i) (y (i + 1)) ⊆ Set.Icc a b := by grind
-        grw [dist_eq_norm, ←intervalIntegral.integral_derivWithin_Icc_of_contDiffOn_Icc
-          (hg.mono this) hmono, ←norm_integral_le_integral_norm hmono]
+        grw [dist_eq_norm, ←integral_derivWithin_Icc_of_contDiffOn_Icc (hg.mono (by grind)) hmono,
+           ←norm_integral_le_integral_norm hmono]
         convert le_refl _ using 2
-        apply intervalIntegral.integral_congr_uIoo
-        intro x hx
+        apply intervalIntegral.integral_congr_uIoo; intro x hx
         simp [Set.uIoo_of_le hmono] at hx hmem
         rw [derivWithin_of_mem_nhds, derivWithin_of_mem_nhds] <;>
           simp [←mem_interior_iff_mem_nhds, hx]
         grind
       _ = ∫ x in (y 0)..(y n), ‖derivWithin g (.Icc a b) x‖ := by
-        apply intervalIntegral.sum_integral_adjacent_intervals
-        intro k hk
+        apply sum_integral_adjacent_intervals
+        intro k _
         replace hmono : y k ≤ y (k + 1) := hmono (by omega)
         exact (hg'.mono (by grind [Set.uIcc_of_le])).norm.intervalIntegrable
       _ ≤ _ := by
-        apply intervalIntegral.integral_mono_interval (by grind) (hmono (by positivity)) (by grind)
+        apply integral_mono_interval (by grind) (hmono (by positivity)) (by grind)
           (Eventually.of_forall (fun _ ↦ by positivity)) (ContinuousOn.intervalIntegrable _)
         simpa [Set.uIcc_of_lt hab] using hg'.norm
   sorry
