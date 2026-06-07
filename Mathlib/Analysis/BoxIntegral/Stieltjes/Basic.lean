@@ -1238,6 +1238,36 @@ theorem intervalIntegral.integral_congr_uIoo {f : ℝ → F} {a b : ℝ} {μ : M
   filter_upwards [μ.ae_ne <| a ⊔ b] with x _ hx
   exact h ⟨hx.left, lt_of_le_of_ne hx.right ‹_›⟩
 
+private theorem variation_of_contDiffOn_le [CompleteSpace F] (hab : a < b)
+    (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
+    eVariationOn g (.Icc a b) ≤ ENNReal.ofReal (∫ x in a..b, ‖derivWithin g (.Icc a b) x‖) := by
+  have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
+  convert iSup_le ?_; rintro ⟨ n, ⟨ y, hmono, hmem ⟩ ⟩
+  simp only [edist_dist]
+  rw [←ofReal_sum_of_nonneg (by intros; positivity)]
+  apply ofReal_le_ofReal
+  calc
+    _ ≤ ∑ i ∈ range n, ∫ x in (y i)..(y (i + 1)), ‖derivWithin g (.Icc a b) x‖ := by
+      apply sum_le_sum; intro i hi
+      replace hmono : y i ≤ y (i + 1) := hmono (by omega)
+      grw [dist_eq_norm, ←integral_derivWithin_Icc_of_contDiffOn_Icc (hg.mono (by grind)) hmono,
+         ←norm_integral_le_integral_norm hmono]
+      convert le_refl _ using 2
+      apply intervalIntegral.integral_congr_uIoo; intro x hx
+      simp [Set.uIoo_of_le hmono] at hx hmem
+      rw [derivWithin_of_mem_nhds, derivWithin_of_mem_nhds] <;>
+        simp [←mem_interior_iff_mem_nhds, hx]
+      grind
+    _ = ∫ x in (y 0)..(y n), ‖derivWithin g (.Icc a b) x‖ := by
+      apply sum_integral_adjacent_intervals
+      intro k _
+      replace hmono : y k ≤ y (k + 1) := hmono (by omega)
+      exact (hg'.mono (by grind [Set.uIcc_of_le])).norm.intervalIntegrable
+    _ ≤ _ := by
+      apply integral_mono_interval (by grind) (hmono (by positivity)) (by grind)
+        (Eventually.of_forall (fun _ ↦ by positivity)) (ContinuousOn.intervalIntegrable _)
+      simpa [Set.uIcc_of_lt hab] using hg'.norm
+
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
@@ -1245,34 +1275,35 @@ theorem variation_of_contDiffOn [CompleteSpace F] (hab : a ≤ b) (hg : ContDiff
     (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖derivWithin g (.Icc a b) x‖ := by
   obtain rfl | hab := hab.eq_or_lt
   · simp
-  have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
-  refine eq_of_le_of_ge (toReal_le_of_le_ofReal ?_ ?_) ?_
+  refine eq_of_le_of_ge (toReal_le_of_le_ofReal ?_ (variation_of_contDiffOn_le hab hg)) ?_
   · apply integral_nonneg_of_forall hab.le; intros; positivity
-  · convert iSup_le ?_; rintro ⟨ n, ⟨ y, hmono, hmem ⟩ ⟩
-    simp only [edist_dist]
-    rw [←ofReal_sum_of_nonneg (by intros; positivity)]
-    apply ofReal_le_ofReal
-    calc
-      _ ≤ ∑ i ∈ range n, ∫ x in (y i)..(y (i + 1)), ‖derivWithin g (.Icc a b) x‖ := by
-        apply sum_le_sum; intro i hi
-        replace hmono : y i ≤ y (i + 1) := hmono (by omega)
-        grw [dist_eq_norm, ←integral_derivWithin_Icc_of_contDiffOn_Icc (hg.mono (by grind)) hmono,
-           ←norm_integral_le_integral_norm hmono]
-        convert le_refl _ using 2
-        apply intervalIntegral.integral_congr_uIoo; intro x hx
-        simp [Set.uIoo_of_le hmono] at hx hmem
-        rw [derivWithin_of_mem_nhds, derivWithin_of_mem_nhds] <;>
-          simp [←mem_interior_iff_mem_nhds, hx]
-        grind
-      _ = ∫ x in (y 0)..(y n), ‖derivWithin g (.Icc a b) x‖ := by
-        apply sum_integral_adjacent_intervals
-        intro k _
-        replace hmono : y k ≤ y (k + 1) := hmono (by omega)
-        exact (hg'.mono (by grind [Set.uIcc_of_le])).norm.intervalIntegrable
-      _ ≤ _ := by
-        apply integral_mono_interval (by grind) (hmono (by positivity)) (by grind)
-          (Eventually.of_forall (fun _ ↦ by positivity)) (ContinuousOn.intervalIntegrable _)
-        simpa [Set.uIcc_of_lt hab] using hg'.norm
+  have : eVariationOn g (.Icc a b) ≠ ⊤ := by
+    have := variation_of_contDiffOn_le hab hg
+    contrapose! this
+    simp [this]
+  rw [←ofReal_le_iff_le_toReal this]
+  apply ENNReal.le_of_forall_pos_le_add
+  rintro ε hε _
+  have δ : ℝ := by sorry
+  have hδ : δ > 0 := by sorry
+  let N := ⌈(b - a) / δ⌉₊
+  have hN : N > 0 := by positivity
+  have hab' : 0 < b - a := by positivity
+  let z : ℕ → ℝ := (a + (b - a) * · / N)
+  have z0 : z 0 = a := by simp [z]
+  have zN : z N = b := by simp [z]; field_simp; abel
+  have zdiff (n : ℕ) : z (n + 1) = z n + (b - a) / N := by simp [z]; grind
+  have zmono (n : ℕ) : z n < z (n + 1) := by simp only [zdiff, lt_add_iff_pos_right]; positivity
+  have zmono' : Monotone z := by intro i j hij; unfold z; grw [hij]
+  have zmem : ∀ i ≤ N, z i ∈ Set.Icc a b := by
+    intro i hi
+    replace hi : (i:ℝ) ≤ N := by exact_mod_cast hi
+    simp [z]; field_simp; simp only [zero_mul]
+    exact ⟨ by positivity, by grw [hi]; grind ⟩
+  grw [←eVariationOn.sum_le_of_monotoneOn_Iic (zmono'.monotoneOn _) zmem]
+  simp only [edist_dist, ge_iff_le]
+  grw [←ofReal_sum_of_nonneg (by intros; positivity), coe_nnreal_eq ε, ←ofReal_add_le]
+  apply ofReal_le_ofReal
   sorry
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
