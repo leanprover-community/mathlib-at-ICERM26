@@ -1156,7 +1156,7 @@ This lemma is used in the proof of Theorem A3 (a).
 
 For g C^1[a,b] and ε > 0, there is a δ > 0 such that for all a ≤ a' < b' ≤ b with
 b' - a' < δ, we have that for all c ∈ [a',b'] that
-‖g(b')-g(a')‖ ≤ ‖g'(c)‖ * (b' - a') + ε * (b' - a')
+‖g(b')-g(a') - g'(c) * (b' - a') ‖ ≤ ε * (b' - a')
 -/
 private lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
   (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hε : 0 < ε)
@@ -1230,13 +1230,51 @@ private lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {ε : ℝ} (hab
       grw [B.le_opNorm₂, hδ_prop, hM_bound _ (by grind), this]
       field_simp; order
 
+/-- From mathlib; remove when bumping -/
+theorem intervalIntegral.integral_congr_uIoo {f : ℝ → F} {a b : ℝ} {μ : MeasureTheory.Measure ℝ}
+  [MeasureTheory.NoAtoms μ] (h : (Set.uIoo a b).EqOn f g) :
+    ∫ x in a..b, f x ∂μ = ∫ x in a..b, g x ∂μ := by
+  apply integral_congr_ae
+  filter_upwards [μ.ae_ne <| a ⊔ b] with x _ hx
+  exact h ⟨hx.left, lt_of_le_of_ne hx.right ‹_›⟩
+
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
-theorem variation_of_contDiffOn (hab : a ≤ b) (hg : ContDiffOn ℝ 1 g (.uIcc a b)) :
-    (eVariationOn g (.uIcc a b)).toReal = ∫ x in a..b, ‖deriv g x‖ := by
+theorem variation_of_contDiffOn [CompleteSpace F] (hab : a ≤ b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
+    (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖derivWithin g (.Icc a b) x‖ := by
   obtain rfl | hab := hab.eq_or_lt
   · simp
+  have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
+  refine eq_of_le_of_ge (toReal_le_of_le_ofReal ?_ ?_) ?_
+  · apply intervalIntegral.integral_nonneg_of_forall hab.le; intros; positivity
+  · convert iSup_le ?_; rintro ⟨ n, ⟨ y, hmono, hmem ⟩ ⟩
+    simp only [edist_dist]
+    rw [←ofReal_sum_of_nonneg (by intros; positivity)]
+    apply ofReal_le_ofReal
+    calc
+      _ ≤ ∑ i ∈ range n, ∫ x in (y i)..(y (i + 1)), ‖derivWithin g (.Icc a b) x‖ := by
+        apply Finset.sum_le_sum; intro i hi
+        replace hmono : y i ≤ y (i + 1) := hmono (by omega)
+        have : Set.Icc (y i) (y (i + 1)) ⊆ Set.Icc a b := by grind
+        grw [dist_eq_norm, ←intervalIntegral.integral_derivWithin_Icc_of_contDiffOn_Icc
+          (hg.mono this) hmono, ←norm_integral_le_integral_norm hmono]
+        convert le_refl _ using 2
+        apply intervalIntegral.integral_congr_uIoo
+        intro x hx
+        simp [Set.uIoo_of_le hmono] at hx hmem
+        rw [derivWithin_of_mem_nhds, derivWithin_of_mem_nhds] <;>
+          simp [←mem_interior_iff_mem_nhds, hx]
+        grind
+      _ = ∫ x in (y 0)..(y n), ‖derivWithin g (.Icc a b) x‖ := by
+        apply intervalIntegral.sum_integral_adjacent_intervals
+        intro k hk
+        replace hmono : y k ≤ y (k + 1) := hmono (by omega)
+        exact (hg'.mono (by grind [Set.uIcc_of_le])).norm.intervalIntegrable
+      _ ≤ _ := by
+        apply intervalIntegral.integral_mono_interval (by grind) (hmono (by positivity)) (by grind)
+          (Eventually.of_forall (fun _ ↦ by positivity)) (ContinuousOn.intervalIntegrable _)
+        simpa [Set.uIcc_of_lt hab] using hg'.norm
   sorry
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
