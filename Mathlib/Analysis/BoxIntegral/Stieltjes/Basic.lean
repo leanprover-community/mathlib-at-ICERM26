@@ -1383,9 +1383,16 @@ theorem HasStieltjesIntegral.of_contDiffOn_eq_riemann (hg : ContDiffOn ℝ 1 g (
   set g' := derivWithin g (.Icc a b)
   rw [hasStieltjesIntegral_iff_lim_sum hab]
   intro ε hε
-  obtain ⟨ δ₀, hδ₀ ⟩ := hg'.metric_uniform (ε / (2 * (b-a) * (max (M * ‖B‖) 1))) (by positivity)
+  obtain ⟨ δ₀, hδ₀pos, hδ₀ ⟩ := hg'.metric_uniform (ε / (2 * (b-a) * (max (M * ‖B‖) 1)))
+    (by positivity)
   have hriem : RiemannIntegrable a b (fun x ↦ B (f x) (g' x)) :=
     hf.mul_continuous (Set.uIcc_of_lt hab ▸ hg')
+  obtain ⟨ δ₁, hδ₁pos, hδ₁ ⟩ := (hasRiemannIntegral_iff_lim_sum hab).mp hriem.hasRiemannIntegral
+    (ε / (2 * (b-a) * (max (M * ‖B‖) 1))) (by positivity)
+  refine ⟨ min (NNReal.mk δ₀ hδ₀pos.le) δ₁, ?_, ?_⟩
+  · simpa [hδ₁pos, NNReal.mk] using hδ₀pos
+  peel hδ₁ with π hhen hpart h
+  rw [le_inf_iff]; rintro ⟨ hmesh₁, hmesh₂ ⟩
   sorry
 
 theorem StieltjesIntegrable.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
