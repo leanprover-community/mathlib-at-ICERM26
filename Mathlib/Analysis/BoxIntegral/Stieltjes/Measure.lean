@@ -123,4 +123,17 @@ theorem stieltjesIntegral_of_continuous_of_Stieltjes (hf : ContinuousOn f (.uIcc
     ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂g = ∫ x in a..b, f x ∂g.measure :=
   (HasStieltjesIntegral.of_continuous_of_Stieltjes g hf).stieltjesIntegral_eq
 
+theorem HasRiemannIntegral.of_continuous (hf : ContinuousOn f (.uIcc a b)) :
+    HasRiemannIntegral a b f (∫ x in a..b, f x) := by
+  convert HasStieltjesIntegral.of_continuous_of_Stieltjes (StieltjesFunction.id) hf
+  exact Real.volume_eq_stieltjes_id
+
+theorem RiemannIntegrable.of_continuous (hf : ContinuousOn f (.uIcc a b)) :
+    RiemannIntegrable a b f :=
+  (HasRiemannIntegral.of_continuous hf).riemannIntegrable
+
+theorem riemannIntegral_of_continuous (hf : ContinuousOn f (.uIcc a b)) :
+    riemannIntegral a b f = ∫ x in a..b, f x :=
+  (HasRiemannIntegral.of_continuous hf).riemannIntegral_eq
+
 end BoxIntegral

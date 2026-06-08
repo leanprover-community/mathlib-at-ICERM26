@@ -139,10 +139,10 @@ theorem norm_stieltjesIntegral_E_le (hab : a < b) (hg : BoundedVariationOn g (.I
 
 /-- If the integrator is the Fourier primitive, the Stieltjes integral is the ordinary integral
 against its derivative, here specialized to the Fourier kernel. -/
-theorem hasStieltjesIntegral_E (hab : a < b) {ξ : ℝ} (hξ : ξ ≠ 0) (hg : RiemannIntegrable a b g) :
+theorem hasStieltjesIntegral_E {ξ : ℝ} (hξ : ξ ≠ 0) (hg : RiemannIntegrable a b g) :
     HasStieltjesIntegral a b (mul ℝ ℂ).flip g (E ξ) (∫ x in a..b, e ξ x * g x) := by
   have h (x : ℝ) := hasDerivAt_E x hξ
-  convert HasStieltjesIntegral.of_contDiffOn hab ?_ hg using 3 with x
+  convert HasStieltjesIntegral.of_contDiffOn ?_ hg using 3 with x
   · simp [(h x).deriv, mul_comm]
   refine (contDiff_one_iff_deriv.mpr ⟨fun x ↦ (h x).differentiableAt, ?_⟩).contDiffOn
   simp only [ne_eq, hξ, not_false_eq_true, deriv_E]
@@ -156,7 +156,7 @@ theorem interval_fourierIntegral_eq_boundary_sub_stieltjes
   have hInt : StieltjesIntegrable a b (mul ℝ ℂ) (E ξ) g := by
     rw [← Set.uIcc_of_lt hab] at hg
     exact .of_continuousOn_of_boundedVariationOn (by fun_prop) hg
-  rw [(hasStieltjesIntegral_E hab hξ (hg.riemannIntegrable hab.le)).stieltjesIntegral_eq.symm,
+  rw [(hasStieltjesIntegral_E hξ (hg.riemannIntegrable hab.le)).stieltjesIntegral_eq.symm,
       stieltjesIntegral.by_parts hInt]
   simp [mul_comm]
 

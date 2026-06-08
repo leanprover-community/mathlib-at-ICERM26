@@ -1202,15 +1202,14 @@ Remark: In the use of MV theorem A3, they assume that f is Riemann integrable on
 fact that this will imply that f is bounded. However, for the MVT statement, we need only that f is
 bounded.
 -/
-private lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {ε : ℝ} (hab : a < b)
-  (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hε : 0 < ε)
-  (f_bounded : ∃ M > 0, ∀ x ∈ Set.Icc a b, ‖f x‖ < M) : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b,
+private lemma MVT_with_bilinear_form_and_error [CompleteSpace F] (hab : a < b)
+  (hg : ContDiffOn ℝ 1 g (.Icc a b)) (ε : ℝ) (hε : 0 < ε) (M : ℝ) (hM_pos : 0 < M)
+  (hM_bound : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ M) : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b,
   a' < b' → b' - a' < δ → ∀ c ∈ Set.Icc a' b', ‖B (f c) (g b' -g a')‖
     ≤ ‖B (f c) (derivWithin g (.Icc a b) c)‖ * (b' - a') + ε * (b' - a') := by
   by_cases! hB : B = 0
   · use 1; simp only [gt_iff_lt, zero_lt_one, ge_iff_le, Set.mem_Icc, hB, zero_apply, norm_zero,
     zero_mul, zero_add, and_imp, true_and]; intros; positivity
-  obtain ⟨M, hM_pos, hM_bound⟩ := f_bounded
   rw [← norm_pos_iff] at hB
   obtain ⟨δ, hδ_pos, hδ_prop⟩ := MVT_with_error hab hg (show 0 < ε / (‖B‖ * M) by positivity)
   use δ, hδ_pos
@@ -1231,8 +1230,8 @@ private lemma MVT_with_bilinear_form_and_error [CompleteSpace F] {ε : ℝ} (hab
       field_simp; order
 
 /-- From mathlib; remove when bumping -/
-theorem intervalIntegral.integral_congr_uIoo {f : ℝ → F} {a b : ℝ} {μ : MeasureTheory.Measure ℝ}
-  [MeasureTheory.NoAtoms μ] (h : (Set.uIoo a b).EqOn f g) :
+theorem _root_.intervalIntegral.integral_congr_uIoo {f : ℝ → F} {a b : ℝ}
+  {μ : MeasureTheory.Measure ℝ} [MeasureTheory.NoAtoms μ] (h : (Set.uIoo a b).EqOn f g) :
     ∫ x in a..b, f x ∂μ = ∫ x in a..b, g x ∂μ := by
   apply integral_congr_ae
   filter_upwards [μ.ae_ne <| a ⊔ b] with x _ hx
@@ -1275,13 +1274,10 @@ theorem variation_of_contDiffOn [CompleteSpace F] (hab : a ≤ b) (hg : ContDiff
     (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖derivWithin g (.Icc a b) x‖ := by
   obtain rfl | hab := hab.eq_or_lt
   · simp
-  refine eq_of_le_of_ge (toReal_le_of_le_ofReal ?_ (variation_of_contDiffOn_le hab hg)) ?_
+  have h_le := variation_of_contDiffOn_le hab hg
+  refine eq_of_le_of_ge (toReal_le_of_le_ofReal ?_ h_le) ?_
   · apply integral_nonneg_of_forall hab.le; intros; positivity
-  have : eVariationOn g (.Icc a b) ≠ ⊤ := by
-    have := variation_of_contDiffOn_le hab hg
-    contrapose! this
-    simp [this]
-  rw [←ofReal_le_iff_le_toReal this]
+  rw [←ofReal_le_iff_le_toReal (by contrapose! h_le; simp [h_le])]
   apply ENNReal.le_of_forall_pos_le_add
   rintro ε hε _
   have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
@@ -1371,7 +1367,45 @@ theorem variation_of_contDiffOn [CompleteSpace F] (hab : a ≤ b) (hg : ContDiff
       simp [sum_add_distrib]; field_simp
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
-Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. -/
+Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. Riemann integral version -/
+theorem HasStieltjesIntegral.of_contDiffOn_eq_riemann (hg : ContDiffOn ℝ 1 g (.uIcc a b))
+    (hf : RiemannIntegrable a b f) : HasStieltjesIntegral a b B f g
+    (riemannIntegral a b (fun x ↦ B (f x) (derivWithin g (.uIcc a b) x))) := by
+  wlog hab : a ≤ b
+  · rw [symm_iff, ←riemannIntegral.integral_symm, Set.uIcc_comm a b]
+    exact this ((Set.uIcc_comm a b) ▸ hg) hf.symm (by order)
+  obtain rfl | hab := hab.eq_or_lt
+  · simp
+  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le (hf.bounded hab)
+  replace hM : ∀ x ∈ Set.Ioc a b, ‖f x‖ ≤ M := by aesop
+  simp only [Set.uIcc_of_lt hab] at hg ⊢
+  have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
+  set g' := derivWithin g (.Icc a b)
+  rw [hasStieltjesIntegral_iff_lim_sum hab]
+  intro ε hε
+  obtain ⟨ δ₀, hδ₀ ⟩ := hg'.metric_uniform (ε / (2 * (b-a) * (max (M * ‖B‖) 1))) (by positivity)
+  have hriem : RiemannIntegrable a b (fun x ↦ B (f x) (g' x)) :=
+    hf.mul_continuous (Set.uIcc_of_lt hab ▸ hg')
+  sorry
+
+theorem StieltjesIntegrable.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
+    (hf : RiemannIntegrable a b f) : StieltjesIntegrable a b B f g :=
+  (HasStieltjesIntegral.of_contDiffOn_eq_riemann hg hf).stieltjesIntegrable
+
+theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn
+    (hg : ContDiffOn ℝ 1 g (.uIcc a b)) (hf : RiemannIntegrable a b f) :
+    ∫⟨B⟩ x in a..b, f x ∂g = riemannIntegral a b (fun x ↦ B (f x) (derivWithin g (.uIcc a b) x)) :=
+  (HasStieltjesIntegral.of_contDiffOn_eq_riemann hg hf).stieltjesIntegral_eq
+
+/-- The Riemann integral agrees with the interval integral. TO DO: weaken this to scalar
+and finite dimensional versions to make it provable. -/
+theorem riemannIntegral_eq_intervalIntegral (hf : RiemannIntegrable a b f) :
+    riemannIntegral a b f = ∫ x in a..b, f x := by
+  sorry
+
+/-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
+Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. Interval integral version.
+TODO: weaken to finite dimensional version -/
 theorem HasStieltjesIntegral.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
     (hf : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by
@@ -1380,25 +1414,21 @@ theorem HasStieltjesIntegral.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
     exact this ((Set.uIcc_comm a b) ▸ hg) hf.symm (by order)
   obtain rfl | hab := hab.eq_or_lt
   · simp
-  sorry
-
-theorem StieltjesIntegrable.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
-    (hf : RiemannIntegrable a b f) : StieltjesIntegrable a b B f g :=
-  (HasStieltjesIntegral.of_contDiffOn hg hf).stieltjesIntegrable
-
-theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn
-    (hg : ContDiffOn ℝ 1 g (.uIcc a b)) (hf : RiemannIntegrable a b f) :
-    ∫⟨B⟩ x in a..b, f x ∂g = ∫ x in a..b, B (f x) (deriv g x) :=
-  (HasStieltjesIntegral.of_contDiffOn hg hf).stieltjesIntegral_eq
-
-/-- The Riemann integral agrees with the interval integral. -/
-theorem riemannIntegral_eq_intervalIntegral (hf : RiemannIntegrable a b f) :
-    riemannIntegral a b f = ∫ x in a..b, f x := by
-  convert stieltjesIntegral_eq_intervalIntegral_of_contDiffOn contDiff_id.contDiffOn hf
-    using 3 with x
-  simp
-
-
+  set g' := derivWithin g (.uIcc a b)
+  have : ∫ x in a..b, B (f x) (deriv g x) = ∫ x in a..b, B (f x) (g' x) := by
+    apply intervalIntegral.integral_congr_uIoo; intro x hx
+    simp only [g'] at hx ⊢
+    rw [derivWithin_of_mem_nhds]
+    simp only [← mem_interior_iff_mem_nhds]
+    simpa [Set.uIcc_of_lt, Set.uIoo_of_lt, hab] using hx
+  rw [this]
+  convert of_contDiffOn_eq_riemann hg hf
+  simp only [Set.uIcc_of_lt hab] at hg
+  have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
+  have hriem : RiemannIntegrable a b (fun x ↦ B (f x) (g' x)) := by
+    apply hf.mul_continuous
+    simpa [g', Set.uIcc_of_lt hab] using hg'
+  rw [riemannIntegral_eq_intervalIntegral hriem]
 
 -- The material below is not currently in use.
 
