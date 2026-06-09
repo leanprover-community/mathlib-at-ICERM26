@@ -174,49 +174,4 @@ lemma Ioc.comp_injOn_of_strictMonoOn {φ : ℝ → ℝ} {S : Set (Box (Fin 1))}
   · simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.lower₁ hIJ
   · simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.upper₁ hIJ
 
-/-! ## Lexicographic ordering of one-dimensional boxes
-
-This code is not currently in use.
-
--/
-
-def Box.lexKey (J : Box (Fin 1)) : ℝ ×ₗ ℝ := toLex (J.lower₁, J.upper₁)
-
-lemma Box.lexKey_injective : Function.Injective Box.lexKey := by
-  intro J K h
-  simpa [Box.lexKey, Box.congr₁] using h
-
-def Box.lex_le (J K : Box (Fin 1)) : Prop := Box.lexKey J ≤ Box.lexKey K
-
-noncomputable instance Box.instDecidableLexLe : DecidableRel Box.lex_le := by
-  classical
-  infer_instance
-
-instance Box.instIsTransLexLe : IsTrans _ lex_le := ⟨fun _ _ _ ↦ le_trans⟩
-
-instance Box.instIsAntisymmLexLe : Std.Antisymm lex_le :=
-  ⟨fun _ _ h₁ h₂ ↦ lexKey_injective (le_antisymm h₁ h₂)⟩
-
-instance Box.instIsTotalLexLe : Std.Total lex_le := ⟨fun _ _ ↦ le_total _ _⟩
-
-instance Box.instIsReflLexLe : Std.Refl lex_le := ⟨fun _ ↦ le_rfl⟩
-
-/-- Disjoint one-dimensional boxes have disjoint underlying real half-open intervals. -/
-lemma disjoint_Ioc_of_disjoint_box {J K : Box (Fin 1)}
-    (h : Disjoint J.toSet K) :
-    Disjoint (Set.Ioc (J.lower₁) (J.upper₁)) (Set.Ioc (K.lower₁) (K.upper₁)) := by
-  simp [Box.disjoint_iff₁, Set.Ioc_disjoint_Ioc] at h ⊢
-  grind
-
-/-- If two disjoint one-dimensional boxes are ordered by lower endpoint, then the first lies to the
-left of the second. -/
-lemma upper_le_lower_of_disjoint_box_of_lower_le {J K : Box (Fin 1)}
-    (hdisj : Disjoint J.toSet K) (hlower : J.lower₁ ≤ K.lower₁) :
-    J.upper₁ ≤ K.lower₁ := by
-  simp [Box.disjoint_iff₁] at hdisj
-  grind [Box.lower_lt_upper₁]
-
-lemma Icc_subset_of_box_le_Ioc {J : Box (Fin 1)} (hab : a < b) (hJ : J ≤ Ioc a b) :
-    J.Icc₁ ⊆ Set.Icc a b := by simp; grind [Box.le_Ioc_iff]
-
 end BoxIntegral

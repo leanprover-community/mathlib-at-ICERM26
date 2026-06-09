@@ -114,6 +114,15 @@ lemma eVariationOn_id_Icc {a b : ℝ} (hab : a ≤ b) :
 lemma BoundedVariationOn.id_of_Icc {a b : ℝ} :  BoundedVariationOn id (.Icc a b) := by
   rcases lt_or_ge b a with hab | hab <;> simp [hab, BoundedVariationOn, eVariationOn_id_Icc]
 
+/-- From mathlib; remove when bumping -/
+theorem intervalIntegral.integral_congr_uIoo {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
+  {f g : ℝ → F} {a b : ℝ}
+  {μ : MeasureTheory.Measure ℝ} [MeasureTheory.NoAtoms μ] (h : (Set.uIoo a b).EqOn f g) :
+    ∫ x in a..b, f x ∂μ = ∫ x in a..b, g x ∂μ := by
+  apply integral_congr_ae
+  filter_upwards [μ.ae_ne <| a ⊔ b] with x _ hx
+  exact h ⟨hx.left, lt_of_le_of_ne hx.right ‹_›⟩
+
 open BoxIntegral ENNReal Metric Filter
 open BoxAdditiveMap hiding zero_apply
 open ContinuousLinearMap TaggedPrepartition intervalIntegral Metric
@@ -165,7 +174,7 @@ theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) {L : E} : HasRiemannIntegra
 
 /-- A Riemann integrable function on a closed interval is bounded. -/
 theorem RiemannIntegrable.bounded (hab : a < b) (h : RiemannIntegrable a b f) :
-    Bornology.IsBounded (f '' (.Ioc a b)) := by
+    Bornology.IsBounded (f '' (.Icc a b)) := by
   obtain ⟨L, hL⟩ := RiemannIntegrable_def.mp h
   rw [hasRiemannIntegral_iff_lim_sum hab] at hL; obtain ⟨δ, hδ, h⟩ := hL 1 (by norm_num)
   let N := ⌈(b - a) / δ⌉₊
@@ -186,8 +195,11 @@ theorem RiemannIntegrable.bounded (hab : a < b) (h : RiemannIntegrable a b f) :
     exact ⟨zmono' (by lia), zmono' (by lia)⟩
   rw [isBounded_iff_forall_norm_le]
   let F : ℕ → NNReal := fun n ↦ ‖f (z n)‖₊
-  refine ⟨(range (N + 1)).sup F + 2 * N / (b - a), fun y hy ↦ ?_⟩
-  simp only [Set.mem_image, Set.mem_Ioc] at hy; obtain ⟨x, ⟨hx, hx'⟩, rfl⟩ := hy
+  refine ⟨max ‖f a‖ ((range (N + 1)).sup F + 2 * N / (b - a)), fun y hy ↦ ?_⟩
+  simp only [Set.mem_image, Set.mem_Icc] at hy; obtain ⟨x, ⟨hx, hx'⟩, rfl⟩ := hy
+  rcases eq_or_lt_of_le hx with rfl | hx
+  · exact Std.left_le_max
+  grw [←Std.right_le_max]
   let i : ℝ → ℕ := fun x ↦ ⌈N * (x - a) / (b - a)⌉₊
   have hipos {x : ℝ} (hx : a < x) : 0 < i x := by positivity
   have hi {x : ℝ} (hx' : x ≤ b) : i x ≤ N := by simp [i]; field_simp; linarith
@@ -1146,99 +1158,9 @@ end BoundedVariation
 
 /-! ### Continuously differentiable integrators -/
 
-/-- given an interval [a,b], if c,d ∈ [a,b], then |c - d| < b -a -/
-private lemma dist_mem_Icc_le {a b m n : ℝ} (hm : m ∈ Set.Icc a b)
-  (hn : n ∈ Set.Icc a b) : |m - n| ≤ b - a := by grind [Real.dist_eq]
+variable [CompleteSpace F]
 
-/-- Lemma for a vector valued MVT with error since MVT is false for a general
-funcion in higher dimensions, but is true up to some error for higher dimensions.
-This lemma is used in the proof of Theorem A3 (a).
-
-For g C^1[a,b] and ε > 0, there is a δ > 0 such that for all a ≤ a' < b' ≤ b with
-b' - a' < δ, we have that for all c ∈ [a',b'] that
-‖g(b')-g(a') - g'(c) * (b' - a') ‖ ≤ ε * (b' - a')
--/
-private lemma MVT_with_error [CompleteSpace F] {g : ℝ → F} {a b ε : ℝ}
-  (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) (hε : 0 < ε)
-  : ∃ δ > 0, ∀ a' ∈ Set.Icc a b, ∀ b' ∈ Set.Icc a b,
-  |b' - a'| < δ → ∀ c ∈ Set.uIcc a' b', dist (g b' -g a')
-    ((b' - a') • (derivWithin g (.Icc a b)) c) ≤ ε * |b' - a'| := by
-  set g' := derivWithin g (.Icc a b)
-  have hderiv_cont := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) le_rfl
-  obtain ⟨δ, hδ_pos, hδ_prop⟩ := hderiv_cont.metric_uniform ε (by positivity)
-  refine ⟨δ, hδ_pos, fun a' _ b' _ _ c hc ↦ ?_⟩
-  by_cases! ha'b' : a' = b'
-  · simp [ha'b']
-  have hIcc_subset : Set.uIcc a' b' ⊆ .Icc a b := by intro; simp [Set.mem_uIcc]; grind
-  have h_ftc := calc
-     g b' - g a' = ∫ x in a'..b', g' c + (g' x - g' c) := by
-      rw [← integral_derivWithin_uIcc_of_contDiffOn_uIcc (hg.mono hIcc_subset)]
-      apply integral_congr; intro x hx
-      simp only [add_sub_cancel]
-      exact derivWithin_subset hIcc_subset (uniqueDiffOn_Icc (by grind) x hx)
-        (hg.differentiableOn one_ne_zero x (hIcc_subset hx))
-     _ = (∫ x in a'..b', g' c) + ∫ x in a'..b', (g' x - g' c) := by
-      rw [intervalIntegral.integral_add intervalIntegrable_const]
-      exact (hderiv_cont.mono hIcc_subset).intervalIntegrable.sub
-        intervalIntegrable_const
-  simp only [h_ftc, intervalIntegral.integral_const, dist_self_add_left, ge_iff_le]
-  apply norm_integral_le_of_norm_le_const
-  intro x hx
-  apply (hδ_prop _ (hIcc_subset ⟨hx.1.le, hx.2⟩) _ (hIcc_subset hc) _).le
-  grw [dist_mem_Icc_le ⟨hx.1.le, hx.2⟩ hc]; grind
-
-/-- Lemma MVT version using a bilinear form, this theorem is used in the proof of Theorem A3 (b)
-Since the MVT is false in general (for higher dimensions), we prove a version where it is true up
-to some error term.
-
-For g : ℝ → F and f : ℝ → E, and B a bounded blinear from from E × F → G where E, F, and G are
-normed. Then if g is C^1[a,b], and f is bounded on [a,b], then for any ε > 0, there is a δ > 0 such
-that for all a',b' with a ≤ a' < b' ≤ b, we have for all c ∈ [a',b'] that
-‖B(f(c),g(b') - g(a'))‖ ≤ ‖B(f(c),g'(c))‖ (b' - a') + ε (b' - a')
-We remark that the theorem is most powerful when we take a' = a and b' = b. Since this is used to
-say that if the mesh is fine enough (of size < δ), then we have this MVT with small error.
-
-Remark: In the use of MV theorem A3, they assume that f is Riemann integrable on [a,b], and use the
-fact that this will imply that f is bounded. However, for the MVT statement, we need only that f is
-bounded.
--/
-private lemma MVT_with_bilinear_form_and_error [CompleteSpace F] (hab : a < b)
-  (hg : ContDiffOn ℝ 1 g (.Icc a b)) (ε : ℝ) (hε : 0 < ε) (M : ℝ) (hM_pos : 0 < M)
-  (hM_bound : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ M) : ∃ δ > 0, ∀ a' ≥ a, ∀ b' ≤ b,
-  a' < b' → b' - a' < δ → ∀ c ∈ Set.Icc a' b', ‖B (f c) (g b' -g a')‖
-    ≤ ‖B (f c) (derivWithin g (.Icc a b) c)‖ * (b' - a') + ε * (b' - a') := by
-  by_cases! hB : B = 0
-  · use 1; simp only [gt_iff_lt, zero_lt_one, ge_iff_le, Set.mem_Icc, hB, zero_apply, norm_zero,
-    zero_mul, zero_add, and_imp, true_and]; intros; positivity
-  rw [← norm_pos_iff] at hB
-  obtain ⟨δ, hδ_pos, hδ_prop⟩ := MVT_with_error hab hg (show 0 < ε / (‖B‖ * M) by positivity)
-  use δ, hδ_pos
-  intros a' _ b' _ h_a'b' _ c hc
-  specialize hδ_prop a' (by grind) b' (by grind) (by grind) c
-    (by simpa [Set.uIcc_of_lt h_a'b'] using hc)
-  rw [dist_eq_norm] at hδ_prop
-  have : |b' - a'| = b' - a' := abs_of_pos (by positivity)
-  calc
-    _ = ‖B (f c) ((b' - a') • derivWithin g (.Icc a b) c)
-      + B (f c) (g b' - g a' - (b' - a') • derivWithin g (.Icc a b) c)‖ := by simp
-    _ ≤ ‖B (f c) ((b' - a') • derivWithin g (.Icc a b) c)‖
-      + ‖B (f c) (g b' - g a' - (b' - a') • derivWithin g (.Icc a b) c)‖ := by apply norm_add_le
-    _ ≤ _ := by
-      simp only [map_smul, norm_smul, Real.norm_eq_abs, this, mul_comm,
-        add_le_add_iff_left]
-      grw [B.le_opNorm₂, hδ_prop, hM_bound _ (by grind), this]
-      field_simp; order
-
-/-- From mathlib; remove when bumping -/
-theorem _root_.intervalIntegral.integral_congr_uIoo {f : ℝ → F} {a b : ℝ}
-  {μ : MeasureTheory.Measure ℝ} [MeasureTheory.NoAtoms μ] (h : (Set.uIoo a b).EqOn f g) :
-    ∫ x in a..b, f x ∂μ = ∫ x in a..b, g x ∂μ := by
-  apply integral_congr_ae
-  filter_upwards [μ.ae_ne <| a ⊔ b] with x _ hx
-  exact h ⟨hx.left, lt_of_le_of_ne hx.right ‹_›⟩
-
-private theorem variation_of_contDiffOn_le [CompleteSpace F] (hab : a < b)
-    (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
+private theorem variation_of_contDiffOn_le (hab : a < b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
     eVariationOn g (.Icc a b) ≤ ENNReal.ofReal (∫ x in a..b, ‖derivWithin g (.Icc a b) x‖) := by
   have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
   convert iSup_le ?_; rintro ⟨ n, ⟨ y, hmono, hmem ⟩ ⟩
@@ -1270,7 +1192,7 @@ private theorem variation_of_contDiffOn_le [CompleteSpace F] (hab : a < b)
 /-- Theorem A.3 (a).  If g′ is continuous on [a, b], then
 Varₐᵇ g = ∫ₐᵇ ‖g′(x)‖ dx.
 -/
-theorem variation_of_contDiffOn [CompleteSpace F] (hab : a ≤ b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
+theorem variation_of_contDiffOn (hab : a ≤ b) (hg : ContDiffOn ℝ 1 g (.Icc a b)) :
     (eVariationOn g (.Icc a b)).toReal = ∫ x in a..b, ‖derivWithin g (.Icc a b) x‖ := by
   obtain rfl | hab := hab.eq_or_lt
   · simp
@@ -1377,23 +1299,66 @@ theorem HasStieltjesIntegral.of_contDiffOn_eq_riemann (hg : ContDiffOn ℝ 1 g (
   obtain rfl | hab := hab.eq_or_lt
   · simp
   obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le (hf.bounded hab)
-  replace hM : ∀ x ∈ Set.Ioc a b, ‖f x‖ ≤ M := by aesop
+  let M' := max M 0
+  replace hM : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ M' := by aesop
   simp only [Set.uIcc_of_lt hab] at hg ⊢
   have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
   set g' := derivWithin g (.Icc a b)
   rw [hasStieltjesIntegral_iff_lim_sum hab]
   intro ε hε
-  obtain ⟨ δ₀, hδ₀pos, hδ₀ ⟩ := hg'.metric_uniform (ε / (2 * (b-a) * (max (M * ‖B‖) 1)))
+  obtain ⟨ δ₀, hδ₀pos, hδ₀ ⟩ := hg'.metric_uniform (ε / (3 * (b-a) * (max (M' * ‖B‖) 1)))
     (by positivity)
   have hriem : RiemannIntegrable a b (fun x ↦ B (f x) (g' x)) :=
     hf.mul_continuous (Set.uIcc_of_lt hab ▸ hg')
   obtain ⟨ δ₁, hδ₁pos, hδ₁ ⟩ := (hasRiemannIntegral_iff_lim_sum hab).mp hriem.hasRiemannIntegral
-    (ε / (2 * (b-a) * (max (M * ‖B‖) 1))) (by positivity)
+    (ε / 3) (by positivity)
   refine ⟨ min (NNReal.mk δ₀ hδ₀pos.le) δ₁, ?_, ?_⟩
   · simpa [hδ₁pos, NNReal.mk] using hδ₀pos
   peel hδ₁ with π hhen hpart h
   rw [le_inf_iff]; rintro ⟨ hmesh₁, hmesh₂ ⟩
-  sorry
+  calc
+    _ ≤ dist (∑ J ∈ π.boxes, (B (f (π.tag J 0))) (g J.upper₁ - g J.lower₁))
+      (∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) • (B (f (π.tag J 0))) (g' (π.tag J 0)))
+      + ε / 3 := by grw [←h hmesh₂]; apply dist_triangle
+    _ ≤ ∑ J ∈ π.boxes, ε * (ofDiff id J) / (3 * (b - a)) + ε / 3 := by
+      simp only [isValue, dist_eq_norm, ← sum_sub_distrib, ←map_smul_of_tower, ←map_sub,
+        ofDiff_apply, id_eq]
+      grw [norm_sum_le]; gcongr with J hJ
+      grw [le_opNorm, le_opNorm, hM _ (by simpa [hab] using π.tag_mem_Icc J)]
+      have := π.le_of_mem hJ
+      specialize hhen J hJ
+      simp only [Box.le_iff₁, hab, Ioc.lower₁, Ioc.upper₁, Box.mem_Icc₁, Box.Icc₁, Set.mem_Icc]
+        at this hhen
+      have hJle := J.lower_le_upper₁
+      have hsubset : Set.uIcc J.lower₁ J.upper₁ ⊆ .Icc a b := by
+        simp [Set.uIcc_of_le hJle]; grind
+      calc
+        _ = ‖B‖ * M' * ‖∫ x in J.lower₁..J.upper₁, g' x - g' (π.tag J 0)‖ := by
+          congr 2
+          rw [intervalIntegral.integral_sub (hg'.mono hsubset).intervalIntegrable
+              intervalIntegrable_const, intervalIntegral.integral_const]
+          rw [← integral_derivWithin_uIcc_of_contDiffOn_uIcc (hg.mono hsubset)]
+          congr 1
+          apply intervalIntegral.integral_congr_uIoo; intro x hx
+          simp only [hJle, Set.uIoo_of_le, Set.mem_Ioo, Set.uIcc_of_le, g'] at hx ⊢
+          rw [derivWithin_of_mem_nhds, derivWithin_of_mem_nhds] <;>
+          simp [←mem_interior_iff_mem_nhds, hx]
+          grind
+        _ ≤ ‖B‖ * M' * ∫ x in J.lower₁..J.upper₁, ε / (3 * (b - a) * max (M' * ‖B‖) 1) := by
+          grw [norm_integral_le_integral_norm hJle]; gcongr
+          apply integral_mono_on_of_le_Ioo hJle <;>
+            try exact (ContinuousOn.mono (by fun_prop) hsubset).intervalIntegrable
+          intro x _
+          apply (hδ₀ _ (by grind) _ (by grind) _).le
+          simp only [mesh_size_le_iff₁, NNReal.coe_mk] at hmesh₁
+          grind
+        _ ≤ _ := by
+          simp; field_simp; grw [←Std.left_le_max]; ring_nf; apply le_refl
+    _ ≤ ε/3 + ε/3 := by
+      rw [←Finset.sum_div, ←Finset.mul_sum, (ofDiff id).sum_partition_boxes (by simp) hpart]
+      simp [hab]; field_simp; norm_num
+    _ < ε := by linarith
+
 
 theorem StieltjesIntegrable.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
     (hf : RiemannIntegrable a b f) : StieltjesIntegrable a b B f g :=
@@ -1436,75 +1401,4 @@ theorem HasStieltjesIntegral.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
     apply hf.mul_continuous
     simpa [g', Set.uIcc_of_lt hab] using hg'
   rw [riemannIntegral_eq_intervalIntegral hriem]
-
--- The material below is not currently in use.
-
-section Sorted
-
-omit [NormedSpace ℝ F] in
-/-- The sum of variations over a list of ordered one-dimensional boxes is bounded by the
-variation over their union. -/
-lemma list_sum_eVariationOn_Icc_le_iUnion (g : ℝ → F) :
-    ∀ L : List (Box (Fin 1)),
-      L.Pairwise (fun J K ↦ J.upper 0 ≤ K.lower 0) →
-      (L.map fun J ↦ eVariationOn g J.Icc₁).sum ≤ eVariationOn g {x | ∃ J ∈ L, x ∈ J.Icc₁ }
-  | [], _ => by simp
-  | J :: L, hpair => by
-      rw [List.pairwise_cons] at hpair
-      rcases hpair with ⟨hhead, htail⟩
-      have ih := list_sum_eVariationOn_Icc_le_iUnion g L htail
-      let Utail : Set ℝ := {x | ∃ K ∈ L, x ∈ K.Icc₁}
-      have hleft : ∀ x ∈ J.Icc₁, ∀ y ∈ Utail, x ≤ y := by
-        rintro x hx y ⟨K, hK, hyK⟩; exact hx.2.trans ((hhead K hK).trans hyK.1)
-      have hU : J.Icc₁ ∪ Utail = {x | ∃ K ∈ J :: L, x ∈ K.Icc₁} := by ext x; simp [Utail]
-      calc
-        _ = eVariationOn g J.Icc₁ + (L.map fun J ↦ eVariationOn g J.Icc₁).sum := by simp
-        _ ≤ eVariationOn g J.Icc₁ + eVariationOn g Utail := by
-          simpa [add_comm, add_left_comm, add_assoc] using add_le_add_left ih _
-        _ ≤ eVariationOn g (J.Icc₁ ∪ Utail) := eVariationOn.add_le_union g hleft
-        _ = _ := by rw [hU]
-
-/-- Sorting the boxes of a one-dimensional prepartition by lower endpoint puts each box to the
-left of all later boxes. -/
-lemma sorted_boxes_pairwise_upper_le_lower {I : Box (Fin 1)} (π : Prepartition I) :
-    (π.boxes.sort Box.lex_le).Pairwise (fun J K ↦ J.upper 0 ≤ K.lower 0) := by
-  set L := π.boxes.sort Box.lex_le
-  rw [List.pairwise_iff_get]
-  intro i j hij
-  have hne : L.get i ≠ L.get j :=
-    fun h ↦ Nat.ne_of_lt hij <| val_eq_of_eq ((π.boxes.sort_nodup Box.lex_le).get_inj_iff.1 h)
-  exact upper_le_lower_of_disjoint_box_of_lower_le (π.disjoint_coe_of_mem
-    ((Finset.mem_sort Box.lex_le).1 (L.get_mem i))
-    ((Finset.mem_sort Box.lex_le).1 (L.get_mem j)) hne)
-    (Prod.Lex.monotone_fst _ _ ((π.boxes.pairwise_sort Box.lex_le).rel_get_of_lt hij))
-
-omit [NormedSpace ℝ F] in
-/-- The total variation over the boxes of a one-dimensional prepartition is bounded by the
-variation on the ambient interval. -/
-lemma sum_eVariationOn_Icc_le_eVariationOn (g : ℝ → F) (hab : a < b) (π : Prepartition (Ioc a b)) :
-    ∑ J ∈ π.boxes, eVariationOn g J.Icc₁ ≤ eVariationOn g (Set.Icc a b) := by
-  let L := π.boxes.sort Box.lex_le
-  calc
-    _ = (L.map fun J ↦ eVariationOn g J.Icc₁).sum := by
-      rw [← Multiset.sum_coe, ← Multiset.map_coe, Finset.sort_eq]; rfl
-    _ ≤ eVariationOn g {x | ∃ J ∈ L, x ∈ J.Icc₁ } :=
-      list_sum_eVariationOn_Icc_le_iUnion g L (sorted_boxes_pairwise_upper_le_lower π)
-    _ ≤ _ := by
-      apply eVariationOn.mono g
-      rintro x ⟨J, hJL, hxJ⟩
-      exact Icc_subset_of_box_le_Ioc hab (π.le_of_mem ((Finset.mem_sort Box.lex_le).1 hJL)) hxJ
-
-end Sorted
-
-omit [NormedSpace ℝ F] in
-/-- Real-valued form of `sum_eVariationOn_Icc_le_eVariationOn` under finite total variation. -/
-lemma sum_eVariationOn_Icc_toReal_le_eVariationOn (g : ℝ → F) (hab : a < b)
-    (hg : BoundedVariationOn g (Set.Icc a b)) (π : Prepartition (Ioc a b)) :
-    ∑ J ∈ π.boxes, (eVariationOn g J.Icc₁).toReal ≤
-      (eVariationOn g (Set.Icc a b)).toReal := by
-  have hfin : ∀ J ∈ π.boxes, eVariationOn g J.Icc₁ ≠ ⊤ :=
-    fun J hJ ↦ hg.mono (Icc_subset_of_box_le_Ioc hab (π.le_of_mem hJ))
-  rw [← toReal_sum hfin]
-  exact toReal_mono hg (sum_eVariationOn_Icc_le_eVariationOn g hab π)
-
 end BoxIntegral
