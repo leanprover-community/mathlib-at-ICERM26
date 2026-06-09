@@ -46,9 +46,6 @@ lemma upper_le_lower_of_disjoint_box_of_lower_le {J K : Box (Fin 1)}
   simp [Box.disjoint_iff₁] at hdisj
   grind [Box.lower_lt_upper₁]
 
-lemma Icc_subset_of_box_le_Ioc {a b : ℝ} {J : Box (Fin 1)} (hab : a < b) (hJ : J ≤ Ioc a b) :
-    J.Icc₁ ⊆ Set.Icc a b := by simp; grind [Box.le_Ioc_iff]
-
 section Sorted
 
 -- The material below is not currently in use.

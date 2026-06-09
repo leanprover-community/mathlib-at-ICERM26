@@ -10,6 +10,7 @@ was conducted.
 module
 
 public import Mathlib.Analysis.BoxIntegral.Stieltjes.IntegrationByParts
+public import Mathlib.Analysis.BoxIntegral.Stieltjes.Riemann
 public import Mathlib.Analysis.Complex.RealDeriv
 public import Mathlib.Analysis.Fourier.FourierTransform
 public import Mathlib.Analysis.SpecialFunctions.ExpDeriv
@@ -142,7 +143,7 @@ against its derivative, here specialized to the Fourier kernel. -/
 theorem hasStieltjesIntegral_E {ξ : ℝ} (hξ : ξ ≠ 0) (hg : RiemannIntegrable a b g) :
     HasStieltjesIntegral a b (mul ℝ ℂ).flip g (E ξ) (∫ x in a..b, e ξ x * g x) := by
   have h (x : ℝ) := hasDerivAt_E x hξ
-  convert HasStieltjesIntegral.of_contDiffOn ?_ hg using 3 with x
+  convert HasStieltjesIntegral.of_contDiffOn (F := ℂ) (G := ℂ) ?_ hg using 3 with x
   · simp [(h x).deriv, mul_comm]
   refine (contDiff_one_iff_deriv.mpr ⟨fun x ↦ (h x).differentiableAt, ?_⟩).contDiffOn
   simp only [ne_eq, hξ, not_false_eq_true, deriv_E]

@@ -173,8 +173,14 @@ theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) {L : E} : HasRiemannIntegra
   hasStieltjesIntegral_iff_lim_sum hab
 
 /-- A Riemann integrable function on a closed interval is bounded. -/
-theorem RiemannIntegrable.bounded (hab : a < b) (h : RiemannIntegrable a b f) :
-    Bornology.IsBounded (f '' (.Icc a b)) := by
+theorem RiemannIntegrable.bounded (h : RiemannIntegrable a b f) :
+    Bornology.IsBounded (f '' (.uIcc a b)) := by
+  wlog hab : a ≤ b
+  · rw [Set.uIcc_comm a b]
+    exact this h.symm (by order)
+  obtain rfl | hab := hab.eq_or_lt
+  · simp
+  simp only [Set.uIcc_of_lt hab]
   obtain ⟨L, hL⟩ := RiemannIntegrable_def.mp h
   rw [hasRiemannIntegral_iff_lim_sum hab] at hL; obtain ⟨δ, hδ, h⟩ := hL 1 (by norm_num)
   let N := ⌈(b - a) / δ⌉₊
@@ -1298,7 +1304,7 @@ theorem HasStieltjesIntegral.of_contDiffOn_eq_riemann (hg : ContDiffOn ℝ 1 g (
     exact this ((Set.uIcc_comm a b) ▸ hg) hf.symm (by order)
   obtain rfl | hab := hab.eq_or_lt
   · simp
-  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le (hf.bounded hab)
+  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le hf.bounded
   let M' := max M 0
   replace hM : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ M' := by aesop
   simp only [Set.uIcc_of_lt hab] at hg ⊢
@@ -1369,36 +1375,4 @@ theorem stieltjesIntegral_eq_intervalIntegral_of_contDiffOn
     ∫⟨B⟩ x in a..b, f x ∂g = riemannIntegral a b (fun x ↦ B (f x) (derivWithin g (.uIcc a b) x)) :=
   (HasStieltjesIntegral.of_contDiffOn_eq_riemann hg hf).stieltjesIntegral_eq
 
-/-- The Riemann integral agrees with the interval integral. TO DO: weaken this to scalar
-and finite dimensional versions to make it provable. -/
-theorem riemannIntegral_eq_intervalIntegral (hf : RiemannIntegrable a b f) :
-    riemannIntegral a b f = ∫ x in a..b, f x := by
-  sorry
-
-/-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
-Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. Interval integral version.
-TODO: weaken to finite dimensional version -/
-theorem HasStieltjesIntegral.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
-    (hf : RiemannIntegrable a b f) :
-    HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by
-  wlog hab : a ≤ b
-  · rw [symm_iff, ←integral_symm]
-    exact this ((Set.uIcc_comm a b) ▸ hg) hf.symm (by order)
-  obtain rfl | hab := hab.eq_or_lt
-  · simp
-  set g' := derivWithin g (.uIcc a b)
-  have : ∫ x in a..b, B (f x) (deriv g x) = ∫ x in a..b, B (f x) (g' x) := by
-    apply intervalIntegral.integral_congr_uIoo; intro x hx
-    simp only [g'] at hx ⊢
-    rw [derivWithin_of_mem_nhds]
-    simp only [← mem_interior_iff_mem_nhds]
-    simpa [Set.uIcc_of_lt, Set.uIoo_of_lt, hab] using hx
-  rw [this]
-  convert of_contDiffOn_eq_riemann hg hf
-  simp only [Set.uIcc_of_lt hab] at hg
-  have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
-  have hriem : RiemannIntegrable a b (fun x ↦ B (f x) (g' x)) := by
-    apply hf.mul_continuous
-    simpa [g', Set.uIcc_of_lt hab] using hg'
-  rw [riemannIntegral_eq_intervalIntegral hriem]
 end BoxIntegral

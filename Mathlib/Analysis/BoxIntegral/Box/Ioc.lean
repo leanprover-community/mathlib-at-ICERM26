@@ -151,6 +151,9 @@ lemma Box.mem_of_le (hab : a < b) {J : Box (Fin 1)} (hJ : J ≤ Ioc a b) :
   have := J.lower_lt_upper₁
   grind [le_Ioc_iff]
 
+lemma Icc_subset_of_box_le_Ioc {a b : ℝ} {J : Box (Fin 1)} (hab : a < b) (hJ : J ≤ Ioc a b) :
+    J.Icc₁ ⊆ Set.Icc a b := by simp; grind [Box.le_Ioc_iff]
+
 /-! ## Mapping an interval -/
 
 variable (φ : ℝ → ℝ)

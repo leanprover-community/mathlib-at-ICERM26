@@ -11,6 +11,7 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Stieltjes.IntegrationByParts
 public import Mathlib.Analysis.BoxIntegral.Stieltjes.ChangeVariables
+public import Mathlib.Analysis.BoxIntegral.Stieltjes.Riemann
 
 /-! # Finite sums as Riemann–Stieltjes integrals
 
