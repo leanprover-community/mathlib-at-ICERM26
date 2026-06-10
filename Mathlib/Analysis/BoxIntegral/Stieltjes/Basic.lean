@@ -340,6 +340,10 @@ theorem stieltjesIntegral_map (hB : ∀ e y, Ψ (B e y) = B' (φ e) (ψ y))
     ∫⟨B'⟩ x in a..b, φ (f x) ∂(ψ ∘ g) = Ψ (∫⟨B⟩ x in a..b, f x ∂g) :=
   (h.hasStieltjesIntegral.map hB).stieltjesIntegral_eq
 
+theorem riemannIntegral_map (h : RiemannIntegrable a b f) :
+    riemannIntegral a b (φ ∘ f) = φ (riemannIntegral a b f) :=
+  (h.hasRiemannIntegral.map).riemannIntegral_eq
+
 end Naturality
 
 section Linearity

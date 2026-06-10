@@ -92,9 +92,16 @@ theorem riemannIntegral_eq_intervalIntegral_euclidean {ι : Type*} [Fintype ι] 
 theorem riemannIntegral_eq_intervalIntegral [hfin : Module.Finite ℝ E]
     (hf : RiemannIntegrable a b f) : IntervalIntegrable f volume a b ∧
     riemannIntegral a b f = ∫ x in a..b, f x := by
-  let ι := Module.Basis.ofVectorSpaceIndex ℝ E
-  have basis : Module.Basis ι ℝ E := Module.Basis.ofVectorSpace ℝ E
-  sorry
+  let e := (Module.Basis.ofVectorSpace ℝ E).repr.trans (Finsupp.linearEquivFunOnFinite _ _ _)
+  let T := e.toContinuousLinearMap
+  let S := e.symm.toContinuousLinearMap
+  have hriem := riemannIntegral_eq_intervalIntegral_euclidean (hf.map (φ := T))
+  constructor
+  · convert S.intervalIntegrable_comp hriem.1
+    aesop
+  have hriem' := congrArg S (riemannIntegral_map (φ := T) hf)
+  rw [hriem.2, ←S.intervalIntegral_comp_comm hriem.1] at hriem'
+  simpa [S, T] using hriem'.symm
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. Interval integral version. -/
