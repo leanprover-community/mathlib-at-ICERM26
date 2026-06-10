@@ -41,7 +41,17 @@ open intervalIntegral MeasureTheory
 
 variable {a b : ℝ} {f : ℝ → ℝ} {L : ℝ}
 
-theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegrable a b f) :
+theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannIntegrable a b f)
+    {ε : ℝ} (hε : 0 < ε) : ∃ δ > 0, ∀ π : Prepartition (Ioc a b), π.IsPartition → π.mesh_size ≤ δ →
+     ∑ J ∈ π.boxes, ((J.upper₁ - J.lower₁) * (sSup (f '' J.Icc₁) - sInf (f '' J.Icc₁))) < ε := by
+  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le hf.bounded
+  obtain ⟨ δ, hδpos, hδ ⟩ := (hasRiemannIntegral_iff_lim_sum hab).mp hf.hasRiemannIntegral (ε/3)
+    (by positivity)
+  refine ⟨ δ, hδpos, fun π hπ hmesh ↦ ?_ ⟩
+  sorry
+
+
+private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegrable a b f) :
     IntervalIntegrable f volume a b := by
   rw [intervalIntegrable_iff]
   obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le hf.bounded
@@ -50,20 +60,18 @@ theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegrable a b 
     intro x hx; apply hM; simp only [Set.mem_image]; exact ⟨ x, Set.uIoc_subset_uIcc hx, rfl ⟩
   sorry
 
-theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIntegral a b f L) :
+private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIntegral a b f L) :
     ∫ x in a..b, f x = L := by
   sorry
-
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [CompleteSpace F] [NormedAddCommGroup G]
   [NormedSpace ℝ G]
-variable {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L : G}
-
+variable {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L : G} {M : E}
 
 /-- The Euclidean space-valued Riemann integral agrees with the interval integral. -/
-theorem riemannIntegral_eq_intervalIntegral_euclidean {ι : Type*} [Fintype ι] {f : ℝ → ι → ℝ}
-    (hf : RiemannIntegrable a b f) : IntervalIntegrable f volume a b ∧
+private theorem riemannIntegral_eq_intervalIntegral_euclidean {ι : Type*} [Fintype ι]
+    {f : ℝ → ι → ℝ} (hf : RiemannIntegrable a b f) : IntervalIntegrable f volume a b ∧
     riemannIntegral a b f = ∫ x in a..b, f x := by
   set L := riemannIntegral a b f
   have hriem (i : ι) : HasRiemannIntegral a b (fun x ↦ f x i) (L i) := by
@@ -102,6 +110,10 @@ theorem riemannIntegral_eq_intervalIntegral [hfin : Module.Finite ℝ E]
   have hriem' := congrArg S (riemannIntegral_map (φ := T) hf)
   rw [hriem.2, ←S.intervalIntegral_comp_comm hriem.1] at hriem'
   simpa [S, T] using hriem'.symm
+
+theorem HasRiemannIntegral.intervalIntegral_eq [hfin : Module.Finite ℝ E]
+    (hf : HasRiemannIntegral a b f M) : ∫ x in a..b, f x = M := by
+  rw [←(riemannIntegral_eq_intervalIntegral hf.riemannIntegrable).2, hf.riemannIntegral_eq]
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. Interval integral version. -/
