@@ -37,23 +37,23 @@ theorem Finset.sum_indicator_singleton_eq_self {ι : Type*} {M : Type*} [Fintype
 
 namespace BoxIntegral
 
-open intervalIntegral MeasureTheory
+open intervalIntegral MeasureTheory Finset
 
 variable {a b : ℝ} {f : ℝ → ℝ} {L : ℝ}
 
 theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannIntegrable a b f)
     {ε : ℝ} (hε : 0 < ε) : ∃ δ > 0, ∀ π : Prepartition (Ioc a b), π.IsPartition → π.mesh_size ≤ δ →
      ∑ J ∈ π.boxes, ((J.upper₁ - J.lower₁) * (sSup (f '' J.Icc₁) - sInf (f '' J.Icc₁))) < ε := by
-  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le hf.bounded
   obtain ⟨ δ, hδpos, hδ ⟩ := (hasRiemannIntegral_iff_lim_sum hab).mp hf.hasRiemannIntegral (ε/5)
     (by positivity)
   refine ⟨ δ, hδpos, fun π hπ hmesh ↦ ?_ ⟩
+  let ε' := ε / (5 * (b - a))
+  have hε' : 0 < ε' := by positivity
   have hup (J : Box (Fin 1)) : ∃ x ∈ Set.Icc a b, J ∈ π.boxes →
-    x ∈ J.Icc₁ ∧ f x > sSup (f '' J.Icc₁) - (ε/(5*(b-a))) := by
+    x ∈ J.Icc₁ ∧ f x > sSup (f '' J.Icc₁) - ε' := by
     by_cases hJ : J ∈ π.boxes
-    · have h1 : sSup (f '' J.Icc₁) - (ε/(5*(b-a))) < sSup (f '' J.Icc₁) :=
-        sub_lt_self _ (by positivity)
-      have := exists_lt_of_lt_csSup (by simp [J.lower_le_upper₁]) h1
+    · have := exists_lt_of_lt_csSup (by simp [J.lower_le_upper₁])
+        (sub_lt_self (sSup (f '' J.Icc₁)) hε')
       simp only [Box.Icc₁_def, Set.mem_image, Set.mem_Icc, exists_exists_and_eq_and] at this
       obtain ⟨ x, hx ⟩ := this
       replace hJ := π.le_of_mem hJ
@@ -62,11 +62,10 @@ theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannI
       refine ⟨ x, by grind, fun _ ↦ hx ⟩
     use a; simp [hab.le, hJ]
   have hdown (J : Box (Fin 1)) : ∃ x ∈ Set.Icc a b, J ∈ π.boxes →
-    x ∈ J.Icc₁ ∧ f x < sInf (f '' J.Icc₁) + (ε/(5*(b-a))) := by
+    x ∈ J.Icc₁ ∧ f x < sInf (f '' J.Icc₁) + ε' := by
     by_cases hJ : J ∈ π.boxes
-    · have h1 : sInf (f '' J.Icc₁) < sInf (f '' J.Icc₁) + (ε/(5*(b-a))) :=
-        lt_add_of_pos_right _ (by positivity)
-      have := exists_lt_of_csInf_lt (by simp [J.lower_le_upper₁]) h1
+    · have := exists_lt_of_csInf_lt (by simp [J.lower_le_upper₁])
+        (lt_add_of_pos_right (sInf (f '' J.Icc₁)) hε')
       simp only [Box.Icc₁_def, Set.mem_image, Set.mem_Icc, exists_exists_and_eq_and] at this
       obtain ⟨ x, hx ⟩ := this
       replace hJ := π.le_of_mem hJ
@@ -95,8 +94,8 @@ theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannI
     simpa [hab] using ((hxdown J).2 hJ).1
   calc
     _ ≤ ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * (f ((π' true).tag J 0) - f ((π' false).tag J 0)
-      + 2 * ε / (5 * (b-a))) := by
-      refine Finset.sum_le_sum fun J hJ ↦ ?_
+      + 2 * ε') := by
+      refine sum_le_sum fun J hJ ↦ ?_
       have := J.lower_le_upper₁
       simp only [Box.Icc₁_def, ↓reduceIte, Bool.false_eq_true, ge_iff_le, π']; gcongr
       grw [((hxup J).2 hJ).2, ((hxdown J).2 hJ).2, Box.Icc₁_def ]
@@ -104,10 +103,10 @@ theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannI
     _ = ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * f ((π' true).tag J 0) -
         ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * f ((π' false).tag J 0)
         + 2 * ε / 5 := by
-      simp only [Fin.isValue, mul_sub, mul_add, Finset.sum_add_distrib, Finset.sum_sub_distrib,
-        ← Finset.sum_mul, add_right_inj]
+      simp only [Fin.isValue, mul_sub, mul_add, sum_add_distrib, sum_sub_distrib,
+        ← sum_mul, add_right_inj]
       have := hπ.sum_of_sub id
-      simp only [id_eq, Finset.sum_sub_distrib, hab, Ioc.upper₁, Ioc.lower₁] at this
+      simp only [id_eq, sum_sub_distrib, hab, Ioc.upper₁, Ioc.lower₁] at this
       grind
     _ ≤ dist (∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) • f ((π' true).tag J 0))
         (riemannIntegral a b f)
@@ -120,7 +119,7 @@ theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannI
         simp only [π']; split_ifs
         · intro J hJ; simpa [hab] using ((hxup J).2 hJ).1
         intro J hJ; simpa [hab] using ((hxdown J).2 hJ).1
-      grw [hδ (π' true) (hhen true) hπ hmesh, hδ (π' false) (hhen false) hπ hmesh]
+      grw [hδ (π' _) (hhen _) hπ hmesh, hδ (π' _) (hhen _) hπ hmesh]
       linarith
 
 private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegrable a b f) :
@@ -161,7 +160,7 @@ private theorem riemannIntegral_eq_intervalIntegral_euclidean {ι : Type*} [Fint
     ext; simp [Set.indicator, (hriem i).intervalIntegral_eq_scalar]; aesop
   constructor
   · have : IntervalIntegrable (∑ i, (fun x ↦ Set.indicator {i} (f x))) volume a b :=
-      IntervalIntegrable.sum _ (by aesop)
+      .sum _ (by aesop)
     convert this; ext1 j; simp
   calc
     _ = ∑ i, Set.indicator {i} L := by simp
@@ -177,8 +176,7 @@ theorem riemannIntegral_eq_intervalIntegral [hfin : Module.Finite ℝ E]
   let S := e.symm.toContinuousLinearMap
   have hriem := riemannIntegral_eq_intervalIntegral_euclidean (hf.map (φ := T))
   constructor
-  · convert S.intervalIntegrable_comp hriem.1
-    aesop
+  · convert S.intervalIntegrable_comp hriem.1; aesop
   have hriem' := congrArg S (riemannIntegral_map (φ := T) hf)
   rw [hriem.2, ←S.intervalIntegral_comp_comm hriem.1] at hriem'
   simpa [S, T] using hriem'.symm
@@ -202,15 +200,13 @@ theorem HasStieltjesIntegral.of_contDiffOn [Module.Finite ℝ G] (hg : ContDiffO
     apply intervalIntegral.integral_congr_uIoo; intro x hx
     simp only [g'] at hx ⊢
     rw [derivWithin_of_mem_nhds]
-    simp only [← mem_interior_iff_mem_nhds]
-    simpa [Set.uIcc_of_lt, Set.uIoo_of_lt, hab] using hx
+    simpa [← mem_interior_iff_mem_nhds, Set.uIcc_of_lt, Set.uIoo_of_lt, hab] using hx
   rw [this]
   convert of_contDiffOn_eq_riemann hg hf
   simp only [Set.uIcc_of_lt hab] at hg
-  have hg' := hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _)
-  have hriem : RiemannIntegrable a b (fun x ↦ B (f x) (g' x)) := by
-    apply hf.mul_continuous
-    simpa [g', Set.uIcc_of_lt hab] using hg'
+  have hriem : RiemannIntegrable a b (fun x ↦ B (f x) (g' x)) :=
+    hf.mul_continuous (by simpa [g', Set.uIcc_of_lt hab] using
+      hg.continuousOn_derivWithin (uniqueDiffOn_Icc hab) (le_refl _))
   rw [(riemannIntegral_eq_intervalIntegral hriem).2]
 
 end BoxIntegral
