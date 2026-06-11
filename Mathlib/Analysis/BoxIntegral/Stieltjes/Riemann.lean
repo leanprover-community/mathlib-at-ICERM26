@@ -48,12 +48,32 @@ theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannI
   obtain ⟨ δ, hδpos, hδ ⟩ := (hasRiemannIntegral_iff_lim_sum hab).mp hf.hasRiemannIntegral (ε/5)
     (by positivity)
   refine ⟨ δ, hδpos, fun π hπ hmesh ↦ ?_ ⟩
-  have hup : ∀ J, ∃ x ∈ Set.Icc a b, J ∈ π.boxes →
-    x ∈ J.Icc₁ ∧ f x ≥ sSup (f '' J.Icc₁) - (ε/(5*(b-a))) := by
-    sorry
-  have hdown : ∀ J, ∃ x ∈ Set.Icc a b, J ∈ π.boxes →
-    x ∈ J.Icc₁ ∧ f x ≤ sInf (f '' J.Icc₁) + (ε/(5*(b-a))) := by
-    sorry
+  have hup (J : Box (Fin 1)) : ∃ x ∈ Set.Icc a b, J ∈ π.boxes →
+    x ∈ J.Icc₁ ∧ f x > sSup (f '' J.Icc₁) - (ε/(5*(b-a))) := by
+    by_cases hJ : J ∈ π.boxes
+    · have h1 : sSup (f '' J.Icc₁) - (ε/(5*(b-a))) < sSup (f '' J.Icc₁) :=
+        sub_lt_self _ (by positivity)
+      have := exists_lt_of_lt_csSup (by simp [J.lower_le_upper₁]) h1
+      simp only [Box.Icc₁_def, Set.mem_image, Set.mem_Icc, exists_exists_and_eq_and] at this
+      obtain ⟨ x, hx ⟩ := this
+      replace hJ := π.le_of_mem hJ
+      simp only [Box.le_iff₁, hab, Ioc.lower₁, Ioc.upper₁,
+        Set.mem_Icc, Prepartition.mem_boxes, Box.Icc₁_def, gt_iff_lt] at hJ ⊢
+      refine ⟨ x, by grind, fun _ ↦ hx ⟩
+    use a; simp [hab.le, hJ]
+  have hdown (J : Box (Fin 1)) : ∃ x ∈ Set.Icc a b, J ∈ π.boxes →
+    x ∈ J.Icc₁ ∧ f x < sInf (f '' J.Icc₁) + (ε/(5*(b-a))) := by
+    by_cases hJ : J ∈ π.boxes
+    · have h1 : sInf (f '' J.Icc₁) < sInf (f '' J.Icc₁) + (ε/(5*(b-a))) :=
+        lt_add_of_pos_right _ (by positivity)
+      have := exists_lt_of_csInf_lt (by simp [J.lower_le_upper₁]) h1
+      simp only [Box.Icc₁_def, Set.mem_image, Set.mem_Icc, exists_exists_and_eq_and] at this
+      obtain ⟨ x, hx ⟩ := this
+      replace hJ := π.le_of_mem hJ
+      simp only [Box.le_iff₁, hab, Ioc.lower₁, Ioc.upper₁,
+        Set.mem_Icc, Prepartition.mem_boxes, Box.Icc₁_def] at hJ ⊢
+      refine ⟨ x, by grind, fun _ ↦ hx ⟩
+    use a; simp [hab.le, hJ]
   choose xup hxup using hup
   choose xdown hxdown using hdown
   let π' : Bool → TaggedPrepartition (Ioc a b) := fun p ↦ {
@@ -102,7 +122,6 @@ theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannI
         intro J hJ; simpa [hab] using ((hxdown J).2 hJ).1
       grw [hδ (π' true) (hhen true) hπ hmesh, hδ (π' false) (hhen false) hπ hmesh]
       linarith
-
 
 private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegrable a b f) :
     IntervalIntegrable f volume a b := by
