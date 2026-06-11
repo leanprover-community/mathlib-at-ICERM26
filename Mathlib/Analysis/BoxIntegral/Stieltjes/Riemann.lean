@@ -45,10 +45,63 @@ theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannI
     {ε : ℝ} (hε : 0 < ε) : ∃ δ > 0, ∀ π : Prepartition (Ioc a b), π.IsPartition → π.mesh_size ≤ δ →
      ∑ J ∈ π.boxes, ((J.upper₁ - J.lower₁) * (sSup (f '' J.Icc₁) - sInf (f '' J.Icc₁))) < ε := by
   obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le hf.bounded
-  obtain ⟨ δ, hδpos, hδ ⟩ := (hasRiemannIntegral_iff_lim_sum hab).mp hf.hasRiemannIntegral (ε/3)
+  obtain ⟨ δ, hδpos, hδ ⟩ := (hasRiemannIntegral_iff_lim_sum hab).mp hf.hasRiemannIntegral (ε/5)
     (by positivity)
   refine ⟨ δ, hδpos, fun π hπ hmesh ↦ ?_ ⟩
-  sorry
+  have hup : ∀ J, ∃ x ∈ Set.Icc a b, J ∈ π.boxes →
+    x ∈ J.Icc₁ ∧ f x ≥ sSup (f '' J.Icc₁) - (ε/(5*(b-a))) := by
+    sorry
+  have hdown : ∀ J, ∃ x ∈ Set.Icc a b, J ∈ π.boxes →
+    x ∈ J.Icc₁ ∧ f x ≤ sInf (f '' J.Icc₁) + (ε/(5*(b-a))) := by
+    sorry
+  choose xup hxup using hup
+  choose xdown hxdown using hdown
+  let π' : Bool → TaggedPrepartition (Ioc a b) := fun p ↦ {
+    boxes := π.boxes
+    le_of_mem' := π.le_of_mem'
+    pairwiseDisjoint := π.pairwiseDisjoint
+    tag J := if p then (fun _ ↦ xup J) else (fun _ ↦ xdown J)
+    tag_mem_Icc J := by
+      split_ifs
+      · simpa [hab] using (hxup J).1
+      · simpa [hab] using (hxdown J).1
+    }
+  have hπ' (p : Bool) : dist (∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) • f ((π' p).tag J 0))
+    (riemannIntegral a b f) < ε / 5 := by
+    convert hδ (π' p) ?_ hπ hmesh
+    intro J hJ; simp only [π']
+    split_ifs
+    · simpa [hab] using ((hxup J).2 hJ).1
+    simpa [hab] using ((hxdown J).2 hJ).1
+  calc
+    _ ≤ ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * (f ((π' true).tag J 0) - f ((π' false).tag J 0)
+      + 2 * ε / (5 * (b-a))) := by
+      refine Finset.sum_le_sum fun J hJ ↦ ?_
+      have := J.lower_le_upper₁
+      simp only [Box.Icc₁_def, ↓reduceIte, Bool.false_eq_true, ge_iff_le, π']; gcongr
+      grw [((hxup J).2 hJ).2, ((hxdown J).2 hJ).2, Box.Icc₁_def ]
+      apply le_of_eq; ring
+    _ = ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * f ((π' true).tag J 0) -
+        ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * f ((π' false).tag J 0)
+        + 2 * ε / 5 := by
+      simp only [Fin.isValue, mul_sub, mul_add, Finset.sum_add_distrib, Finset.sum_sub_distrib,
+        ← Finset.sum_mul, add_right_inj]
+      have := hπ.sum_of_sub id
+      simp only [id_eq, Finset.sum_sub_distrib, hab, Ioc.upper₁, Ioc.lower₁] at this
+      grind
+    _ ≤ dist (∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) • f ((π' true).tag J 0))
+        (riemannIntegral a b f)
+        + dist (∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) • f ((π' false).tag J 0))
+        (riemannIntegral a b f)
+        + 2 * ε / 5 := by
+      grw [←dist_triangle_right, Real.dist_eq, ←le_abs_self]; simp
+    _ < _ := by
+      have hhen (p : Bool) : (π' p).IsHenstock := by
+        simp only [π']; split_ifs
+        · intro J hJ; simpa [hab] using ((hxup J).2 hJ).1
+        intro J hJ; simpa [hab] using ((hxdown J).2 hJ).1
+      grw [hδ (π' true) (hhen true) hπ hmesh, hδ (π' false) (hhen false) hπ hmesh]
+      linarith
 
 
 private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegrable a b f) :
