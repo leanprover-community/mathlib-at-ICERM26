@@ -55,6 +55,17 @@ theorem aemeasurable_of_le_ge_tendstoMeasure {α : Type*} [MeasurableSpace α]
     simp only [sub_sub_cancel, sub_zero] at this
     apply iSup_eq_of_forall_le_of_tendsto (by aesop) this
 
+open Filter in
+theorem BoxIntegral.IntegrationParams.eventually_isHenstock_of_Riemann {ι : Type*} [Fintype ι]
+    (B : Box ι) : ∀ᶠ π in IntegrationParams.toFilteriUnion B ⊤ (l := IntegrationParams.Riemann),
+    π.IsHenstock := by
+  simp only [toFilteriUnion, toFilterDistortioniUnion, toFilterDistortion, Prepartition.iUnion_top,
+    eventually_iSup, eventually_inf_principal, Set.mem_setOf_eq]
+  refine (fun _ ↦ mem_iInf_of_mem (fun _ ↦ ⟨ 1, by norm_num ⟩) ?_)
+  apply mem_iInf_of_mem (by simp [RCond]) _
+  simp only [mem_principal, Set.setOf_subset_setOf]
+  exact fun _ hπ _ ↦ hπ.isHenstock (by aesop)
+
 namespace BoxIntegral
 
 open intervalIntegral MeasureTheory Finset TaggedPrepartition
@@ -240,15 +251,25 @@ private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIn
     exact Filter.Eventually.of_forall (by finiteness)
   rw [←ENNReal.tendsto_toReal_zero_iff h] at this
   apply squeeze_zero' (by simp) _ this
-  apply Filter.eventually_of_mem (IntegrationParams.eventually_isPartition _ _)
-  intro π hπ
+  filter_upwards [IntegrationParams.eventually_isPartition _ _,
+    IntegrationParams.eventually_isHenstock_of_Riemann _] with π hπ hhen
   rw [←ENNReal.ofReal_le_iff_le_toReal (h π)]
   simp only [← Pi.sub_apply, Fin.isValue, smul_eq_mul, Function.comp_apply,
     upper_darboux, lower_darboux, ← sum_sub_distrib, ← Set.indicator_sub', sum_apply]
+  have h3 : ∀ J ∈ π.boxes, a ≤ J.lower₁ ∧ J.upper₁ ≤ b := by
+    intro J hJ; simpa [Box.le_iff₁, Box.toSet₁, hab] using π.le_of_mem hJ
+  have hmem : ∀ J ∈ π.boxes, π.tag J 0 ∈ J.Icc₁ := by
+    intro J hJ; simpa using hhen J hJ
   have h0_1 : ∀ J ∈ π.boxes, sInf (f '' J.Icc₁) ≤ f (π.tag J 0) := by
-    sorry
+    intro J hJ
+    simp only [Box.Icc₁, Fin.isValue]
+    apply csInf_le (bddBelow_def.mp ⟨ -M, fun y hy ↦ by grind ⟩) (Set.mem_image_of_mem _ _)
+    simpa [Box.Icc₁] using hmem J hJ
   have h0_2 : ∀ J ∈ π.boxes, f (π.tag J 0) ≤ sSup (f '' J.Icc₁) := by
-    sorry
+    intro J hJ
+    simp only [Box.Icc₁, Fin.isValue]
+    apply le_csSup (bddAbove_def.mp ⟨ M, fun y hy ↦ by grind ⟩) (Set.mem_image_of_mem _ _)
+    simpa [Box.Icc₁] using hmem J hJ
   have h0 : ∀ J ∈ π.boxes, 0 ≤ sSup (f '' J.Icc₁) - sInf (f '' J.Icc₁) := by
     intro J hJ; linarith [h0_1 J hJ, h0_2 J hJ]
   have h1 (J : Box (Fin 1)): 0 ≤ J.upper₁ - J.lower₁ := by linarith [J.lower_le_upper₁]
@@ -260,7 +281,9 @@ private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIn
     simp
   have h4 : ∀ J ∈ π.boxes, volume (.Ioc J.lower₁ J.upper₁ ∩ .Ioc a b) =
     ENNReal.ofReal (J.upper₁ - J.lower₁) := by
-    sorry
+    intro J hJ; calc
+      _ = volume (.Ioc J.lower₁ J.upper₁) := by congr 1; grind
+      _ = _ := by simp
   simp_rw [Real.enorm_of_nonneg (sum_nonneg (h2 _)), ENNReal.ofReal_sum_of_nonneg (h2 _)]
   rw [lintegral_finsetSum]
   · have (x : ℝ) (E : Set ℝ) (g : ℝ → ℝ): ENNReal.ofReal (E.indicator g x) =
@@ -293,9 +316,7 @@ private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIn
             rw [intervalIntegral.integral_eq_integral_of_support_subset]
             · simp [J.lower_le_upper₁]
             apply Set.support_indicator_subset.trans
-            have := π.le_of_mem hJ
-            simp_all [Box.le_iff₁, Box.toSet₁]
-            grind
+            grind [Box.toSet₁]
           apply π.integrable_of_piecewise
       have h8 : ∫ x in a..b, f x ≥ ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * sInf (f '' J.Icc₁)
         := calc
@@ -318,7 +339,6 @@ private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIn
     apply le_of_eq (sum_congr (by rfl) _); intro J hJ
     rw [mul_comm, h4 J hJ, ENNReal.ofReal_mul' (h1 J)]
   intros; measurability
-
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [CompleteSpace F] [NormedAddCommGroup G]
