@@ -136,7 +136,7 @@ namespace BoxIntegral
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
-variable {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L : G}
+variable {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L : G} {M : E}
 
 /-- In one dimension, the mesh size simplifies to the longest length of an interval
 in the partition. -/
@@ -166,10 +166,15 @@ theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) : HasStieltjesIntegral a 
   simp [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral',
     HasIntegral_Riemann_iff, integralSum]
 
-theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) {L : E} : HasRiemannIntegral a b f L ↔
+theorem HasRiemannIntegral.lim (hab : a < b) (h : HasRiemannIntegral a b f M) :
+    (IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤).Tendsto (fun π ↦ ∑ x ∈ π.boxes,
+    ((x.upper₁ - x.lower₁) • (f (π.tag x 0)))) (nhds M) := by
+  convert HasStieltjesIntegral.lim hab h
+
+theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) : HasRiemannIntegral a b f M ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
-     dist (∑ x ∈ π.boxes, ((x.upper₁ - x.lower₁) • (f (π.tag x 0)))) L < ε :=
+     dist (∑ x ∈ π.boxes, ((x.upper₁ - x.lower₁) • (f (π.tag x 0)))) M < ε :=
   hasStieltjesIntegral_iff_lim_sum hab
 
 /-- A Riemann integrable function on a closed interval is bounded. -/

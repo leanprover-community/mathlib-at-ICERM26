@@ -150,66 +150,39 @@ private noncomputable def TaggedPrepartition.upper_darboux (f : ℝ → ℝ)
     (π : TaggedPrepartition (Ioc a b)) : ℝ → ℝ :=
   ∑ J ∈ π.boxes, J.toSet₁.indicator (fun _ ↦ sSup (f '' J.Icc₁))
 
-private theorem TaggedPrepartition.lower_darboux_le (π : TaggedPrepartition (Ioc a b)) {M : ℝ}
+private theorem TaggedPrepartition.darboux_bounds (π : TaggedPrepartition (Ioc a b)) {M : ℝ}
     {f : ℝ → ℝ} (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) (hπ : π.IsPartition) :
-    ∀ x ∈ Set.Ioc a b, π.lower_darboux f x ≤ f x := by
+    ∀ x ∈ Set.Ioc a b, π.lower_darboux f x ≤ f x ∧ f x ≤ π.upper_darboux f x:= by
   intro x hx
   obtain ⟨ J, hJ, hmem ⟩ := hπ (fun _ ↦ x) (by simpa [hab] using hx)
-  unfold lower_darboux
-  rw [Finset.sum_apply, Finset.sum_eq_single J]
-  · simp_all only [Set.mem_Icc, and_imp, Set.mem_Ioc, mem_toPrepartition, Box.mem₁, Box.toSet₁_def,
-    Set.indicator, and_self, ↓reduceIte, Box.Icc₁_def]
-    apply csInf_le
-    · refine bddBelow_def.mp ⟨ -M, fun y hy ↦ ?_ ⟩
-      simp only [Set.mem_image, Set.mem_Icc] at hy
-      obtain ⟨ z, hz, rfl ⟩ := hy
-      replace hJ := π.le_of_mem hJ
-      simp [Box.le_iff₁, hab] at hJ
-      grind
-    grind
-  · intro I hI; simp only [ne_eq, Set.indicator_apply_eq_zero]
-    intro hIJ hxI
-    have := Disjoint.notMem_of_mem_right (π.pairwiseDisjoint hI hJ hIJ) hmem
-    simp at this hxI; grind
-  intro h; exfalso; exact h hJ
-
-private theorem TaggedPrepartition.upper_darboux_ge (π : TaggedPrepartition (Ioc a b)) {M : ℝ}
-    (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) (hπ : π.IsPartition) :
-    ∀ x ∈ Set.Ioc a b, π.upper_darboux f x ≥ f x := by
-  intro x hx
-  obtain ⟨ J, hJ, hmem ⟩ := hπ (fun _ ↦ x) (by simpa [hab] using hx)
-  unfold upper_darboux
-  rw [Finset.sum_apply, Finset.sum_eq_single J]
-  · simp_all only [Set.mem_Icc, and_imp, Set.mem_Ioc, mem_toPrepartition, Box.mem₁, Box.toSet₁_def,
-    Set.indicator, and_self, ↓reduceIte, Box.Icc₁_def]
-    apply le_csSup
-    · refine bddAbove_def.mp ⟨ M, fun y hy ↦ ?_ ⟩
-      simp only [Set.mem_image, Set.mem_Icc] at hy
-      obtain ⟨ z, hz, rfl ⟩ := hy
-      replace hJ := π.le_of_mem hJ
-      simp [Box.le_iff₁, hab] at hJ
-      grind
-    grind
-  · intro I hI; simp only [ne_eq, Set.indicator_apply_eq_zero]
-    intro hIJ hxI
-    have := Disjoint.notMem_of_mem_right (π.pairwiseDisjoint hI hJ hIJ) hmem
-    simp at this hxI; grind
-  intro h; exfalso; exact h hJ
+  have h (g : Box (Fin 1) → ℝ → ℝ) :
+    (∑ I ∈ π.boxes, I.toSet₁.indicator (g I)) x = g J x := by
+    rw [sum_apply, sum_eq_single J]
+    · simp_all
+    · intro I hI; simp only [ne_eq, Set.indicator_apply_eq_zero]
+      intro hIJ hxI
+      have := Disjoint.notMem_of_mem_right (π.pairwiseDisjoint hI hJ hIJ) hmem
+      simp at this hxI; grind
+    intros; simp_all
+  simp_rw [lower_darboux, upper_darboux, h, Box.Icc₁]
+  simp at hmem
+  replace hJ := π.le_of_mem hJ
+  simp [Box.le_iff₁, hab] at hJ
+  exact ⟨ csInf_le (bddBelow_def.mp ⟨ -M, fun y hy ↦ by grind ⟩) (by grind),
+    le_csSup (bddAbove_def.mp ⟨ M, fun y hy ↦ by grind ⟩) (by grind) ⟩
 
 private theorem TaggedPrepartition.lower_darboux_integrable (π : TaggedPrepartition (Ioc a b))
     (f : ℝ → ℝ) : IntervalIntegrable (π.lower_darboux f) volume a b := by
   unfold TaggedPrepartition.lower_darboux
   apply IntervalIntegrable.sum
-  intro J hJ
-  refine ⟨ .indicator ?_ (by measurability), .indicator ?_ (by measurability) ⟩
+  refine fun _ _ ↦ ⟨ .indicator ?_ (by measurability), .indicator ?_ (by measurability) ⟩
   <;> exact MeasureTheory.integrableOn_const (by simp) (by finiteness)
 
 private theorem TaggedPrepartition.upper_darboux_integrable (π : TaggedPrepartition (Ioc a b))
     (f : ℝ → ℝ) : IntervalIntegrable (π.upper_darboux f) volume a b := by
   unfold TaggedPrepartition.upper_darboux
   apply IntervalIntegrable.sum
-  intro J hJ
-  refine ⟨ .indicator ?_ (by measurability), .indicator ?_ (by measurability) ⟩
+  refine fun _ _ ↦ ⟨ .indicator ?_ (by measurability), .indicator ?_ (by measurability) ⟩
   <;> exact MeasureTheory.integrableOn_const (by simp) (by finiteness)
 
 private theorem RiemannIntegrable.darboux_integrable (hab : a < b) (hf : RiemannIntegrable a b f) :
@@ -242,7 +215,7 @@ private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegra
     intro π hπ
     apply MeasureTheory.ae_restrict_of_forall_mem (by measurability)
     rw [Set.uIoc_of_le hab.le]
-    intro x hx; exact ⟨ π.lower_darboux_le hab hM hπ x hx, π.upper_darboux_ge hab hM hπ x hx⟩
+    exact π.darboux_bounds hab hM hπ
   apply MeasureTheory.tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero _ (by fun_prop) _
   · intro π
     convert ((hmes_hi π).sub (hmes_lo π)).aestronglyMeasurable using 1
@@ -251,7 +224,67 @@ private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegra
 
 private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIntegral a b f L)
     (hab : a < b) : ∫ x in a..b, f x = L := by
-  sorry
+  apply tendsto_nhds_unique _ (hf.lim hab)
+  rw [←tendsto_sub_nhds_zero_iff, tendsto_zero_iff_abs_tendsto_zero]
+  have := hf.riemannIntegrable.darboux_integrable hab
+  simp_rw [eLpNorm_one_eq_lintegral_enorm] at this
+  have h (π : TaggedPrepartition (Ioc a b)) : ∫⁻ (x : ℝ) in .Ioc a b,
+    ‖(π.upper_darboux f - π.lower_darboux f) x‖ₑ ≠ ⊤ := by
+    rw [←MeasureTheory.integrable_toReal_iff]
+    · sorry
+    · exact ((π.upper_darboux_integrable f).1.1.aemeasurable.sub
+      (π.lower_darboux_integrable f).1.1.aemeasurable).enorm
+    exact Filter.Eventually.of_forall (by finiteness)
+  rw [←ENNReal.tendsto_toReal_zero_iff h] at this
+  apply squeeze_zero (by intros; simp) _ this
+  intro π
+  rw [←ENNReal.ofReal_le_iff_le_toReal (h π)]
+  simp only [← Pi.sub_apply, Fin.isValue, smul_eq_mul, Function.comp_apply,
+    TaggedPrepartition.upper_darboux,
+    TaggedPrepartition.lower_darboux, ← sum_sub_distrib, ← Set.indicator_sub', sum_apply]
+  have h0 : ∀ J ∈ π.boxes, 0 ≤ sSup (f '' J.Icc₁) - sInf (f '' J.Icc₁) := by
+    sorry
+  have h1 (J : Box (Fin 1)): 0 ≤ J.upper₁ - J.lower₁ := by linarith [J.lower_le_upper₁]
+  have h2 (x : ℝ) : ∀ J ∈ π.boxes, 0 ≤ J.toSet₁.indicator
+    ((fun x ↦ sSup (f '' J.Icc₁)) - fun x ↦ sInf (f '' J.Icc₁)) x := by
+    sorry
+  have h3 (x : ℝ) : 0 ≤ ∑ J ∈ π.boxes,
+    J.toSet₁.indicator ((fun x ↦ sSup (f '' J.Icc₁)) - fun x ↦ sInf (f '' J.Icc₁)) x := by
+    sorry
+  have h4 : ∀ J ∈ π.boxes, volume (Set.Ioc J.lower₁ J.upper₁ ∩ Set.Ioc a b) =
+    ENNReal.ofReal (J.upper₁ - J.lower₁) := by
+    sorry
+  simp_rw [Real.enorm_of_nonneg (h3 _), ENNReal.ofReal_sum_of_nonneg (h2 _)]
+  rw [MeasureTheory.lintegral_finsetSum]
+  · have (x : ℝ) (E : Set ℝ) (g : ℝ → ℝ): ENNReal.ofReal (E.indicator g x) =
+        E.indicator (fun x ↦ ENNReal.ofReal (g x)) x := by simp [Set.indicator]; aesop
+    simp_rw [this]
+    simp only [Pi.sub_apply, Fin.isValue, Box.toSet₁_def, measurableSet_Ioc,
+      lintegral_indicator, Measure.restrict_restrict, lintegral_const, MeasurableSet.univ,
+      Measure.restrict_apply, Set.univ_inter, ge_iff_le]
+    trans ∑ J ∈ π.boxes, ENNReal.ofReal ((J.upper₁ - J.lower₁) *
+      (sSup (f '' J.Icc₁) - sInf (f '' J.Icc₁)))
+    · rw [←ENNReal.ofReal_sum_of_nonneg]
+      · apply ENNReal.ofReal_le_ofReal
+        simp only [Fin.isValue, mul_sub, sum_sub_distrib, abs_le', tsub_le_iff_right, neg_sub]
+        have h5 : ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * f (π.tag J 0) ≤
+          ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * sSup (f '' J.Icc₁) := by
+          sorry
+        have h6 : ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * f (π.tag J 0) ≥
+          ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * sInf (f '' J.Icc₁) := by
+          sorry
+        have h7 : ∫ x in a..b, f x ≤ ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * sInf (f '' J.Icc₁)
+          := by
+          sorry
+        have h8 : ∫ x in a..b, f x ≥ ∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) * sInf (f '' J.Icc₁)
+          := by
+          sorry
+        grind
+      intro J hJ; exact mul_nonneg (h1 J) (h0 J hJ)
+    apply le_of_eq (Finset.sum_congr (by rfl) _); intro J hJ
+    rw [mul_comm, h4 J hJ, ENNReal.ofReal_mul' (h1 J)]
+  intros; measurability
+
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   [NormedAddCommGroup F] [NormedSpace ℝ F] [CompleteSpace F] [NormedAddCommGroup G]
