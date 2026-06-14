@@ -40,16 +40,20 @@ to each other in measure, then it is ae measurable. -/
 theorem aemeasurable_of_le_ge_tendstoMeasure {α : Type*} [MeasurableSpace α]
   {μ : MeasureTheory.Measure α} {g : α → ℝ} {ι : Type*} {l : Filter ι} [l.NeBot]
   [l.IsCountablyGenerated] {f_lo f_hi : ι → α → ℝ} (hflo_mes : ∀ n, AEMeasurable (f_lo n) μ)
-  (hg : ∀ n, ∀ᵐ (x : α) ∂μ, f_lo n x ≤ g x ∧ g x ≤ f_hi n x)
+  (hg : ∀ᶠ n in l, ∀ᵐ (x : α) ∂μ, f_lo n x ≤ g x ∧ g x ≤ f_hi n x)
   (hconv : MeasureTheory.TendstoInMeasure μ (f_hi - f_lo) l 0) : AEMeasurable g μ := by
-    obtain ⟨ n, _, hconv ⟩ := hconv.exists_seq_tendsto_ae'
-    apply AEMeasurable.congr (AEMeasurable.iSup (fun k ↦ hflo_mes (n k)))
-    filter_upwards [MeasureTheory.ae_all_iff.mpr (fun k ↦ (hg (n k))), hconv] with x hg hconv
-    have : Filter.atTop.Tendsto (fun k ↦ g x - f_lo (n k) x) (nhds 0) :=
-      squeeze_zero (fun k ↦ by linarith [(hg k).1]) (fun k ↦ by simp; linarith [(hg k).2]) hconv
+    obtain ⟨ n, htop, hconv ⟩ := hconv.exists_seq_tendsto_ae'
+    obtain ⟨ N, hN ⟩ := Filter.eventually_atTop.mp (htop.eventually hg)
+    apply AEMeasurable.congr (AEMeasurable.iSup (fun k : Set.Ici N ↦ hflo_mes (n k)))
+    simp_rw [←Filter.eventually_imp_distrib_left, ←MeasureTheory.ae_all_iff] at hN
+    filter_upwards [hN, hconv] with x hg hconv
+    have : Filter.atTop.Tendsto (fun k : Set.Ici N ↦ g x - f_lo (n k) x) (nhds 0) :=
+      squeeze_zero (fun k ↦ by linarith [(hg k k.property).1])
+        (fun k ↦ by simp; linarith [(hg k k.property).2])
+        (hconv.comp (Filter.tendsto_Ici_atTop.mp fun ⦃_⦄ ↦ id))
     replace this := this.const_sub (g x)
     simp only [sub_sub_cancel, sub_zero] at this
-    apply iSup_eq_of_forall_le_of_tendsto (fun k ↦ (hg k).1) this
+    apply iSup_eq_of_forall_le_of_tendsto (by aesop) this
 
 namespace BoxIntegral
 
@@ -147,12 +151,12 @@ private noncomputable def TaggedPrepartition.upper_darboux (f : ℝ → ℝ)
   ∑ J ∈ π.boxes, J.toSet₁.indicator (fun _ ↦ sSup (f '' J.Icc₁))
 
 private theorem TaggedPrepartition.lower_darboux_le (π : TaggedPrepartition (Ioc a b)) {M : ℝ}
-    {f : ℝ → ℝ} (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) :
+    {f : ℝ → ℝ} (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) (hπ : π.IsPartition) :
     ∀ x ∈ Set.Ioc a b, π.lower_darboux f x ≤ f x := by
   sorry
 
 private theorem TaggedPrepartition.upper_darboux_ge (π : TaggedPrepartition (Ioc a b)) {M : ℝ}
-    {f : ℝ → ℝ} (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) :
+    (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) (hπ : π.IsPartition) :
     ∀ x ∈ Set.Ioc a b, π.upper_darboux f x ≥ f x := by
   sorry
 
@@ -198,10 +202,11 @@ private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegra
     exact (π.upper_darboux_integrable f).aestronglyMeasurable.aemeasurable
   apply aemeasurable_of_le_ge_tendstoMeasure (l := l) (f_hi := TaggedPrepartition.upper_darboux f)
     hmes_lo
-  · intro π
+  · apply Filter.eventually_of_mem (IntegrationParams.eventually_isPartition _ _)
+    intro π hπ
     apply MeasureTheory.ae_restrict_of_forall_mem (by measurability)
     rw [Set.uIoc_of_le hab.le]
-    intro x hx; exact ⟨ π.lower_darboux_le hab hM x hx, π.upper_darboux_ge hab hM x hx⟩
+    intro x hx; exact ⟨ π.lower_darboux_le hab hM hπ x hx, π.upper_darboux_ge hab hM hπ x hx⟩
   apply MeasureTheory.tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero _ (by fun_prop) _
   · intro π
     convert ((hmes_hi π).sub (hmes_lo π)).aestronglyMeasurable using 1
