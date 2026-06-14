@@ -153,12 +153,48 @@ private noncomputable def TaggedPrepartition.upper_darboux (f : ℝ → ℝ)
 private theorem TaggedPrepartition.lower_darboux_le (π : TaggedPrepartition (Ioc a b)) {M : ℝ}
     {f : ℝ → ℝ} (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) (hπ : π.IsPartition) :
     ∀ x ∈ Set.Ioc a b, π.lower_darboux f x ≤ f x := by
-  sorry
+  intro x hx
+  obtain ⟨ J, hJ, hmem ⟩ := hπ (fun _ ↦ x) (by simpa [hab] using hx)
+  unfold lower_darboux
+  rw [Finset.sum_apply, Finset.sum_eq_single J]
+  · simp_all only [Set.mem_Icc, and_imp, Set.mem_Ioc, mem_toPrepartition, Box.mem₁, Box.toSet₁_def,
+    Set.indicator, and_self, ↓reduceIte, Box.Icc₁_def]
+    apply csInf_le
+    · refine bddBelow_def.mp ⟨ -M, fun y hy ↦ ?_ ⟩
+      simp only [Set.mem_image, Set.mem_Icc] at hy
+      obtain ⟨ z, hz, rfl ⟩ := hy
+      replace hJ := π.le_of_mem hJ
+      simp [Box.le_iff₁, hab] at hJ
+      grind
+    grind
+  · intro I hI; simp only [ne_eq, Set.indicator_apply_eq_zero]
+    intro hIJ hxI
+    have := Disjoint.notMem_of_mem_right (π.pairwiseDisjoint hI hJ hIJ) hmem
+    simp at this hxI; grind
+  intro h; exfalso; exact h hJ
 
 private theorem TaggedPrepartition.upper_darboux_ge (π : TaggedPrepartition (Ioc a b)) {M : ℝ}
     (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) (hπ : π.IsPartition) :
     ∀ x ∈ Set.Ioc a b, π.upper_darboux f x ≥ f x := by
-  sorry
+  intro x hx
+  obtain ⟨ J, hJ, hmem ⟩ := hπ (fun _ ↦ x) (by simpa [hab] using hx)
+  unfold upper_darboux
+  rw [Finset.sum_apply, Finset.sum_eq_single J]
+  · simp_all only [Set.mem_Icc, and_imp, Set.mem_Ioc, mem_toPrepartition, Box.mem₁, Box.toSet₁_def,
+    Set.indicator, and_self, ↓reduceIte, Box.Icc₁_def]
+    apply le_csSup
+    · refine bddAbove_def.mp ⟨ M, fun y hy ↦ ?_ ⟩
+      simp only [Set.mem_image, Set.mem_Icc] at hy
+      obtain ⟨ z, hz, rfl ⟩ := hy
+      replace hJ := π.le_of_mem hJ
+      simp [Box.le_iff₁, hab] at hJ
+      grind
+    grind
+  · intro I hI; simp only [ne_eq, Set.indicator_apply_eq_zero]
+    intro hIJ hxI
+    have := Disjoint.notMem_of_mem_right (π.pairwiseDisjoint hI hJ hIJ) hmem
+    simp at this hxI; grind
+  intro h; exfalso; exact h hJ
 
 private theorem TaggedPrepartition.lower_darboux_integrable (π : TaggedPrepartition (Ioc a b))
     (f : ℝ → ℝ) : IntervalIntegrable (π.lower_darboux f) volume a b := by
