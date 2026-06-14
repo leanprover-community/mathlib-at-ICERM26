@@ -35,6 +35,22 @@ theorem Finset.sum_indicator_singleton_eq_self {ι : Type*} {M : Type*} [Fintype
   simp only [Finset.sum_apply, Set.indicator]
   rw [Finset.sum_eq_single j] <;> grind
 
+/-- If a real-valued function is squeezed by two sequences of ae measurable functions converging
+to each other in measure, then it is ae measurable. -/
+theorem aemeasurable_of_le_ge_tendstoMeasure {α : Type*} [MeasurableSpace α]
+  {μ : MeasureTheory.Measure α} {g : α → ℝ} {ι : Type*} {l : Filter ι} [l.NeBot]
+  [l.IsCountablyGenerated] {f_lo f_hi : ι → α → ℝ} (hflo_mes : ∀ n, AEMeasurable (f_lo n) μ)
+  (hg : ∀ n, ∀ᵐ (x : α) ∂μ, f_lo n x ≤ g x ∧ g x ≤ f_hi n x)
+  (hconv : MeasureTheory.TendstoInMeasure μ (f_hi - f_lo) l 0) : AEMeasurable g μ := by
+    obtain ⟨ n, _, hconv ⟩ := hconv.exists_seq_tendsto_ae'
+    apply AEMeasurable.congr (AEMeasurable.iSup (fun k ↦ hflo_mes (n k)))
+    filter_upwards [MeasureTheory.ae_all_iff.mpr (fun k ↦ (hg (n k))), hconv] with x hg hconv
+    have : Filter.atTop.Tendsto (fun k ↦ g x - f_lo (n k) x) (nhds 0) :=
+      squeeze_zero (fun k ↦ by linarith [(hg k).1]) (fun k ↦ by simp; linarith [(hg k).2]) hconv
+    replace this := this.const_sub (g x)
+    simp only [sub_sub_cancel, sub_zero] at this
+    apply iSup_eq_of_forall_le_of_tendsto (fun k ↦ (hg k).1) this
+
 namespace BoxIntegral
 
 open intervalIntegral MeasureTheory Finset
@@ -122,17 +138,78 @@ theorem HasRiemannIntegral.oscillation_tendsto_zero (hab : a < b) (hf : RiemannI
       grw [hδ (π' _) (hhen _) hπ hmesh, hδ (π' _) (hhen _) hπ hmesh]
       linarith
 
-private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegrable a b f) :
-    IntervalIntegrable f volume a b := by
-  rw [intervalIntegrable_iff]
-  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le hf.bounded
-  apply IntegrableOn.of_bound (by simp) _ M
-  · apply ae_restrict_of_forall_mem (by measurability)
-    intro x hx; apply hM; simp only [Set.mem_image]; exact ⟨ x, Set.uIoc_subset_uIcc hx, rfl ⟩
+private noncomputable def TaggedPrepartition.lower_darboux (f : ℝ → ℝ)
+    (π : TaggedPrepartition (Ioc a b)) : ℝ → ℝ :=
+  ∑ J ∈ π.boxes, J.toSet₁.indicator (fun _ ↦ sInf (f '' J.Icc₁))
+
+private noncomputable def TaggedPrepartition.upper_darboux (f : ℝ → ℝ)
+    (π : TaggedPrepartition (Ioc a b)) : ℝ → ℝ :=
+  ∑ J ∈ π.boxes, J.toSet₁.indicator (fun _ ↦ sSup (f '' J.Icc₁))
+
+private theorem TaggedPrepartition.lower_darboux_le (π : TaggedPrepartition (Ioc a b)) {M : ℝ}
+    {f : ℝ → ℝ} (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) :
+    ∀ x ∈ Set.Ioc a b, π.lower_darboux f x ≤ f x := by
   sorry
 
-private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIntegral a b f L) :
-    ∫ x in a..b, f x = L := by
+private theorem TaggedPrepartition.upper_darboux_ge (π : TaggedPrepartition (Ioc a b)) {M : ℝ}
+    {f : ℝ → ℝ} (hab : a < b) (hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M) :
+    ∀ x ∈ Set.Ioc a b, π.upper_darboux f x ≥ f x := by
+  sorry
+
+private theorem TaggedPrepartition.lower_darboux_integrable (π : TaggedPrepartition (Ioc a b))
+    (f : ℝ → ℝ) : IntervalIntegrable (π.lower_darboux f) volume a b := by
+  unfold TaggedPrepartition.lower_darboux
+  apply IntervalIntegrable.sum
+  intro J hJ
+  refine ⟨ .indicator ?_ (by measurability), .indicator ?_ (by measurability) ⟩
+  <;> exact MeasureTheory.integrableOn_const (by simp) (by finiteness)
+
+private theorem TaggedPrepartition.upper_darboux_integrable (π : TaggedPrepartition (Ioc a b))
+    (f : ℝ → ℝ) : IntervalIntegrable (π.upper_darboux f) volume a b := by
+  unfold TaggedPrepartition.upper_darboux
+  apply IntervalIntegrable.sum
+  intro J hJ
+  refine ⟨ .indicator ?_ (by measurability), .indicator ?_ (by measurability) ⟩
+  <;> exact MeasureTheory.integrableOn_const (by simp) (by finiteness)
+
+private theorem RiemannIntegrable.darboux_integrable (hab : a < b) (hf : RiemannIntegrable a b f) :
+  (IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤).Tendsto (fun π ↦
+    eLpNorm (π.upper_darboux f - π.lower_darboux f) 1 (volume.restrict (.Ioc a b))) (nhds 0) := by
+  sorry
+
+private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegrable a b f)
+    (hab : a < b) : IntervalIntegrable f volume a b := by
+  rw [intervalIntegrable_iff]
+  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le hf.bounded
+  apply IntegrableOn.of_bound (by simp) (AEMeasurable.aestronglyMeasurable _) M
+  · apply ae_restrict_of_forall_mem (by measurability)
+    intro x hx; apply hM; simp only [Set.mem_image]; exact ⟨ x, Set.uIoc_subset_uIcc hx, rfl ⟩
+  let l := IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤
+  have : l.IsCountablyGenerated := by sorry
+  simp only [Set.uIcc_of_lt hab, Real.norm_eq_abs] at hM
+  replace hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M := by grind
+  have hmes_lo (π : TaggedPrepartition (Ioc a b)) : AEMeasurable
+    (TaggedPrepartition.lower_darboux f π) (volume.restrict (Set.uIoc a b)) := by
+    rw [Set.uIoc_of_le hab.le]
+    exact (π.lower_darboux_integrable f).aestronglyMeasurable.aemeasurable
+  have hmes_hi (π : TaggedPrepartition (Ioc a b)) : AEMeasurable
+    (TaggedPrepartition.upper_darboux f π) (volume.restrict (Set.uIoc a b)) := by
+    rw [Set.uIoc_of_le hab.le]
+    exact (π.upper_darboux_integrable f).aestronglyMeasurable.aemeasurable
+  apply aemeasurable_of_le_ge_tendstoMeasure (l := l) (f_hi := TaggedPrepartition.upper_darboux f)
+    hmes_lo
+  · intro π
+    apply MeasureTheory.ae_restrict_of_forall_mem (by measurability)
+    rw [Set.uIoc_of_le hab.le]
+    intro x hx; exact ⟨ π.lower_darboux_le hab hM x hx, π.upper_darboux_ge hab hM x hx⟩
+  apply MeasureTheory.tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero _ (by fun_prop) _
+  · intro π
+    convert ((hmes_hi π).sub (hmes_lo π)).aestronglyMeasurable using 1
+  simp only [Pi.sub_apply, sub_zero, Set.uIoc_of_le hab.le]
+  exact hf.darboux_integrable hab
+
+private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIntegral a b f L)
+    (hab : a < b) : ∫ x in a..b, f x = L := by
   sorry
 
 variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -144,11 +221,16 @@ variable {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} {f : ℝ → E} {g : ℝ �
 private theorem riemannIntegral_eq_intervalIntegral_euclidean {ι : Type*} [Fintype ι]
     {f : ℝ → ι → ℝ} (hf : RiemannIntegrable a b f) : IntervalIntegrable f volume a b ∧
     riemannIntegral a b f = ∫ x in a..b, f x := by
+  wlog hab : a ≤ b
+  · rw [riemannIntegral.integral_symm, integral_symm, IntervalIntegrable.symm_iff, neg_inj]
+    exact this hf.symm (by order)
+  obtain rfl | hab := hab.eq_or_lt
+  · simp
   set L := riemannIntegral a b f
   have hriem (i : ι) : HasRiemannIntegral a b (fun x ↦ f x i) (L i) := by
     convert hf.hasRiemannIntegral.map (φ := .proj i)
   have hinteg (i : ι) : IntervalIntegrable (fun x ↦ f x i) volume a b :=
-    (hriem i).riemannIntegrable.intervalIntegrable_scalar
+    (hriem i).riemannIntegrable.intervalIntegrable_scalar hab
   have hinteg' (i : ι) : IntervalIntegrable (fun x ↦ Set.indicator {i} (f x)) volume a b := by
     convert (ContinuousLinearMap.toSpanSingleton ℝ
       (Set.indicator {i} (fun _ ↦ (1:ℝ)))).intervalIntegrable_comp (hinteg i) with _ x
@@ -157,7 +239,7 @@ private theorem riemannIntegral_eq_intervalIntegral_euclidean {ι : Type*} [Fint
     convert (ContinuousLinearMap.toSpanSingleton ℝ
       (Set.indicator {i} (fun _ ↦ (1:ℝ)))).intervalIntegral_comp_comm (hinteg i) with x
     · ext; simp [Set.indicator]; aesop
-    ext; simp [Set.indicator, (hriem i).intervalIntegral_eq_scalar]; aesop
+    ext; simp [Set.indicator, (hriem i).intervalIntegral_eq_scalar hab]; aesop
   constructor
   · have : IntervalIntegrable (∑ i, (fun x ↦ Set.indicator {i} (f x))) volume a b :=
       .sum _ (by aesop)
