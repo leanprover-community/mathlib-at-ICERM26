@@ -245,7 +245,7 @@ private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIn
   have h (π : TaggedPrepartition (Ioc a b)) : ∫⁻ (x : ℝ) in .Ioc a b,
     ‖(π.upper_darboux f - π.lower_darboux f) x‖ₑ ≠ ⊤ := by
     rw [←integrable_toReal_iff]
-    · sorry
+    · exact .abs ((π.upper_darboux_integrable f).sub (π.lower_darboux_integrable f)).1
     · exact ((π.upper_darboux_integrable f).1.1.aemeasurable.sub
       (π.lower_darboux_integrable f).1.1.aemeasurable).enorm
     exact Filter.Eventually.of_forall (by finiteness)
