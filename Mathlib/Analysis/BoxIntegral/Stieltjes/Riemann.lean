@@ -38,16 +38,20 @@ theorem Finset.sum_indicator_singleton_eq_self {ι : Type*} {M : Type*} [Fintype
 /-- If a real-valued function is squeezed by two sequences of ae measurable functions converging
 to each other in measure, then it is ae measurable. -/
 theorem aemeasurable_of_le_ge_tendstoMeasure {α : Type*} [MeasurableSpace α]
-  {μ : MeasureTheory.Measure α} {g : α → ℝ} {ι : Type*} {l : Filter ι} [l.NeBot]
-  [l.IsCountablyGenerated] {f_lo f_hi : ι → α → ℝ} (hflo_mes : ∀ n, AEMeasurable (f_lo n) μ)
+  {μ : MeasureTheory.Measure α} {g : α → ℝ} {ι : Type*} {l : Filter ι}
+  (hl : ∃ y : ℕ → ι, Filter.atTop.Tendsto y l) {f_lo f_hi : ι → α → ℝ}
+  (hflo_mes : ∀ n, AEMeasurable (f_lo n) μ)
   (hg : ∀ᶠ n in l, ∀ᵐ (x : α) ∂μ, f_lo n x ≤ g x ∧ g x ≤ f_hi n x)
   (hconv : MeasureTheory.TendstoInMeasure μ (f_hi - f_lo) l 0) : AEMeasurable g μ := by
+    obtain ⟨ y, hl ⟩ := hl
+    replace hg := hl.eventually hg
+    replace hconv := hconv.comp hl
     obtain ⟨ n, htop, hconv ⟩ := hconv.exists_seq_tendsto_ae'
     obtain ⟨ N, hN ⟩ := Filter.eventually_atTop.mp (htop.eventually hg)
-    apply AEMeasurable.congr (AEMeasurable.iSup (fun k : Set.Ici N ↦ hflo_mes (n k)))
+    apply AEMeasurable.congr (AEMeasurable.iSup (fun k : Set.Ici N ↦ hflo_mes (y (n k))))
     simp_rw [←Filter.eventually_imp_distrib_left, ←MeasureTheory.ae_all_iff] at hN
     filter_upwards [hN, hconv] with x hg hconv
-    have : Filter.atTop.Tendsto (fun k : Set.Ici N ↦ g x - f_lo (n k) x) (nhds 0) :=
+    have : Filter.atTop.Tendsto (fun k : Set.Ici N ↦ g x - f_lo (y (n k)) x) (nhds 0) :=
       squeeze_zero (fun k ↦ by linarith [(hg k k.property).1])
         (fun k ↦ by simp; linarith [(hg k k.property).2])
         (hconv.comp (Filter.tendsto_Ici_atTop.mp fun ⦃_⦄ ↦ id))
@@ -201,6 +205,7 @@ private theorem RiemannIntegrable.darboux_integrable (hab : a < b) (hf : Riemann
     eLpNorm (π.upper_darboux f - π.lower_darboux f) 1 (volume.restrict (.Ioc a b))) (nhds 0) := by
   sorry
 
+open Prepartition.Even in
 private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegrable a b f)
     (hab : a < b) : IntervalIntegrable f volume a b := by
   rw [intervalIntegrable_iff]
@@ -209,7 +214,6 @@ private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegra
   · apply ae_restrict_of_forall_mem (by measurability)
     intro x hx; apply hM; simp only [Set.mem_image]; exact ⟨ x, Set.uIoc_subset_uIcc hx, rfl ⟩
   let l := IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤
-  have : l.IsCountablyGenerated := by sorry
   simp only [Set.uIcc_of_lt hab, Real.norm_eq_abs] at hM
   replace hM : ∀ x ∈ Set.Icc a b, |f x| ≤ M := by grind
   have hmes_lo (π : TaggedPrepartition (Ioc a b)) : AEMeasurable
@@ -221,17 +225,54 @@ private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegra
     rw [Set.uIoc_of_le hab.le]
     exact (π.upper_darboux_integrable f).aestronglyMeasurable.aemeasurable
   apply aemeasurable_of_le_ge_tendstoMeasure (l := l) (f_hi := TaggedPrepartition.upper_darboux f)
-    hmes_lo
+    _ hmes_lo
   · apply Filter.eventually_of_mem (IntegrationParams.eventually_isPartition _ _)
     intro π hπ
     apply ae_restrict_of_forall_mem (by measurability)
     rw [Set.uIoc_of_le hab.le]
     exact π.darboux_bounds hab hM hπ
-  apply tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero _ (by fun_prop) _
-  · intro π
-    convert ((hmes_hi π).sub (hmes_lo π)).aestronglyMeasurable using 1
-  simp only [Pi.sub_apply, sub_zero, Set.uIoc_of_le hab.le]
-  exact hf.darboux_integrable hab
+  · apply tendstoInMeasure_of_tendsto_eLpNorm one_ne_zero _ (by fun_prop) _
+    · intro π
+      convert ((hmes_hi π).sub (hmes_lo π)).aestronglyMeasurable using 1
+    simp only [Pi.sub_apply, sub_zero, Set.uIoc_of_le hab.le]
+    exact hf.darboux_integrable hab
+  simp only [Filter.tendsto_iff_eventually,
+    IntegrationParams.Riemann_toFilteriUnion_eventually_iff_mesh, gt_iff_lt,
+    Prepartition.mesh_size_le_iff, Prepartition.mem_boxes, mem_toPrepartition, tsub_le_iff_right,
+    Fin.forall_fin_one, Fin.isValue, Prepartition.iUnion_top, and_imp, Filter.eventually_atTop,
+    ge_iff_le, forall_exists_index, l]
+  classical
+  let π : ℕ → TaggedPrepartition (Ioc a b) := fun N ↦
+    let e : Prepartition.Even := ⟨ a, b, N+1, hab, by positivity ⟩
+    {
+      boxes := e.toPrepartition.boxes
+      le_of_mem' := e.toPrepartition.le_of_mem'
+      pairwiseDisjoint := e.toPrepartition.pairwiseDisjoint
+      tag J := if J ≤ Ioc a b then J.upper else (Ioc a b).upper
+      tag_mem_Icc J := by
+        split_ifs with h
+        · exact (BoxIntegral.Box.le_iff_Icc.mp h) J.upper_mem_Icc
+        exact (Ioc a b).upper_mem_Icc
+    }
+  refine ⟨ π, fun p ε hε hp ↦ ⟨ ⌈(a-b) / ε ⌉₊, ?_ ⟩ ⟩
+  intro N hN
+  apply hp (π N)
+  · simp only [Prepartition.Even.toPrepartition, TaggedPrepartition.mem_mk, Prepartition.mem_mk,
+    mem_image, mem_range, Order.lt_add_one_iff, box, Fin.isValue,
+    forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, z_mono, Ioc.upper,
+    Ioc.lower, π]
+    intro i hi
+    rw [z_succ, add_comm]; gcongr; field_simp
+
+    sorry
+  · intro J hJ
+    simp only [Box.Icc₁_eq, Box.Icc₁_def, Fin.isValue, Set.mem_Icc, (π N).le_of_mem hJ, ↓reduceIte,
+      Set.mem_setOf_eq, π]
+    simpa [Box.upper₁] using J.lower_le_upper₁
+  have : (π N).IsPartition := Prepartition.Even.toPrepartition.isPartition _
+  simpa [isPartition_iff_iUnion_eq] using this
+
+
 
 private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIntegral a b f L)
     (hab : a < b) : ∫ x in a..b, f x = L := by
