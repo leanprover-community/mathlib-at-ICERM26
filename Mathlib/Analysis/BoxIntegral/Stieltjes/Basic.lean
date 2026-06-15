@@ -368,8 +368,8 @@ theorem RiemannIntegrable.bounded (h : RiemannIntegrable a b f) :
   specialize hi hx'
   specialize hipos hx
   specialize hi_sub hx
-  have : ‖((e.box (i x - 1)).upper₁ - (e.box (i x - 1)).lower₁) • (f x - f (e.box (i x - 1)).upper₁)‖
-    ≤ 2 := calc
+  have : ‖((e.box (i x - 1)).upper₁ - (e.box (i x - 1)).lower₁) •
+    (f x - f (e.box (i x - 1)).upper₁)‖ ≤ 2 := calc
     _ = dist (∑ x ∈ (π true).boxes, (x.upper₁ - x.lower₁) • f ((π true).tag x 0))
       (∑ x ∈ (π false).boxes, (x.upper₁ - x.lower₁) • f ((π false).tag x 0)) := by
         simp only [isValue, true_and, Bool.false_eq_true, false_and, ↓reduceIte, dist_eq_norm,
@@ -395,6 +395,11 @@ theorem RiemannIntegrable.bounded (h : RiemannIntegrable a b f) :
   have : ‖f (e.z (i x))‖₊ ≤ (range (N + 1)).sup F := le_sup (f := F) (b := i x) (by simp [hi])
   rw [← NNReal.coe_le_coe] at this; grw [← this]
   simp [hi_sub, abs_of_pos hab']; field_simp; apply norm_le_insert'
+
+theorem RiemannIntegrable.bounded' (h : RiemannIntegrable a b f) :
+    ∃ M, ∀ x ∈ Set.uIcc a b, ‖f x‖ ≤ M := by
+  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le h.bounded
+  exact ⟨ M, by grind ⟩
 
 section Naturality
 
