@@ -27,29 +27,38 @@ We specialize some API for `Box` to `Box (Fin 1)`, subscripting with `₁` to in
 one-dimensionality.
 -/
 
-variable {a b c d : ℝ}
+variable {a b c d : ℝ} (J K : Box (Fin 1))
 
-def Box.lower₁ (J : Box (Fin 1)) : ℝ := J.lower 0
+/-- The left endpoint of a one-dimensional box. -/
+def Box.lower₁ : ℝ := J.lower 0
 
-def Box.upper₁ (J : Box (Fin 1)) : ℝ := J.upper 0
+/-- The right endpoint of a one-dimensional box. -/
+def Box.upper₁ : ℝ := J.upper 0
 
-lemma Box.lower_lt_upper₁ (J : Box (Fin 1)) : J.lower₁ < J.upper₁ := J.lower_lt_upper 0
+lemma Box.lower_lt_upper₁ : J.lower₁ < J.upper₁ := J.lower_lt_upper 0
 
-lemma Box.lower_le_upper₁ (J : Box (Fin 1)) : J.lower₁ ≤ J.upper₁ := J.lower_le_upper 0
+lemma Box.lower_le_upper₁ : J.lower₁ ≤ J.upper₁ := J.lower_le_upper 0
 
-def Box.toSet₁ (J : Box (Fin 1)) : Set ℝ := Set.Ioc J.lower₁ J.upper₁
+/-- The length of a one-dimensional box. -/
+def Box.len : ℝ := J.upper₁ - J.lower₁
+
+lemma Box.len_pos : 0 < J.len := by unfold len; linarith [J.lower_lt_upper₁]
+
+lemma Box.len_nonneg : 0 ≤ J.len := J.len_pos.le
+
+def Box.toSet₁ : Set ℝ := Set.Ioc J.lower₁ J.upper₁
 
 @[simp]
-lemma Box.toSet₁_def (J : Box (Fin 1)) : J.toSet₁ = Set.Ioc J.lower₁ J.upper₁ := rfl
+lemma Box.toSet₁_def : J.toSet₁ = Set.Ioc J.lower₁ J.upper₁ := rfl
 
 @[simp]
-lemma Box.mem₁ (x : Fin 1 → ℝ) (J : Box (Fin 1)) :
+lemma Box.mem₁ (x : Fin 1 → ℝ) :
   x ∈ J ↔ x 0 ∈ J.toSet₁ := by simp [mem_def, lower₁, upper₁]
 
-lemma Box.congr₁ (J K : Box (Fin 1)) : J = K ↔ J.lower₁ = K.lower₁ ∧ J.upper₁ = K.upper₁ :=
+lemma Box.congr₁ : J = K ↔ J.lower₁ = K.lower₁ ∧ J.upper₁ = K.upper₁ :=
   ⟨ by grind, fun ⟨ hlow, hup ⟩ ↦ by ext; simp [hlow, hup] ⟩
 
-lemma Box.le_iff₁ (J K : Box (Fin 1)) : J ≤ K ↔ K.lower₁ ≤ J.lower₁ ∧ J.upper₁ ≤ K.upper₁ := by
+lemma Box.le_iff₁ : J ≤ K ↔ K.lower₁ ≤ J.lower₁ ∧ J.upper₁ ≤ K.upper₁ := by
   simp [Box.le_iff_bounds, Pi.le_def, lower₁, upper₁]
 
 lemma Box.disjoint_iff₁ {J J' : Box (Fin 1)} :
@@ -64,16 +73,17 @@ lemma Box.disjoint_iff_disjoint₁ {J J' : Box (Fin 1)} :
   Disjoint J.toSet J'.toSet ↔ Disjoint J.toSet₁ J'.toSet₁ := by
   simp [disjoint_iff₁]; grind [lower_lt_upper₁]
 
-def Box.Icc₁ (J : Box (Fin 1)) : Set ℝ := Set.Icc J.lower₁ J.upper₁
+/-- The closure of a one-dimensional box. -/
+def Box.Icc₁ : Set ℝ := Set.Icc J.lower₁ J.upper₁
 
 @[simp]
-lemma Box.Icc₁_def (J : Box (Fin 1)) : J.Icc₁ = Set.Icc J.lower₁ J.upper₁ := rfl
+lemma Box.Icc₁_def : J.Icc₁ = Set.Icc J.lower₁ J.upper₁ := rfl
 
 @[simp]
-lemma Box.Icc₁_eq (J : Box (Fin 1)) : J.Icc = {x | x 0 ∈ J.Icc₁ } := by
+lemma Box.Icc₁_eq : J.Icc = {x | x 0 ∈ J.Icc₁ } := by
   ext; simp [Box.Icc_def, Pi.le_def, upper₁, lower₁]
 
-lemma Box.mem_Icc₁ (x : Fin 1 → ℝ) (J : Box (Fin 1)) : x ∈ J.Icc ↔ x 0 ∈ J.Icc₁ := by simp
+lemma Box.mem_Icc₁ (x : Fin 1 → ℝ) : x ∈ J.Icc ↔ x 0 ∈ J.Icc₁ := by simp
 
 lemma Box.Icc₁_subset_Icc₁ {J J' : Box (Fin 1)} (h : J ≤ J') : J.Icc₁ ⊆ J'.Icc₁ := by
   grind [le_iff₁, Icc₁]
@@ -113,6 +123,9 @@ lemma Ioc.lower (h : a < b) (i : Fin 1) : (Ioc a b).lower i = a := by simp [h, o
 lemma Ioc.lower₁ (h : a < b) : (Ioc a b).lower₁ = a := Ioc.lower h 0
 
 @[simp]
+lemma Ioc.len (h : a < b) : (Ioc a b).len = b - a := by simp [Box.len, h]
+
+@[simp]
 lemma Ioc.upper_gt (h : b < a) (i : Fin 1) : (Ioc a b).upper i = a := by simp [h, of_gt]
 
 @[simp]
@@ -123,6 +136,9 @@ lemma Ioc.lower_gt (h : b < a) (i : Fin 1) : (Ioc a b).lower i = b := by simp [h
 
 @[simp]
 lemma Ioc.lower_gt₁ (h : b < a) : (Ioc a b).lower₁ = b := Ioc.lower_gt h 0
+
+@[simp]
+lemma Ioc.len_gt (h : b < a) : (Ioc a b).len = a - b := by simp [Box.len, h]
 
 lemma Ioc.symm : Ioc a b = Ioc b a := by
   by_cases! h : a = b

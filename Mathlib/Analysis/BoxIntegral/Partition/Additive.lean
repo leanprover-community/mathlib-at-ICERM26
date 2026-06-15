@@ -274,6 +274,11 @@ lemma _root_.BoxIntegral.Prepartition.IsPartition.sum_of_sub {I : Box (Fin 1)}
     : ∑ J ∈ π.boxes, (f J.upper₁ - f J.lower₁) = f I.upper₁ - f I.lower₁ :=
   (ofDiff f).sum_partition_boxes (by simp) hπ
 
+lemma _root_.BoxIntegral.Prepartition.IsPartition.sum_of_len {I : Box (Fin 1)}
+    {π : Prepartition I} (hπ : π.IsPartition) : ∑ J ∈ π.boxes, J.len = I.len := by
+    unfold Box.len
+    exact hπ.sum_of_sub id
+
 end AddCommGroup
 
 section ToSMul

@@ -25,13 +25,13 @@ open Prepartition Finset
 /-- In one dimension, the mesh size simplifies to the longest length of an interval
 in the partition. -/
 theorem mesh_size₁ {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_size
-    = π.boxes.sup (fun B ↦ NNReal.mk (B.upper₁ - B.lower₁) (by linarith [B.lower_lt_upper₁]))
+    = π.boxes.sup (fun B ↦ NNReal.mk B.len (by linarith [B.len_pos]))
     := by simp [mesh_size]; congr
 
 @[simp]
 theorem mesh_size_le_iff₁ {I : Box (Fin 1)} (π : Prepartition I) (ε : NNReal) :
-    π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, B.upper₁ - B.lower₁ ≤ ε := by
-  simp [mesh_size_le_iff, Box.upper₁, Box.lower₁]
+    π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, B.len ≤ ε := by
+  simp [mesh_size_le_iff, Box.len, Box.lower₁, Box.upper₁]
 
 namespace Prepartition
 
@@ -50,7 +50,7 @@ class Even where
 
 namespace Even
 
-variable (e : Even)
+variable (e : Even) (x : ℝ) (n : ℤ)
 
 theorem b_sub_a_pos : 0 < e.b - e.a := by linarith [e.hab]
 
@@ -68,9 +68,9 @@ theorem grid_zero : e.grid 0 = e.a := by simp [grid]
 @[simp]
 theorem grid_N : e.grid (e.N) = e.b := by have := e.hN; simp [grid, δ]; field_simp; abel
 
-theorem grid_succ_eq (n : ℤ) : e.grid (n + 1) = e.grid n + e.δ := by simp [grid]; ring
+theorem grid_succ_eq : e.grid (n + 1) = e.grid n + e.δ := by simp [grid]; ring
 
-theorem grid_succ_gt (n : ℤ) : e.grid (n + 1) > e.grid n := by
+theorem grid_succ_gt : e.grid (n + 1) > e.grid n := by
   linarith [e.grid_succ_eq n, e.delta_pos]
 
 theorem grid_strictMono : StrictMono e.grid :=
@@ -79,32 +79,28 @@ theorem grid_strictMono : StrictMono e.grid :=
 theorem grid_mono : Monotone e.grid := e.grid_strictMono.monotone
 
 @[simp]
-theorem a_le_grid_iff (n : ℤ) : e.a ≤ e.grid n ↔ 0 ≤ n := by
+theorem a_le_grid_iff : e.a ≤ e.grid n ↔ 0 ≤ n := by
   simp [←grid_zero, e.grid_strictMono.le_iff_le]
 
 @[simp]
-theorem a_lt_grid_iff (n : ℤ) : e.a < e.grid n ↔ 0 < n := by
+theorem a_lt_grid_iff : e.a < e.grid n ↔ 0 < n := by
   simp [←grid_zero, e.grid_strictMono.lt_iff_lt]
 
 @[simp]
-theorem grid_le_b_iff (n : ℤ) : e.grid n ≤ e.b ↔ n ≤ e.N := by
+theorem grid_le_b_iff : e.grid n ≤ e.b ↔ n ≤ e.N := by
   simp [←grid_N, e.grid_strictMono.le_iff_le]
 
 @[simp]
-theorem grid_lt_b_iff (n : ℤ) : e.grid n < e.b ↔ n < e.N := by
+theorem grid_lt_b_iff : e.grid n < e.b ↔ n < e.N := by
   simp [←grid_N, e.grid_strictMono.lt_iff_lt]
 
-theorem grid_mem_Ioc_iff (n : ℤ) : e.grid n ∈ Set.Ioc e.a e.b ↔ n ∈ Set.Ioc 0 e.N := by
-  simp
+theorem grid_mem_Ioc_iff : e.grid n ∈ Set.Ioc e.a e.b ↔ n ∈ Set.Ioc 0 e.N := by simp
 
-theorem grid_mem_Ioo_iff (n : ℤ) : e.grid n ∈ Set.Ioo e.a e.b ↔ n ∈ Set.Ioo 0 e.N := by
-  simp
+theorem grid_mem_Ioo_iff : e.grid n ∈ Set.Ioo e.a e.b ↔ n ∈ Set.Ioo 0 e.N := by simp
 
-theorem grid_mem_Ico_iff (n : ℤ) : e.grid n ∈ Set.Ico e.a e.b ↔ n ∈ Set.Ico 0 e.N := by
-  simp
+theorem grid_mem_Ico_iff : e.grid n ∈ Set.Ico e.a e.b ↔ n ∈ Set.Ico 0 e.N := by simp
 
-theorem grid_mem_Icc_iff (n : ℤ) : e.grid n ∈ Set.Icc e.a e.b ↔ n ∈ Set.Icc 0 e.N := by
-  simp
+theorem grid_mem_Icc_iff : e.grid n ∈ Set.Icc e.a e.b ↔ n ∈ Set.Icc 0 e.N := by simp
 
 /-- The index set for the partition. -/
 noncomputable def indices := Finset.Ico 0 e.N
@@ -140,20 +136,26 @@ theorem box_lower₁ : e.box.lower₁ = e.a := by simp [box, hab]
 @[simp]
 theorem box_upper₁ : e.box.upper₁ = e.b := by simp [box, hab]
 
+@[simp]
+theorem box_len : e.box.len = e.b - e.a := by simp [box, hab]
+
 /-- The grid boxes comprising the partition. -/
 noncomputable def gridbox : ℤ → Box (Fin 1) := fun n ↦ Ioc (e.grid n) (e.grid (n + 1))
 
 @[simp]
-theorem gridbox_upper (n : ℤ) : (e.gridbox n).upper₁ = e.grid (n + 1) := by
+theorem gridbox_upper : (e.gridbox n).upper₁ = e.grid (n + 1) := by
   simp [gridbox, grid_succ_gt]
 
 @[simp]
-theorem gridbox_lower (n : ℤ) : (e.gridbox n).lower₁ = e.grid n := by
+theorem gridbox_lower : (e.gridbox n).lower₁ = e.grid n := by
   simp [gridbox, grid_succ_gt]
 
-theorem gridbox_Icc₁ (n : ℕ) : (e.gridbox n).Icc₁ = Set.Icc (e.grid n) (e.grid (n + 1)) := by simp
+@[simp]
+theorem gridbox_len : (e.gridbox n).len = e.δ := by simp [Box.len, grid_succ_eq]
 
-theorem gridbox_toSet₁ (n : ℕ) : (e.gridbox n).toSet₁ = Set.Ioc (e.grid n) (e.grid (n + 1)) :=
+theorem gridbox_Icc₁ : (e.gridbox n).Icc₁ = Set.Icc (e.grid n) (e.grid (n + 1)) := by simp
+
+theorem gridbox_toSet₁ : (e.gridbox n).toSet₁ = Set.Ioc (e.grid n) (e.grid (n + 1)) :=
   by simp
 
 theorem gridbox_le_box {n : ℤ} (hn : n ∈ e.indices) : e.gridbox n ≤ e.box := by
@@ -161,25 +163,25 @@ theorem gridbox_le_box {n : ℤ} (hn : n ∈ e.indices) : e.gridbox n ≤ e.box 
 
 noncomputable def index : ℝ → ℤ := fun x ↦ ⌈(x - e.a) / e.δ⌉ - 1
 
-theorem grid_lt_iff (x : ℝ) (n : ℤ) : e.grid n < x ↔ n ≤ e.index x := by
+theorem grid_lt_iff : e.grid n < x ↔ n ≤ e.index x := by
   have := e.delta_pos
   simp [index, grid, Int.le_sub_one_iff, Int.lt_ceil]; field_simp; grind
 
-theorem grid_index_lt (x : ℝ) : e.grid (e.index x) < x := by simp [grid_lt_iff]
+theorem grid_index_lt : e.grid (e.index x) < x := by simp [grid_lt_iff]
 
-theorem le_grid_iff (x : ℝ) (n : ℤ) : x ≤ e.grid n ↔ e.index x < n := by
+theorem le_grid_iff : x ≤ e.grid n ↔ e.index x < n := by
   have := e.delta_pos
   simp [index, grid, Int.sub_one_lt_iff, Int.ceil_le]; field_simp; grind
 
-theorem le_grid_succ_index (x : ℝ) : x ≤ e.grid (e.index x + 1) := by simp [le_grid_iff]
+theorem le_grid_succ_index : x ≤ e.grid (e.index x + 1) := by simp [le_grid_iff]
 
-theorem mem_gridbox_iff₁ (x : ℝ) (n : ℤ) : x ∈ (e.gridbox n).toSet₁ ↔ e.index x = n := by
+theorem mem_gridbox_iff₁ : x ∈ (e.gridbox n).toSet₁ ↔ e.index x = n := by
   simp [grid_lt_iff, le_grid_iff]; omega
 
 theorem mem_gridbox_iff (x : Fin 1 → ℝ) (n : ℤ) : x ∈ e.gridbox n ↔ e.index (x 0) = n := by
   simp [grid_lt_iff, le_grid_iff]; omega
 
-theorem mem_box_iff (x : ℝ) : x ∈ e.box.toSet₁ ↔ e.index x ∈ e.indices := by
+theorem mem_box_iff : x ∈ e.box.toSet₁ ↔ e.index x ∈ e.indices := by
   simp [indices, ←grid_zero, ←grid_N, grid_lt_iff, le_grid_iff]
 
 open Classical in
@@ -216,15 +218,12 @@ theorem forall_in_set_const {p : Prop} {α : Type*} (S : Set α) [Nonempty S] : 
 
 @[simp]
 theorem forall_in_finset_const {p : Prop} {α : Type*} (S : Finset α) [Nonempty S] :
-  (∀ x ∈ S, p) ↔ p := by aesop
+  (∀ x ∈ S, p) ↔ p := forall_in_set_const _
 
 theorem mesh_size_toPrepartition : (e.toPrepartition).mesh_size = e.δ.toNNReal
   := by
   apply eq_of_forall_ge_iff
-  intro ε
-  simp only [mesh_size_le_iff₁, toPrepartition, mem_image, tsub_le_iff_right, forall_exists_index,
-    and_imp, forall_apply_eq_imp_iff₂, gridbox_upper, gridbox_lower, grid_succ_eq, add_comm _ e.δ,
-    add_le_add_iff_right, forall_in_finset_const, Real.toNNReal_le_iff_le_coe]
+  simp [-mesh_size_le_iff, toPrepartition, Real.toNNReal_le_iff_le_coe]
 
 end Even
 

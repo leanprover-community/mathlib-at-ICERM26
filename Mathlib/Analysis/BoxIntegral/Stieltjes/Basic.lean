@@ -158,13 +158,13 @@ theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) : HasStieltjesIntegral a 
 
 theorem HasRiemannIntegral.lim (hab : a < b) (h : HasRiemannIntegral a b f M) :
     (IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤).Tendsto (fun π ↦ ∑ x ∈ π.boxes,
-    ((x.upper₁ - x.lower₁) • (f (π.tag x 0)))) (nhds M) := by
+    (x.len • (f (π.tag x 0)))) (nhds M) := by
   convert HasStieltjesIntegral.lim hab h
 
 theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) : HasRiemannIntegral a b f M ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
-     dist (∑ x ∈ π.boxes, ((x.upper₁ - x.lower₁) • (f (π.tag x 0)))) M < ε :=
+     dist (∑ x ∈ π.boxes, (x.len • (f (π.tag x 0)))) M < ε :=
   hasStieltjesIntegral_iff_lim_sum hab
 
 /-- A Riemann integrable function on a closed interval is bounded. -/
@@ -221,22 +221,22 @@ theorem RiemannIntegrable.bounded (h : RiemannIntegrable a b f) :
     simp only [Even.toPrepartition, isValue, mem_image, π]
     exact ⟨e.index (x 0), by simp [←e.mem_box_iff]; grind, by rfl⟩
   have hmesh (p : Bool) : (π p).mesh_size ≤ δ := by
-    simp only [mesh_size_le_iff₁, mem_boxes, mem_toPrepartition, tsub_le_iff_right]
+    simp only [mesh_size_le_iff₁, mem_boxes, mem_toPrepartition]
     intro J hJ; simp only [mem_boxes, Even.mem_toPrepartition_iff, mem_mk, π] at hJ
     obtain ⟨i, hi, rfl⟩ := hJ
-    simp only [Even.gridbox_upper, e.grid_succ_eq, Even.δ, N_eq, Even.gridbox_lower]
-    nth_rw 1 [add_comm]; gcongr; field_simp; grw [← Int.le_ceil]; field_simp; norm_num
+    simp only [e.gridbox_len, Even.δ, N_eq]
+    field_simp; grw [← Int.le_ceil]; field_simp; norm_num
   have : ‖((e.gridbox (e.index x)).upper₁ - (e.gridbox (e.index x)).lower₁) •
     (f x - f (e.gridbox (e.index x)).upper₁)‖ ≤ 2 := calc
-    _ = dist (∑ x ∈ (π true).boxes, (x.upper₁ - x.lower₁) • f ((π true).tag x 0))
-      (∑ x ∈ (π false).boxes, (x.upper₁ - x.lower₁) • f ((π false).tag x 0)) := by
+    _ = dist (∑ J ∈ (π true).boxes, J.len • f ((π true).tag J 0))
+      (∑ J ∈ (π false).boxes, J.len • f ((π false).tag J 0)) := by
         simp only [isValue, true_and, Bool.false_eq_true, false_and, ↓reduceIte, dist_eq_norm,
           ← sum_sub_distrib, π]
         congr; symm
         convert sum_eq_single (e.gridbox (e.index x)) ?_ ?_ using 1
         · have : ∃ a ∈ e.indices, e.gridbox a = e.gridbox (e.index x) :=
             ⟨e.index x, by simp [←e.mem_box_iff]; lia, rfl⟩
-          simp [← smul_sub, this, Box.upper₁, Box.lower₁]
+          simp [← smul_sub, this, Box.len, Box.upper₁, Box.lower₁]
         · intro I hI hIi; simp only [mem_boxes, Even.mem_toPrepartition_iff] at hI
           obtain ⟨j, _, rfl⟩ := hI
           simp [hIi]
@@ -1292,7 +1292,7 @@ theorem HasStieltjesIntegral.of_contDiffOn_eq_riemann (hg : ContDiffOn ℝ 1 g (
   rw [le_inf_iff]; rintro ⟨ hmesh₁, hmesh₂ ⟩
   calc
     _ ≤ dist (∑ J ∈ π.boxes, (B (f (π.tag J 0))) (g J.upper₁ - g J.lower₁))
-      (∑ J ∈ π.boxes, (J.upper₁ - J.lower₁) • (B (f (π.tag J 0))) (g' (π.tag J 0)))
+      (∑ J ∈ π.boxes, J.len • (B (f (π.tag J 0))) (g' (π.tag J 0)))
       + ε / 3 := by grw [←h hmesh₂]; apply dist_triangle
     _ ≤ ∑ J ∈ π.boxes, ε * (ofDiff id J) / (3 * (b - a)) + ε / 3 := by
       simp only [isValue, dist_eq_norm, ← sum_sub_distrib, ←map_smul_of_tower, ←map_sub,
@@ -1324,7 +1324,7 @@ theorem HasStieltjesIntegral.of_contDiffOn_eq_riemann (hg : ContDiffOn ℝ 1 g (
             try exact (ContinuousOn.mono (by fun_prop) hsubset).intervalIntegrable
           intro x _
           apply (hδ₀ _ (by grind) _ (by grind) _).le
-          simp only [mesh_size_le_iff₁, NNReal.coe_mk] at hmesh₁
+          simp only [mesh_size_le_iff₁, NNReal.coe_mk, Box.len] at hmesh₁
           grind
         _ ≤ _ := by
           simp; field_simp; grw [←Std.left_le_max]; ring_nf; apply le_refl
@@ -1332,7 +1332,6 @@ theorem HasStieltjesIntegral.of_contDiffOn_eq_riemann (hg : ContDiffOn ℝ 1 g (
       rw [←Finset.sum_div, ←Finset.mul_sum, (ofDiff id).sum_partition_boxes (by simp) hpart]
       simp [hab]; field_simp; norm_num
     _ < ε := by linarith
-
 
 theorem StieltjesIntegrable.of_contDiffOn (hg : ContDiffOn ℝ 1 g (.uIcc a b))
     (hf : RiemannIntegrable a b f) : StieltjesIntegrable a b B f g :=
