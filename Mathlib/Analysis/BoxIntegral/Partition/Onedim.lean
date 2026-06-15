@@ -197,14 +197,18 @@ noncomputable def toPrepartition : Prepartition e.box :=
       grind
   }
 
-theorem toPrepartition_isPartition : (e.toPrepartition).IsPartition := by
-  intro x hx
-  simp [box, hab] at hx
-  sorry
-
 @[simp]
 theorem mem_toPrepartition_iff (J : Box (Fin 1)) :
     J ∈ e.toPrepartition ↔ ∃ n ∈ e.indices, e.gridbox n = J := by simp [toPrepartition]
+
+theorem toPrepartition_isPartition : (e.toPrepartition).IsPartition := by
+  intro x hx
+  simp [box, hab] at hx
+  refine ⟨ e.gridbox (e.index (x 0)), ?_, ?_ ⟩
+  · simp only [Fin.isValue, mem_toPrepartition_iff, indices]
+    use e.index (x 0)
+    simp [←grid_lt_iff, ←le_grid_iff, hx]
+  simp [grid_index_lt, le_grid_succ_index]
 
 @[simp]
 theorem forall_in_set_const {p : Prop} {α : Type*} (S : Set α) [Nonempty S] : (∀ x ∈ S, p) ↔ p :=
