@@ -10,6 +10,7 @@ was conducted.
 module
 
 public import Mathlib.Analysis.BoxIntegral.Stieltjes.Defs
+public import Mathlib.Analysis.BoxIntegral.Partition.Onedim
 public import Mathlib.Analysis.BoxIntegral.Partition.OrderedDivision
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
@@ -138,17 +139,6 @@ variable {E : Type*} {F : Type*} {G : Type*} [NormedAddCommGroup E] [NormedSpace
   [NormedAddCommGroup F] [NormedSpace ℝ F] [NormedAddCommGroup G] [NormedSpace ℝ G]
 variable {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} {f : ℝ → E} {g : ℝ → F} {L : G} {M : E}
 
-/-- In one dimension, the mesh size simplifies to the longest length of an interval
-in the partition. -/
-theorem mesh_size₁ {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_size
-    = π.boxes.sup (fun B ↦ NNReal.mk (B.upper₁ - B.lower₁) (by linarith [B.lower_lt_upper₁]))
-    := by simp [mesh_size]; congr
-
-@[simp]
-theorem mesh_size_le_iff₁ {I : Box (Fin 1)} (π : Prepartition I) (ε : NNReal) :
-    π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, B.upper₁ - B.lower₁ ≤ ε := by
-  simp [mesh_size_le_iff, Box.upper₁, Box.lower₁]
-
 /-- The predicate `HasStieltjesIntegral` implies convergence of a limit. -/
 theorem HasStieltjesIntegral.lim (hab : a < b) (h : HasStieltjesIntegral a b B f g L) :
     (IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤).Tendsto (fun π ↦ ∑ x ∈ π.boxes,
@@ -177,115 +167,6 @@ theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) : HasRiemannIntegral a b f 
      dist (∑ x ∈ π.boxes, ((x.upper₁ - x.lower₁) • (f (π.tag x 0)))) M < ε :=
   hasStieltjesIntegral_iff_lim_sum hab
 
-namespace Prepartition
-
-/-- An evenly spaced partition of an interval. -/
-class Even where
-  a : ℝ
-  b : ℝ
-  N : ℕ
-  hab : a < b
-  hN : 0 < N
-
-namespace Even
-
-variable (e : Even)
-
-noncomputable def z : ℕ → ℝ := (e.a + (e.b - e.a) * · / e.N)
-
-@[simp]
-theorem z_zero : e.z 0 = e.a := by simp [z]
-
-@[simp]
-theorem z_N : e.z e.N = e.b := by have := e.hN; simp [z]; field_simp; abel
-
-theorem b_sub_a_pos : 0 < e.b - e.a := by linarith [e.hab]
-
-theorem z_succ (n : ℕ) : e.z (n + 1) = e.z n + (e.b - e.a) / e.N := by simp [z]; grind
-
-theorem z_mono (n : ℕ) : e.z n < e.z (n + 1) := by
-  simp only [e.z_succ n, lt_add_iff_pos_right]
-  have := e.b_sub_a_pos
-  have := e.hN
-  positivity
-
-theorem z_mono' : Monotone e.z := by intro i j hij; unfold z; have := e.b_sub_a_pos; grw [hij]
-
-theorem z_mem : ∀ i ≤ e.N, e.z i ∈ Set.Icc e.a e.b := by
-  intro i hi
-  replace hi : (i:ℝ) ≤ N := by exact_mod_cast hi
-  have := e.hN; have := e.hab; simp [z]; field_simp; simp only [zero_mul]
-  exact ⟨ by positivity, by grw [hi]; grind ⟩
-
-theorem incl {i : ℕ} (hi : i < e.N) : Set.Icc (e.z i) (e.z (i + 1)) ⊆ .Icc e.a e.b := by
-  have := e.z_mem i (le_of_lt hi)
-  have := e.z_mem (i + 1) (by grind)
-  apply Set.Icc_subset_Icc <;> grind
-
-theorem incl_o {i : ℕ} (hi : i < e.N) : Set.Ioo (e.z i) (e.z (i + 1)) ⊆ .Ioo e.a e.b := by
-  have := e.z_mem i (le_of_lt hi)
-  have := e.z_mem (i + 1) (by grind)
-  apply Set.Ioo_subset_Ioo <;> grind
-
-theorem incl_u {i : ℕ} (hi : i < e.N) : Set.uIcc (e.z i) (e.z (i + 1)) ⊆ .Icc e.a e.b := by
-    simp [Set.uIcc_of_lt (e.z_mono i), e.incl hi]
-
-noncomputable def box : ℕ → Box (Fin 1) := fun n ↦ Ioc (e.z n) (e.z (n + 1))
-
-theorem box_upper (i : ℕ) : (e.box i).upper₁ = e.z (i + 1) := by simp [box, z_mono]
-
-theorem box_lower (i : ℕ) : (e.box i).lower₁ = e.z i := by simp [box, z_mono]
-
-theorem box_le {i : ℕ} (hi : i < e.N) : e.box i ≤ Ioc e.a e.b := by
-    simp only [e.hab, e.z_mono i, Ioc_le_Ioc_iff, box]
-    simp only [← z_zero, ← z_N]
-    exact ⟨e.z_mono' (by lia), e.z_mono' (by lia)⟩
-
-open Classical in
-noncomputable def toPrepartition : Prepartition (Ioc e.a e.b) :=
-  {
-    boxes := (range e.N).image e.box
-    le_of_mem' J hJ := by
-      simp only [mem_image, mem_range] at hJ; obtain ⟨j, hj, rfl⟩ := hJ
-      exact e.box_le hj
-    pairwiseDisjoint I hI J hJ hdisj := by
-      simp only [coe_image, coe_range, Set.mem_image, Set.mem_Iio] at hI hJ
-      obtain ⟨i, hi, rfl⟩ := hI
-      obtain ⟨j, hj, rfl⟩ := hJ
-      simp only [Function.onFun, Box.disjoint_iff₁, box_upper, box_lower]
-      rcases lt_trichotomy i j with _ | rfl | _
-      · left; exact e.z_mono' (by lia)
-      · simp at hdisj
-      right; exact e.z_mono' (by lia)
-  }
-
-theorem toPrepartition.isPartition : e.toPrepartition.IsPartition := by
-  intro x hx
-  simp only [Box.mem₁, Box.toSet₁_def, e.hab, Ioc.lower₁, Ioc.upper₁, isValue, Set.mem_Ioc] at hx ⊢
-  have := e.hN
-  have := e.b_sub_a_pos
-  have : 0 < x 0 - a := by linarith
-  let i := ⌈(x 0 - e.a) / (e.b - e.a) * e.N⌉₊
-  have h1 : 1 ≤ i := by simp only [isValue, Nat.one_le_ceil_iff, i]; positivity
-  have h2 : i ≤ e.N := by simp [i]; field_simp; linarith
-  refine ⟨ e.box (i - 1), ?_, ?_, ?_ ⟩
-  · simp only [toPrepartition, mem_mk, mem_image, mem_range]
-    exact ⟨ i-1, by lia, rfl ⟩
-  · simp only [box, z_mono, Ioc.lower₁, isValue]
-    simp only [z, isValue, Nat.cast_sub h1, Nat.cast_one, i]
-    calc
-      _ < a + (b - a) * ((x 0 - a) / (b - a) * ↑N + 1 - 1) / ↑N := by
-        gcongr
-        apply Nat.ceil_lt_add_one (by positivity)
-      _ = _ := by simp; field_simp; abel
-  simp only [isValue, box, z_mono, Ioc.upper₁]
-  simp only [isValue, z, show i - 1 + 1 = i by lia]
-  grw [←Nat.le_ceil]; field_simp; simp
-
-end Even
-
-end Prepartition
-
 /-- A Riemann integrable function on a closed interval is bounded. -/
 theorem RiemannIntegrable.bounded (h : RiemannIntegrable a b f) :
     Bornology.IsBounded (f '' (.uIcc a b)) := by
@@ -298,103 +179,85 @@ theorem RiemannIntegrable.bounded (h : RiemannIntegrable a b f) :
   simp only [Set.uIcc_of_lt hab]
   obtain ⟨L, hL⟩ := RiemannIntegrable_def.mp h
   rw [hasRiemannIntegral_iff_lim_sum hab] at hL; obtain ⟨δ, hδ, h⟩ := hL 1 (by norm_num)
-  let N := ⌈(b - a) / δ⌉₊
+  let N := ⌈(b - a) / δ⌉
+  have N_eq : N = ⌈(b - a) / δ⌉ := rfl
   have hN : 0 < N := by positivity
-  let e : Prepartition.Even := ⟨ a, b, N, hab, hN ⟩
-  have e_a : e.a = a := rfl
-  have e_b : e.b = b := rfl
-  have e_N : e.N = N := rfl
+  let e := Prepartition.Even.mk a b N hab hN
+  rw [show a = e.a by rfl, show b = e.b by rfl, show N = e.N by rfl] at *
   rw [isBounded_iff_forall_norm_le]
-  let F : ℕ → NNReal := fun n ↦ ‖f (e.z n)‖₊
-  refine ⟨max ‖f a‖ ((range (N + 1)).sup F + 2 * N / (b - a)), fun y hy ↦ ?_⟩
+  let F : ℤ → NNReal := fun n ↦ ‖f (e.grid n)‖₊
+  refine ⟨max ‖f e.a‖ ((Finset.Icc 0 e.N).sup F + 2 * e.N / (e.b - e.a)), fun y hy ↦ ?_⟩
   simp only [Set.mem_image, Set.mem_Icc] at hy; obtain ⟨x, ⟨hx, hx'⟩, rfl⟩ := hy
   rcases eq_or_lt_of_le hx with rfl | hx
   · exact Std.left_le_max
   grw [←Std.right_le_max]
-  let i : ℝ → ℕ := fun x ↦ ⌈N * (x - a) / (b - a)⌉₊
-  have hipos {x : ℝ} (hx : a < x) : 0 < i x := by positivity
-  have hi {x : ℝ} (hx' : x ≤ b) : i x ≤ N := by simp [i]; field_simp; gcongr
-  have hi_sub {x : ℝ} (hx : a < x) : i x - 1 + 1 = i x := by have := hipos hx; lia
   classical
-  let π : Bool → TaggedPrepartition (Ioc a b) := fun p ↦ {
+  let π : Bool → TaggedPrepartition e.box := fun p ↦ {
     boxes := e.toPrepartition.boxes
     le_of_mem' := e.toPrepartition.le_of_mem'
     pairwiseDisjoint := e.toPrepartition.pairwiseDisjoint
-    tag J := if p ∧ J = e.box (i x - 1) then (fun _ ↦ x) else
-      if J ∈ (range N).image e.box then J.upper else (Ioc a b).upper
+    tag J := if p ∧ J = e.gridbox (e.index x) then (fun _ ↦ x) else
+      if J ∈ e.toPrepartition.boxes then J.upper else (Ioc e.a e.b).upper
     tag_mem_Icc J := by
       split_ifs with h h'
-      · simp [Box.Icc_def, Pi.le_def, hab, hx.le, hx']
-      · simp only [mem_image, mem_range] at h'; obtain ⟨j, hj, rfl⟩ := h'
-        exact (Box.le_iff_Icc.mp (e.box_le hj)) (Box.upper_mem_Icc _)
+      · simp [Even.box, Box.Icc_def, Pi.le_def, hab, hx.le, hx']
+      · simp only [Even.toPrepartition, mem_image] at h'; obtain ⟨j, hj, rfl⟩ := h'
+        exact (Box.le_iff_Icc.mp (e.gridbox_le_box hj)) (Box.upper_mem_Icc _)
       apply Box.upper_mem_Icc
   }
-  have hmem {x : ℝ} (hx : a < x) (hx' : x ≤ b) : (fun _ ↦ x) ∈ e.box (i x - 1) := by
-    simp only [e.z_mono (i x - 1), Prepartition.Even.box, mem_Ioc]
-    simp only [hi_sub hx, Prepartition.Even.z, i]
-    rw [e_a, e_b, e_N]
-    constructor
-    · calc
-        _ < a + (b - a) * (↑N * (x - a) / (b - a)) / ↑N := by
-          gcongr; grw [← add_lt_add_iff_right 1]
-          convert Nat.ceil_lt_add_one ?_ <;> try infer_instance
-          · rw [←Nat.cast_add_one, Nat.sub_one_add_one]
-            positivity
-          positivity
-        _ ≤ _ := by field_simp; linarith
-    grw [← Nat.le_ceil]
-    field_simp; linarith
+  have hmem {x : ℝ} (hx : e.a < x) (hx' : x ≤ e.b) : (fun _ ↦ x) ∈ e.gridbox (e.index x) := by
+    simp [e.mem_gridbox_iff]
   have hhen (p : Bool) : (π p).IsHenstock := by
     intro J hJ
-    simp only [mem_image, mem_range, π]; split_ifs with h h'
-    · rw [h.2]
-      exact Box.coe_subset_Icc (hmem hx hx')
-    · obtain ⟨j, _, rfl⟩ := h'
-      apply Box.upper_mem_Icc
-    simp [π, Prepartition.Even.toPrepartition] at hJ; tauto
+    simp only [mem_boxes, π]
+    split_ifs with h h'
+    · simp [h.2, (e.grid_index_lt x).le, e.le_grid_succ_index x]
+    · apply Box.upper_mem_Icc
+    exfalso; exact h' hJ
   have hpart (p : Bool) : (π p).IsPartition := by
-    intro x hx; simp only [hab, mem_Ioc, isValue] at hx
-    refine ⟨e.box (i (x 0) - 1), ?_, by convert hmem hx.1 hx.2⟩
-    simp only [isValue, Prepartition.Even.toPrepartition, Prepartition.mem_mk,
-      mem_image, mem_range, π]
-    exact ⟨i (x 0) - 1, by have := hi hx.2; grind, by rfl⟩
+    intro x hx; simp only [Even.box, hab, mem_Ioc, isValue] at hx
+    refine ⟨e.gridbox (e.index (x 0)), ?_, by convert hmem hx.1 hx.2⟩
+    rw [←Prepartition.mem_boxes]
+    simp only [Even.toPrepartition, isValue, mem_image, π]
+    exact ⟨e.index (x 0), by simp [←e.mem_box_iff]; grind, by rfl⟩
   have hmesh (p : Bool) : (π p).mesh_size ≤ δ := by
     simp only [mesh_size_le_iff₁, mem_boxes, mem_toPrepartition, tsub_le_iff_right]
-    intro J hJ; simp only [mem_image, mem_range, mem_mk, Prepartition.Even.toPrepartition,
-      Prepartition.mem_mk, π] at hJ
+    intro J hJ; simp only [mem_boxes, Even.mem_toPrepartition_iff, mem_mk, π] at hJ
     obtain ⟨i, hi, rfl⟩ := hJ
-    simp only [e.box_upper, e.z_succ, e.box_lower, e_N, N]
-    nth_rw 1 [add_comm]; gcongr; field_simp; grw [← Nat.le_ceil, e_a, e_b]; field_simp; norm_num
-  specialize hi hx'
-  specialize hipos hx
-  specialize hi_sub hx
-  have : ‖((e.box (i x - 1)).upper₁ - (e.box (i x - 1)).lower₁) •
-    (f x - f (e.box (i x - 1)).upper₁)‖ ≤ 2 := calc
+    simp only [Even.gridbox_upper, e.grid_succ_eq, Even.δ, N_eq, Even.gridbox_lower]
+    nth_rw 1 [add_comm]; gcongr; field_simp; grw [← Int.le_ceil]; field_simp; norm_num
+  have : ‖((e.gridbox (e.index x)).upper₁ - (e.gridbox (e.index x)).lower₁) •
+    (f x - f (e.gridbox (e.index x)).upper₁)‖ ≤ 2 := calc
     _ = dist (∑ x ∈ (π true).boxes, (x.upper₁ - x.lower₁) • f ((π true).tag x 0))
       (∑ x ∈ (π false).boxes, (x.upper₁ - x.lower₁) • f ((π false).tag x 0)) := by
         simp only [isValue, true_and, Bool.false_eq_true, false_and, ↓reduceIte, dist_eq_norm,
           ← sum_sub_distrib, π]
         congr; symm
-        convert sum_eq_single (e.box (i x - 1)) ?_ ?_ using 1
-        · have : ∃ a < N, e.box a = e.box (i x - 1) := ⟨i x - 1, by lia, rfl⟩
+        convert sum_eq_single (e.gridbox (e.index x)) ?_ ?_ using 1
+        · have : ∃ a ∈ e.indices, e.gridbox a = e.gridbox (e.index x) :=
+            ⟨e.index x, by simp [←e.mem_box_iff]; lia, rfl⟩
           simp [← smul_sub, this, Box.upper₁, Box.lower₁]
-        · intro I hI hIi; simp only [Prepartition.Even.toPrepartition, mem_image, mem_range] at hI
+        · intro I hI hIi; simp only [mem_boxes, Even.mem_toPrepartition_iff] at hI
           obtain ⟨j, _, rfl⟩ := hI
           simp [hIi]
-        simp only [Prepartition.Even.toPrepartition, mem_image, mem_range, not_exists, not_and,
+        simp only [Even.toPrepartition, mem_image, not_exists, not_and,
           isValue, ↓reduceIte]
-        intro h; simpa using h (i x - 1) (by lia)
+        intro h; simpa using h (e.index x) (by simp [←e.mem_box_iff]; lia)
     _ ≤ 2 := by
       grw [dist_triangle_right _ _ L, h (π true) (hhen true) (hpart true) (hmesh true),
         h (π false) (hhen false) (hpart false) (hmesh false)]
       norm_num
-  have h : ((e.box (i x - 1)).upper₁ - (e.box (i x - 1)).lower₁) = (b - a) / N := by
-    simp [e.box_upper, e.box_lower, e.z_succ, e_a, e_b, e_N]
-  simp only [h, norm_smul, norm_div, Real.norm_eq_abs, RCLike.norm_natCast] at this
-  grw [← this, e.box_upper]
-  have : ‖f (e.z (i x))‖₊ ≤ (range (N + 1)).sup F := le_sup (f := F) (b := i x) (by simp [hi])
+  have h : ((e.gridbox (e.index x)).upper₁ - (e.gridbox (e.index x)).lower₁) = (e.b - e.a) / e.N
+    := by simp [e.gridbox_upper, e.gridbox_lower, e.grid_succ_eq, Even.δ]
+  simp only [h, norm_smul, norm_div, Real.norm_eq_abs] at this
+  grw [← this, e.gridbox_upper]
+  have : ‖f (e.grid (e.index x + 1))‖₊ ≤ (Finset.Icc 0 e.N).sup F := by
+    apply le_sup (f := F) (b := e.index x + 1)
+    have := (e.mem_box_iff x).mp (by simp; lia)
+    simp [Even.indices] at this ⊢
+    omega
   rw [← NNReal.coe_le_coe] at this; grw [← this]
-  simp [hi_sub, abs_of_pos hab']; field_simp; apply norm_le_insert'
+  simp [abs_of_pos, hab', hN]; field_simp; apply norm_le_insert'
 
 theorem RiemannIntegrable.bounded' (h : RiemannIntegrable a b f) :
     ∃ M, ∀ x ∈ Set.uIcc a b, ‖f x‖ ≤ M := by
@@ -474,11 +337,11 @@ theorem HasRiemannIntegral.zero : HasRiemannIntegral a b (0 : ℝ → E) 0 :=
   HasStieltjesIntegral.zero_left
 
 @[simp]
-theorem StieltjesIntegrable.zero_left : StieltjesIntegrable a b B 0 g :=
+theorem StieltjesIntegrable.gridero_left : StieltjesIntegrable a b B 0 g :=
   HasStieltjesIntegral.zero_left.stieltjesIntegrable
 
 @[simp]
-theorem RiemannIntegrable.zero : RiemannIntegrable a b (0 : ℝ → E) :=
+theorem RiemannIntegrable.gridero : RiemannIntegrable a b (0 : ℝ → E) :=
   HasRiemannIntegral.zero.stieltjesIntegrable
 
 @[simp]
@@ -628,7 +491,7 @@ theorem StieltjesIntegrable.const_right (c : F) : StieltjesIntegrable a b B f (f
   (HasStieltjesIntegral.const_right c).stieltjesIntegrable
 
 @[simp]
-theorem StieltjesIntegrable.zero_right : StieltjesIntegrable a b B f 0 := const_right 0
+theorem StieltjesIntegrable.gridero_right : StieltjesIntegrable a b B f 0 := const_right 0
 
 @[simp]
 theorem stieltjesIntegral_const_right (c : F) : ∫⟨B⟩ x in a..b, f x ∂(fun _ ↦ c) = 0 :=
@@ -732,7 +595,7 @@ theorem HasStieltjesIntegral.zero_bil : HasStieltjesIntegral a b 0 f g (0 : G) :
   obtain rfl | hab := hab.eq_or_lt <;> simp [hab, of_lt, HasStieltjesIntegral']
 
 @[simp]
-theorem StieltjesIntegrable.zero_bil : StieltjesIntegrable (G := G) a b 0 f g :=
+theorem StieltjesIntegrable.gridero_bil : StieltjesIntegrable (G := G) a b 0 f g :=
   HasStieltjesIntegral.zero_bil.stieltjesIntegrable
 
 @[simp]
@@ -1321,74 +1184,83 @@ theorem variation_of_contDiffOn (hab : a ≤ b) (hg : ContDiffOn ℝ 1 g (.Icc a
   set g' := derivWithin g (.Icc a b)
   have g'_eq : g' = derivWithin g (.Icc a b) := rfl
   let N := ⌈(b - a) / δ⌉₊
-  have N_eq : N = ⌈(b - a) / δ⌉₊ := rfl
   have hN : N > 0 := by positivity
   have hab' : 0 < b - a := by positivity
-  let e : Prepartition.Even := ⟨ a, b, N, hab, hN ⟩
-  rw [(show a = e.a by rfl), (show b = e.b by rfl), (show N = e.N by rfl)] at *
-  grw [←eVariationOn.sum_le_of_monotoneOn_Iic (e.z_mono'.monotoneOn _) e.z_mem]
-  simp only [edist_dist, ge_iff_le]
+  let e := Prepartition.Even.mk a b ↑N hab (by exact_mod_cast hN)
+  rw [(show a = e.a by rfl), (show b = e.b by rfl)] at *
+  have N_eq : e.N = N := rfl
+  have N_eq' : N = ⌈(e.b - e.a) / δ⌉₊ := rfl
+  have : ∑ i ∈ range N, edist (g (e.grid (i + 1 : ℕ))) (g (e.grid i)) ≤
+    eVariationOn g (.Icc e.a e.b) := by
+    apply eVariationOn.sum_le_of_monotoneOn_Iic (u := fun i ↦ e.grid i)
+    · intro i hi j hj hij; simp [e.grid_strictMono.le_iff_le, hij]
+    intro i hi; simp [N_eq, hi]
+  grw [←this]
+  simp only [Nat.cast_add, Nat.cast_one, edist_dist, ge_iff_le]
   grw [←ofReal_sum_of_nonneg (by intros; positivity), coe_nnreal_eq ε, ←ofReal_add_le]
   apply ofReal_le_ofReal
-  have zmem := e.z_mem
-  simp only [Set.mem_Icc] at zmem
-  have hsmall (i : ℕ) : e.z (i + 1) - e.z i ≤ δ := by
-    simp [e.z_succ, N_eq]; field_simp; grw [←Nat.le_ceil]; field_simp; norm_num
+  have hsmall (i : ℤ) : e.grid (i + 1) - e.grid i ≤ δ := by
+    simp [e.grid_succ_eq, Even.δ, N_eq, N_eq']; field_simp; grw [←Nat.le_ceil]; field_simp; norm_num
+  have hIcc {i : ℕ} (hi : i < N) : Set.uIcc (e.grid ↑i) (e.grid (↑i + 1)) ⊆ Set.Icc a b := by
+    simp only [Set.uIcc_of_lt (e.grid_succ_gt i)]
+    apply e.Icc_subset_Icc
+    simp [Even.indices, N_eq, hi]
   calc
-    _ = ∫ x in (e.z 0)..(e.z e.N), ‖g' x‖  := by rw [e.z_zero, e.z_N]
-    _ = ∑ i ∈ range e.N, ∫ x in (e.z i)..(e.z (i + 1)), ‖g' x‖  :=
-      (sum_integral_adjacent_intervals (fun i hi ↦
-      (hg'.mono (e.incl_u hi)).norm.intervalIntegrable)).symm
-    _ ≤ ∑ i ∈ range e.N, (dist (g (e.z (i + 1))) (g (e.z i)) + ↑ε/e.N) := by
+    _ = ∫ x in (e.grid 0)..(e.grid e.N), ‖g' x‖  := by rw [e.grid_zero, e.grid_N]
+    _ = ∑ i ∈ range N, ∫ x in (e.grid i)..(e.grid (i + 1)), ‖g' x‖  :=
+      (sum_integral_adjacent_intervals
+        (fun i hi ↦ (hg'.mono (hIcc hi)).norm.intervalIntegrable)).symm
+    _ ≤ ∑ i ∈ range N, (dist (g (e.grid (i + 1))) (g (e.grid i)) + ↑ε/e.N) := by
       apply sum_le_sum; intro i hi; rw [mem_range] at hi
+      have hi' : ↑i ∈ e.indices := by simp [Even.indices, N_eq, hi]
       calc
-        _ = ∫ x in e.z i..e.z (i + 1), ‖g' (e.z i) + (g' x - g' (e.z i))‖ := by
+        _ = ∫ x in e.grid i..e.grid (i + 1), ‖g' (e.grid i) + (g' x - g' (e.grid i))‖ := by
           congr with x; rw [add_sub_cancel]
-        _ ≤ ∫ x in e.z i..e.z (i + 1), (‖g' (e.z i)‖ + ε / (2 * (e.b-e.a))) := by
-          apply intervalIntegral.integral_mono_on_of_le_Ioo (e.z_mono i).le <;>
-             try exact (ContinuousOn.mono (by fun_prop) (e.incl_u hi)).intervalIntegrable
+        _ ≤ ∫ x in e.grid i..e.grid (i + 1), (‖g' (e.grid i)‖ + ε / (2 * (e.b-e.a))) := by
+          apply intervalIntegral.integral_mono_on_of_le_Ioo (e.grid_succ_gt i).le <;>
+             try exact (ContinuousOn.mono (by fun_prop) (hIcc hi)).intervalIntegrable
           intro x hx; grw [norm_add_le, hδ_prop]
-          · exact Set.Ioo_subset_Icc_self (e.incl_o hi hx)
-          · grind
+          · exact Set.Ioo_subset_Icc_self (e.Ioo_subset_Ioo hi' hx)
+          · simp [N_eq, hi.le]
           simp only [Set.mem_Ioo, abs_lt, neg_lt_sub_iff_lt_add] at ⊢ hx
           split_ands <;> linarith [hsmall i, hx.1, hx.2]
-        _ = ‖∫ x in e.z i..e.z (i + 1), g' (e.z i)‖ + ε / (2 * e.N) := by
+        _ = ‖∫ x in e.grid i..e.grid (i + 1), g' (e.grid i)‖ + ε / (2 * e.N) := by
           simp only [enorm_norm, ne_eq, enorm_ne_top, not_false_eq_true, intervalIntegrable_const,
             intervalIntegral.integral_add, intervalIntegral.integral_const, smul_eq_mul,
             integral_div, norm_smul, Real.norm_eq_abs]
-          rw [abs_of_pos (by linarith [e.z_mono i])]; congr 1
-          simp [e.z_succ]; field_simp
-        _ = ‖(∫ x in e.z i..e.z (i + 1), g' x) + ∫ x in e.z i..e.z (i + 1), g' (e.z i) - g' x‖
-            + ε / (2 * e.N) := by
+          rw [abs_of_pos (by linarith [e.grid_succ_gt i])]; congr 1
+          simp [e.grid_succ_eq, Even.δ]; field_simp
+        _ = ‖(∫ x in e.grid i..e.grid (i + 1), g' x)
+            + ∫ x in e.grid i..e.grid (i + 1), g' (e.grid i) - g' x‖ + ε / (2 * e.N) := by
           congr
-          convert intervalIntegral.integral_add ?_ ?_
+          convert intervalIntegral.integral_add (hg'.mono (hIcc hi)).intervalIntegrable ?_
           · abel
-          · exact (hg'.mono (e.incl_u hi)).intervalIntegrable
-          exact (ContinuousOn.mono (by fun_prop) (e.incl_u hi)).intervalIntegrable
-        _ ≤ ‖∫ x in e.z i..e.z (i + 1), g' x‖ + ε / (2 * e.N) + ε / (2 * e.N) := by
+          · infer_instance
+          exact (ContinuousOn.mono (by fun_prop) (hIcc hi)).intervalIntegrable
+        _ ≤ ‖∫ x in e.grid i..e.grid (i + 1), g' x‖ + ε / (2 * e.N) + ε / (2 * e.N) := by
           grw [norm_add_le]; gcongr
-          grw [norm_integral_le_integral_norm (e.z_mono i).le]; calc
-            _ ≤ ∫ x in e.z i..e.z (i + 1), ε / (2 * (e.b - e.a)) := by
-              apply intervalIntegral.integral_mono_on_of_le_Ioo (e.z_mono i).le <;>
-                try exact (ContinuousOn.mono (by fun_prop) (e.incl_u hi)).intervalIntegrable
+          grw [norm_integral_le_integral_norm (e.grid_succ_gt i).le]; calc
+            _ ≤ ∫ x in e.grid i..e.grid (i + 1), ε / (2 * (e.b - e.a)) := by
+              apply intervalIntegral.integral_mono_on_of_le_Ioo (e.grid_succ_gt i).le <;>
+                try exact (ContinuousOn.mono (by fun_prop) (hIcc hi)).intervalIntegrable
               intro x hx; grw [hδ_prop]
-              · exact e.incl hi (Set.left_mem_Icc.mpr (e.z_mono i).le)
-              · exact Set.Ioo_subset_Icc_self (e.incl_o hi hx)
+              · exact e.Icc_subset_Icc hi' (Set.left_mem_Icc.mpr (e.grid_succ_gt i).le)
+              · exact Set.Ioo_subset_Icc_self (e.Ioo_subset_Ioo hi' hx)
               simp only [Set.mem_Ioo, abs_lt, neg_lt_sub_iff_lt_add] at ⊢ hx
               split_ands <;> linarith [hsmall i, hx.1, hx.2]
-            _ = _ := by simp [e.z_succ]; field_simp
+            _ = _ := by simp [e.grid_succ_eq, Even.δ]; field_simp
         _ = _ := by
-          rw [dist_eq_norm, ←integral_derivWithin_Icc_of_contDiffOn_Icc (hg.mono (e.incl hi))
-              (e.z_mono i).le, add_assoc]
-          congr 2
-          · apply intervalIntegral.integral_congr_uIoo; intro x hx
-            rw [g'_eq]
-            simp only [Set.uIoo_of_lt (e.z_mono i)] at hx
-            rw [derivWithin_of_mem_nhds, derivWithin_of_mem_nhds] <;>
-              simp only [← mem_interior_iff_mem_nhds, interior_Icc, hx, e.incl_o hi hx]
-          field_simp; norm_num
+          rw [dist_eq_norm, ←integral_derivWithin_Icc_of_contDiffOn_Icc
+              (hg.mono (e.Icc_subset_Icc hi')) (e.grid_succ_gt i).le, add_assoc]
+          · congr 2
+            · apply intervalIntegral.integral_congr_uIoo; intro x hx
+              rw [g'_eq]
+              simp only [Set.uIoo_of_lt (e.grid_succ_gt i)] at hx
+              rw [derivWithin_of_mem_nhds, derivWithin_of_mem_nhds] <;>
+                simp only [← mem_interior_iff_mem_nhds, interior_Icc, hx, e.Ioo_subset_Ioo hi' hx]
+            field_simp; norm_num
     _ = _ := by
-      simp [sum_add_distrib]; field_simp
+      simp [sum_add_distrib, N_eq]; field_simp
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. Riemann integral version -/

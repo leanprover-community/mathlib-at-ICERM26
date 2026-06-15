@@ -11,7 +11,7 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Stieltjes.Basic
 
--- Need to migrate to Mathlib.Topology.Algebra.Module.ContinuousLinearMap.PiProd
+-- Need to migrate to Mathlib.Topology.Algebra.Module.ContinuousLinearMap.PiProd`
 public import Mathlib.Topology.Algebra.Module.LinearMapPiProd
 
 /-! # Compatibility of Riemann integration and the interval integral
@@ -303,16 +303,15 @@ private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegra
     simp only [Pi.sub_apply, sub_zero, Set.uIoc_of_le hab.le]
     exact hf.darboux_integrable hab
   simp only [Filter.tendsto_iff_eventually, Riemann_toFilteriUnion_eventually_iff_mesh, gt_iff_lt,
-    mesh_size_le_iff, mem_boxes, mem_toPrepartition, tsub_le_iff_right,
-    Fin.forall_fin_one, Fin.isValue, iUnion_top, and_imp, Filter.eventually_atTop,
-    ge_iff_le, forall_exists_index]
+    mesh_size_le_iff₁, mem_boxes, mem_toPrepartition, tsub_le_iff_right,
+    iUnion_top, and_imp, Filter.eventually_atTop, ge_iff_le, forall_exists_index]
   classical
-  let π : ℕ → TaggedPrepartition (Ioc a b) := fun N ↦
-    let e : Prepartition.Even := ⟨ a, b, N+1, hab, by positivity ⟩
+  let e : ℕ → Prepartition.Even := fun N ↦ .mk a b (N+1) hab (by positivity)
+  let π : ∀ N, TaggedPrepartition (e N).box := fun N ↦
     {
-      boxes := e.toPrepartition.boxes
-      le_of_mem' := e.toPrepartition.le_of_mem'
-      pairwiseDisjoint := e.toPrepartition.pairwiseDisjoint
+      boxes := (e N).toPrepartition.boxes
+      le_of_mem' := (e N).toPrepartition.le_of_mem'
+      pairwiseDisjoint := (e N).toPrepartition.pairwiseDisjoint
       tag J := if J ≤ Ioc a b then J.upper else (Ioc a b).upper
       tag_mem_Icc J := by
         split_ifs with h
@@ -322,16 +321,19 @@ private theorem RiemannIntegrable.intervalIntegrable_scalar (hf : RiemannIntegra
   refine ⟨ π, fun p ε hε hp ↦ ⟨ ⌊(b-a) / ε⌋₊, ?_ ⟩ ⟩
   intro N hN
   apply hp (π N)
-  · simp only [Even.toPrepartition, TaggedPrepartition.mem_mk, Prepartition.mem_mk,
-    mem_image, mem_range, Order.lt_add_one_iff, box, Fin.isValue,
-    forall_exists_index, and_imp, forall_apply_eq_imp_iff₂, z_mono, Ioc.upper,
-    Ioc.lower, π]
-    intro i hi
-    rw [z_succ, add_comm]; gcongr; field_simp
-    grw [←hN, Nat.cast_add_one, ←Nat.lt_floor_add_one]; field_simp; order
+  · intro B (hB : B ∈ (e N).toPrepartition)
+    simp only [mem_toPrepartition_iff] at hB; obtain ⟨n, hn, rfl⟩ := hB
+    rw [add_comm]
+    simp only [gridbox_upper, (e N).grid_succ_eq, δ, gridbox_lower, add_le_add_iff_left,
+      show (e N).N = N+1 by rfl]
+    have := Nat.lt_floor_add_one ((b-a) / ε)
+    grw [hN, show b = (e N).b by rfl, show a = (e N).a by rfl] at this
+    field_simp; grw [Int.cast_add, Int.cast_natCast, Int.cast_one, tsub_le_iff_right, ←this]
+    field_simp; simp
   · intro J hJ
-    simpa [Box.Icc₁_eq, (π N).le_of_mem hJ, Set.mem_setOf_eq, π, Box.upper₁] using J.lower_le_upper₁
-  have : (π N).IsPartition := Even.toPrepartition.isPartition _
+    have : J ≤ Ioc a b := (π N).le_of_mem hJ
+    simpa [Box.Icc₁_eq, this, π, hab, Box.upper₁] using J.lower_le_upper₁
+  have : (π N).IsPartition := (e N).toPrepartition_isPartition
   simpa [TaggedPrepartition.isPartition_iff_iUnion_eq] using this
 
 private theorem HasRiemannIntegral.intervalIntegral_eq_scalar (hf : HasRiemannIntegral a b f L)
