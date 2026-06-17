@@ -11,7 +11,6 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Stieltjes.Defs
 public import Mathlib.Analysis.BoxIntegral.Partition.Onedim
-public import Mathlib.Analysis.BoxIntegral.Partition.OrderedDivision
 public import Mathlib.Topology.EMetricSpace.BoundedVariation
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 public import Mathlib.MeasureTheory.Integral.IntervalIntegral.ContDiff

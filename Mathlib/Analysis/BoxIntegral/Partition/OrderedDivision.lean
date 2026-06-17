@@ -8,19 +8,22 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Box.Ioc
 public import Mathlib.Analysis.BoxIntegral.Partition.Basic
+public import Mathlib.Analysis.BoxIntegral.Partition.Tagged
 public import Mathlib.Data.Finset.Sort
 
 /-! # Ordered divisions of intervals
 
 This file defines ordered one-dimensional divisions and their canonical prepartitions of
 `BoxIntegral.Ioc a b`.
+
+It also defines tagged divisions and duplicate-removal for tagged divisions.
 -/
 
 @[expose] public section
 
-open scoped BigOperators
-
 namespace BoxIntegral
+
+/-! ## Ordered divisions -/
 
 /-- Raw finite data for an ordered division of an interval. Correctness properties are added
 separately. -/
@@ -45,8 +48,7 @@ def snoc (π : OrderedDivision) (c : ℝ) : OrderedDivision where
 noncomputable def box (π : OrderedDivision) (i : Fin π.N) : Box (Fin 1) :=
   Ioc (π.x i.castSucc) (π.x i.succ)
 
-
-theorem box_injective (π : OrderedDivision) (hπ : π.StrictMono) :
+theorem box_injective {π : OrderedDivision} (hπ : π.StrictMono) :
     Function.Injective π.box := by
   intro i j hij
   apply Fin.castSucc_injective
@@ -58,10 +60,9 @@ theorem box_injective (π : OrderedDivision) (hπ : π.StrictMono) :
 noncomputable def boxMap {π : OrderedDivision} (hπ : π.StrictMono) : Finset (Box (Fin 1)) :=
   (Finset.univ : Finset (Fin π.N)).map ⟨π.box, π.box_injective hπ⟩
 
-
 /-- The prepartition of `Ioc a b` associated to an ordered division with endpoints `a` and `b`. -/
 noncomputable def toPrepartition {a b : ℝ}
-    (π : OrderedDivision) (hπ : π.StrictMono)
+    {π : OrderedDivision} (hπ : π.StrictMono)
     (ha : π.x 0 = a) (hb : π.x (Fin.last π.N) = b) :
     Prepartition (Ioc a b) where
   boxes := π.boxMap hπ
@@ -183,6 +184,8 @@ theorem fromPartition_map {a b : ℝ}
 
 end OrderedDivision
 
+/-! ## Helper lemmas for snoc -/
+
 /-- If we add a new value to the right of a monotone `Fin`-indexed function, preserving the
 last-value inequality, the resulting `Fin.snoc` is monotone. -/
 theorem monotone_fin_snoc {n : ℕ} {f : Fin (n + 1) → ℝ} {x : ℝ}
@@ -225,6 +228,8 @@ theorem strictMono_fin_snoc {n : ℕ} {f : Fin (n + 1) → ℝ} {x : ℝ}
           rw [Fin.snoc_castSucc, Fin.snoc_castSucc]
           exact hf hij
 
+/-! ## Tagged divisions -/
+
 /-- A tagged division is an ordered division together with one tag in each subinterval. The
 validity of the tags is kept as a separate predicate. -/
 structure TaggedDivision extends OrderedDivision where
@@ -239,10 +244,6 @@ def toLeftTagged (π : OrderedDivision) : TaggedDivision where
   tag := fun i ↦ π.x i.castSucc
 
 end OrderedDivision
-
-
-
-
 
 namespace TaggedDivision
 
@@ -356,6 +357,8 @@ theorem snoc_strict (π : TaggedDivision) (hπ : π.StrictMono) {c t : ℝ}
     (hc : π.x (Fin.last π.N) < c) : (π.snoc c t).StrictMono :=
   strictMono_fin_snoc hπ hc
 
+/-! ### Removing duplicate division points -/
+
 /-- Remove repeated consecutive division points from a tagged division. -/
 noncomputable def removeDuplicates (π : TaggedDivision) : TaggedDivision :=
   π.recOnDropLast
@@ -407,6 +410,10 @@ theorem last (π : TaggedDivision) :
       exact hσ.trans h
     · rw [of_last_ne π hN (by simpa [y, z] using h)]
       simp [snoc, OrderedDivision.snoc]
+
+theorem first (π : TaggedDivision) :
+    π.removeDuplicates.x 0 = π.x 0 := by
+  sorry
 
 theorem strict (π : TaggedDivision) (hπ : π.Monotone) :
     π.removeDuplicates.StrictMono := by
@@ -479,6 +486,73 @@ theorem validTags (π : TaggedDivision) (hπ_tag : π.ValidTags) :
 
 end removeDuplicates
 
+/-- The tagged prepartition associated to a tagged division with valid tags, after removing
+repeated consecutive division points. -/
+noncomputable def toTaggedPrepartition {a b : ℝ} (π : TaggedDivision) (hπ : π.ValidTags)
+    (ha : π.x 0 = a) (hb : π.x (Fin.last π.N) = b) :
+    TaggedPrepartition (Ioc a b) := by
+  sorry
+
+/-- The tagged prepartition associated to a tagged division with valid tags is Henstock. -/
+theorem toTaggedPrepartition_isHenstock {a b : ℝ} (π : TaggedDivision) (hπ : π.ValidTags)
+    (ha : π.x 0 = a) (hb : π.x (Fin.last π.N) = b) :
+    (π.toTaggedPrepartition hπ ha hb).IsHenstock := by
+  sorry
+
+/-- The tagged prepartition associated to a tagged division with valid tags is a partition. -/
+theorem toTaggedPrepartition_isPartition {a b : ℝ} (π : TaggedDivision) (hπ : π.ValidTags)
+    (ha : π.x 0 = a) (hb : π.x (Fin.last π.N) = b) :
+    (π.toTaggedPrepartition hπ ha hb).IsPartition := by
+  sorry
+
+/-- The mesh size of the prepartition associated to a tagged division with valid tags is the
+largest gap between consecutive division points. -/
+theorem toTaggedPrepartition_mesh_size {a b : ℝ} (π : TaggedDivision) (hπ : π.ValidTags)
+    (ha : π.x 0 = a) (hb : π.x (Fin.last π.N) = b) :
+    (π.toTaggedPrepartition hπ ha hb).mesh_size =
+      (Finset.univ : Finset (Fin π.N)).sup
+        (fun i ↦ NNReal.mk (π.x i.succ - π.x i.castSucc)
+          (sub_nonneg.mpr ((hπ i).1.trans (hπ i).2))) := by
+  sorry
+
 end TaggedDivision
+
+namespace TaggedPrepartition
+
+/-- The tagged division obtained by ordering the boxes of a one-dimensional tagged
+prepartition. -/
+noncomputable def toTaggedDivision {a b : ℝ} (π : TaggedPrepartition (Ioc a b)) :
+    TaggedDivision := by
+  sorry
+
+/-- Ordering a Henstock tagged partition gives a tagged division with valid tags. -/
+theorem toTaggedDivision_validTags {a b : ℝ} {π : TaggedPrepartition (Ioc a b)}
+    (hπ_hen : π.IsHenstock) (hπ_part : π.IsPartition) :
+    π.toTaggedDivision.ValidTags := by
+  sorry
+
+/-- The ordered tagged division associated to a tagged partition starts at the left endpoint. -/
+theorem toTaggedDivision_first {a b : ℝ} (π : TaggedPrepartition (Ioc a b))
+    (hab : a < b) (hπ_part : π.IsPartition) :
+    π.toTaggedDivision.x 0 = a := by
+  sorry
+
+/-- The ordered tagged division associated to a tagged partition ends at the right endpoint. -/
+theorem toTaggedDivision_last {a b : ℝ} (π : TaggedPrepartition (Ioc a b))
+    (hab : a < b) (hπ_part : π.IsPartition) :
+    π.toTaggedDivision.x (Fin.last π.toTaggedDivision.N) = b := by
+  sorry
+
+/-- Ordering a Henstock tagged partition and then forgetting the ordering preserves mesh size. -/
+theorem toTaggedDivision_toTaggedPrepartition_mesh_size {a b : ℝ}
+    (π : TaggedPrepartition (Ioc a b)) (hab : a < b)
+    (hπ_hen : π.IsHenstock) (hπ_part : π.IsPartition) :
+    (π.toTaggedDivision.toTaggedPrepartition
+      (π.toTaggedDivision_validTags hπ_hen hπ_part)
+      (π.toTaggedDivision_first hab hπ_part)
+      (π.toTaggedDivision_last hab hπ_part)).mesh_size = π.mesh_size := by
+  sorry
+
+end TaggedPrepartition
 
 end BoxIntegral
