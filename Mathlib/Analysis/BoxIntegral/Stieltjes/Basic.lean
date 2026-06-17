@@ -1065,18 +1065,30 @@ private theorem RiemannIntegrable.mul_indicator (hab : a < b) (c : ℝ)
   ext; simp [Set.indicator]
   split_ifs <;> simp
 
+private theorem RiemannIntegrable.mul_indicator_box (hab : a < b) (J : Box (Fin 1))
+    (h : RiemannIntegrable a b f) (t : F) :
+      RiemannIntegrable a b (J.toSet₁.indicator (fun x ↦ B (f x) t)) := by
+  have (g : ℝ → G) : J.toSet₁.indicator g = (Set.Iic J.upper₁).indicator g
+    - (Set.Iic J.lower₁).indicator g := by
+    ext x; simp [Set.indicator, Set.Iic, Box.toSet₁]
+    have := J.lower_le_upper₁
+    split_ifs <;> grind
+  rw [this]
+  exact (h.mul_indicator hab J.upper₁ t).sub (h.mul_indicator hab J.lower₁ t)
+
 private noncomputable def simple (s : ℝ → F) : Prop :=
-  ∃ (S : Finset ℝ) (t : ℝ → F), s = ∑ c ∈ S, (Set.Iic c).indicator (fun _ ↦ t c)
+  ∃ (S : Finset (Box (Fin 1))) (t : Box (Fin 1) → F),
+    s = ∑ J ∈ S, J.toSet₁.indicator (fun _ ↦ t J)
 
 private theorem RiemannIntegrable.mul_simple (hab : a < b)
     (hf : RiemannIntegrable a b f) (hs : simple s)
     :  RiemannIntegrable a b (fun x ↦ B (f x) (s x)) := by
   obtain ⟨ S, t, rfl ⟩ := hs
-  convert_to RiemannIntegrable a b (∑ x_1 ∈ S, (fun x ↦ (B (f x))
-      ((Set.Iic x_1).indicator (fun x ↦ t x_1) x)))
+  convert_to RiemannIntegrable a b (∑ J ∈ S, (fun x ↦ (B (f x))
+      (J.toSet₁.indicator (fun x ↦ t J) x)))
   · ext x; simp
   refine .finset_sum (fun s hs ↦ ?_)
-  convert hf.mul_indicator hab s (t s) (B := B)
+  convert hf.mul_indicator_box hab s (t s) (B := B)
   simp [Set.indicator]
   split_ifs <;> simp
 
