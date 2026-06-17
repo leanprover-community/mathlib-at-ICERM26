@@ -1079,9 +1079,18 @@ theorem RiemannIntegrable.mul_continuous {f : ℝ → E} {g : ℝ → F}
   obtain rfl | hab := hab.eq_or_lt
   · simp
   obtain ⟨ s, hs, hlim ⟩ := hg.lim_of_simple hab
+  obtain ⟨ M, hM ⟩ := hf.bounded'
   replace hlim : TendstoUniformlyOn (fun n x ↦ B (f x) (s n x))
     (fun x ↦ B (f x) (g x)) atTop (Set.uIcc a b) := by
-    sorry
+    simp only [tendstoUniformlyOn_iff, gt_iff_lt, dist_eq_norm, eventually_atTop, ge_iff_le,
+      ← map_sub] at hlim ⊢
+    intro ε hε
+    obtain ⟨ N, hN ⟩ := hlim (ε / ((‖B‖ + 1) * (max M 1))) (by positivity)
+    use N
+    peel hN with n hn x hx hconv
+    grw [le_opNorm, le_opNorm, hconv, (hM x hx).trans (le_max_left M 1)]
+    field_simp
+    linarith
   exact RiemannIntegrable.of_uniform (fun n ↦ hf.mul_simple hab (hs n)) hlim
 
 end Cut
