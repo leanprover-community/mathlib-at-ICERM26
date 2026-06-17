@@ -338,11 +338,11 @@ theorem HasRiemannIntegral.zero : HasRiemannIntegral a b (0 : ℝ → E) 0 :=
   HasStieltjesIntegral.zero_left
 
 @[simp]
-theorem StieltjesIntegrable.gridero_left : StieltjesIntegrable a b B 0 g :=
+theorem StieltjesIntegrable.zero_left : StieltjesIntegrable a b B 0 g :=
   HasStieltjesIntegral.zero_left.stieltjesIntegrable
 
 @[simp]
-theorem RiemannIntegrable.gridero : RiemannIntegrable a b (0 : ℝ → E) :=
+theorem RiemannIntegrable.zero : RiemannIntegrable a b (0 : ℝ → E) :=
   HasRiemannIntegral.zero.stieltjesIntegrable
 
 @[simp]
@@ -1018,8 +1018,8 @@ section Cut
 variable {f : ℝ → E} {g : ℝ → F} {L : G} {B : E →L[ℝ] F →L[ℝ] G} {a b c : ℝ} {s : ℝ → F}
 
 theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Icc a b)
-    (h : HasStieltjesIntegral a c B f g L) (hg : ContinuousOn g (.Icc a b))
-    (hfbound : Bornology.IsBounded (f '' (.Icc a b))) :
+    (h : HasStieltjesIntegral a c B f g L) (hg : ContinuousOn g (.uIcc a b))
+    (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
       HasStieltjesIntegral a b B ((Set.Iic c).indicator f) g L := by
   -- take a fine partition of `Set.Icc a b` and cut it at `c`.  There is one interval that
   -- gets cut, but the continuity of g and the bound on f will show that the effect of this cut
@@ -1028,37 +1028,57 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
   sorry
 
 theorem HasStieltjesIntegral.mul_indicator_right (hab : a < b) (hc : c ∈ Set.Icc a b)
-    (h : HasStieltjesIntegral c b B f g L) (hg : ContinuousOn g (.Icc a b))
-    (hfbound : Bornology.IsBounded (f '' (.Icc a b))) :
+    (h : HasStieltjesIntegral c b B f g L) (hg : ContinuousOn g (.uIcc a b))
+    (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
       HasStieltjesIntegral a b B ((Set.Iic c).indicator f) g L := by
   sorry
 
 theorem StieltjesIntegrable.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Icc a b)
-    (h : StieltjesIntegrable a c B f g) (hg : ContinuousOn g (.Icc a b))
-    (hfbound : Bornology.IsBounded (f '' (.Icc a b))) :
+    (h : StieltjesIntegrable a c B f g) (hg : ContinuousOn g (.uIcc a b))
+    (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
       StieltjesIntegrable a b B ((Set.Iic c).indicator f) g :=
   (h.hasStieltjesIntegral.mul_indicator_left hab hc hg hfbound).stieltjesIntegrable
 
 theorem StieltjesIntegrable.mul_indicator_right (hab : a < b) (hc : c ∈ Set.Icc a b)
-    (h : StieltjesIntegrable c b B f g) (hg : ContinuousOn g (.Icc a b))
-    (hfbound : Bornology.IsBounded (f '' (.Icc a b))) :
+    (h : StieltjesIntegrable c b B f g) (hg : ContinuousOn g (.uIcc a b))
+    (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
       StieltjesIntegrable a b B ((Set.Iic c).indicator f) g :=
   (h.hasStieltjesIntegral.mul_indicator_right hab hc hg hfbound).stieltjesIntegrable
 
 variable [CompleteSpace E]
 
-private theorem RiemannIntegrable.mul_indicator (hab : a < b) (hc : c ∈ Set.Icc a b)
+private theorem RiemannIntegrable.mul_indicator (hab : a < b) (c : ℝ)
     (h : RiemannIntegrable a b f) (t : F) :
-      RiemannIntegrable a b ((Set.Iic c).indicator (fun x ↦ B (f x) t)) :=
-  sorry
+      RiemannIntegrable a b ((Set.Iic c).indicator (fun x ↦ B (f x) t)) := by
+  have : RiemannIntegrable a b ((Set.Iic c).indicator f) := by
+    have : c < a ∨ c > b ∨ c ∈ Set.Icc a b := by grind
+    rcases this with hc | hc | hc
+    · apply (riemannIntegrable_congr _).mp .zero
+      simp [Set.EqOn, Set.uIcc_of_lt hab, Set.indicator]
+      grind
+    · apply (riemannIntegrable_congr _).mp h
+      simp [Set.EqOn, Set.uIcc_of_lt hab, Set.indicator]
+      grind
+    apply StieltjesIntegrable.mul_indicator_left hab hc _ (by fun_prop) h.bounded
+    exact h.to_subinterval hab (by grind) hc
+  convert this.map (φ := (ContinuousLinearMap.apply ℝ _ t).comp B)
+  ext; simp [Set.indicator]
+  split_ifs <;> simp
 
 private noncomputable def simple (s : ℝ → F) : Prop :=
   ∃ (S : Finset ℝ) (t : ℝ → F), s = ∑ c ∈ S, (Set.Iic c).indicator (fun _ ↦ t c)
 
 private theorem RiemannIntegrable.mul_simple (hab : a < b)
     (hf : RiemannIntegrable a b f) (hs : simple s)
-    :  RiemannIntegrable a b (fun x ↦ B (f x) (s x)) :=
-  sorry
+    :  RiemannIntegrable a b (fun x ↦ B (f x) (s x)) := by
+  obtain ⟨ S, t, rfl ⟩ := hs
+  convert_to RiemannIntegrable a b (∑ x_1 ∈ S, (fun x ↦ (B (f x))
+      ((Set.Iic x_1).indicator (fun x ↦ t x_1) x)))
+  · ext x; simp
+  refine .finset_sum (fun s hs ↦ ?_)
+  convert hf.mul_indicator hab s (t s) (B := B)
+  simp [Set.indicator]
+  split_ifs <;> simp
 
 /-- A continuous function is a uniform limit of simple functions. -/
 private theorem ContinuousOn.lim_of_simple (hab : a < b) (hg : ContinuousOn g (.uIcc a b)) :
@@ -1091,7 +1111,7 @@ theorem RiemannIntegrable.mul_continuous {f : ℝ → E} {g : ℝ → F}
     grw [le_opNorm, le_opNorm, hconv, (hM x hx).trans (le_max_left M 1)]
     field_simp
     linarith
-  exact RiemannIntegrable.of_uniform (fun n ↦ hf.mul_simple hab (hs n)) hlim
+  exact .of_uniform (fun n ↦ hf.mul_simple hab (hs n)) hlim
 
 end Cut
 
