@@ -201,7 +201,8 @@ theorem RiemannIntegrable.bounded (h : RiemannIntegrable a b f) :
     tag_mem_Icc J := by
       split_ifs with h h'
       · simp [Even.box, Box.Icc_def, Pi.le_def, hab, hx.le, hx']
-      · simp only [Even.toPrepartition, mem_image] at h'; obtain ⟨j, hj, rfl⟩ := h'
+      · simp only [Even.toPrepartition, mem_image] at h'
+        obtain ⟨j, hj, rfl⟩ := h'
         exact (Box.le_iff_Icc.mp (e.gridbox_le_box hj)) (Box.upper_mem_Icc _)
       apply Box.upper_mem_Icc
   }
@@ -937,15 +938,16 @@ theorem HasStieltjesIntegral.cauchy_of_uniformCauchy_of_boundedVariationOn
 remains Stieltjes integrable. -/
 theorem HasStieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
     (hfn : ∀ n, HasStieltjesIntegral a b B (fn n) g (Ln n))
-    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformlyOn fn f l (Set.uIcc a b)) :
     ∃ L, l.Tendsto Ln (nhds L) ∧ HasStieltjesIntegral a b B f g L := by
   obtain ⟨L, hL⟩ := CompleteSpace.complete
     (cauchy_of_uniformCauchy_of_boundedVariationOn hfn hg
-      hlim.tendstoUniformlyOn.uniformCauchySeqOn)
+      hlim.uniformCauchySeqOn)
   refine ⟨L, hL, ?_⟩
   wlog hab : a ≤ b with H
   · rw [symm_iff]
-    exact H (fun n ↦ (hfn n).symm) (Set.uIcc_comm a b ▸ hg) hlim (-L) (Tendsto.neg hL) (by order)
+    rw [Set.uIcc_comm] at hg hlim
+    exact H (fun n ↦ (hfn n).symm) hg hlim (-L) (Tendsto.neg hL) (by order)
   obtain rfl | hab := hab.eq_or_lt
   · have hLn : Ln = 0 := by ext x; simpa using hfn x
     have : L = 0 := tendsto_nhds_unique hL (hLn ▸ tendsto_const_nhds)
@@ -969,14 +971,14 @@ theorem HasStieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
     simp_rw [dist_eq_norm, ← Finset.sum_sub_distrib, ← (B _).sub_apply, ← B.map_sub]
     refine (norm_sum_B_le_of_norm_le_of_boundedVariationOn (B := B) (L' := ε_s)
       (f := fun x ↦ f x - fn n x) hab hg ?_ π).trans h_first_third
-    intro x _; rw [← dist_eq_norm]; exact (h_unif x).le
+    intro x hx; rw [← dist_eq_norm]; rw [← Set.uIcc_of_lt hab] at hx; exact (h_unif x hx).le
   have := dist_triangle4 (∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁))
     (∑ J ∈ π.boxes, B (fn n (π.tag J 0)) (g J.upper₁ - g J.lower₁)) (Ln n) L
   grind
 
 theorem StieltjesIntegrable.of_uniform_of_boundedVariationOn [CompleteSpace G]
     (hfn : ∀ n, StieltjesIntegrable a b B (fn n) g)
-    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformlyOn fn f l (Set.uIcc a b)) :
     StieltjesIntegrable a b B f g := by
   obtain ⟨_, _, hL⟩ := HasStieltjesIntegral.of_uniform_of_boundedVariationOn
     (fun n ↦ (hfn n).hasStieltjesIntegral) hg hlim
@@ -984,25 +986,26 @@ theorem StieltjesIntegrable.of_uniform_of_boundedVariationOn [CompleteSpace G]
 
 theorem stieltjesIntegral.of_uniform_of_boundedVariationOn [CompleteSpace G]
     (hfn : ∀ n, StieltjesIntegrable a b B (fn n) g)
-    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformly fn f l) :
+    (hg : BoundedVariationOn g (.uIcc a b)) (hlim : TendstoUniformlyOn fn f l (Set.uIcc a b)) :
     l.Tendsto (fun n ↦ ∫⟨B⟩ x in a..b, (fn n) x ∂g) (nhds (∫⟨B⟩ x in a..b, f x ∂g)) := by
   obtain ⟨_, hLn, hL⟩ := HasStieltjesIntegral.of_uniform_of_boundedVariationOn
     (fun n ↦ (hfn n).hasStieltjesIntegral) hg hlim
   rw [hL.stieltjesIntegral_eq]; exact hLn
 
 theorem HasRiemannIntegral.of_uniform [CompleteSpace E]
-    (hfn : ∀ n, HasRiemannIntegral a b (fn n) (Mn n)) (hlim : TendstoUniformly fn f l) :
+    (hfn : ∀ n, HasRiemannIntegral a b (fn n) (Mn n))
+    (hlim : TendstoUniformlyOn fn f l (Set.uIcc a b)) :
     ∃ L, l.Tendsto Mn (nhds L) ∧ HasRiemannIntegral a b f L :=
   HasStieltjesIntegral.of_uniform_of_boundedVariationOn hfn .id_of_Icc hlim
 
 theorem RiemannIntegrable.of_uniform [CompleteSpace E]
-    (hfn : ∀ n, RiemannIntegrable a b (fn n)) (hlim : TendstoUniformly fn f l) :
+    (hfn : ∀ n, RiemannIntegrable a b (fn n)) (hlim : TendstoUniformlyOn fn f l (Set.uIcc a b)) :
     RiemannIntegrable a b f := by
   obtain ⟨_, _, hL⟩ := HasRiemannIntegral.of_uniform (fun n ↦ (hfn n).hasRiemannIntegral) hlim
   exact hL.riemannIntegrable
 
 theorem riemannIntegral.of_uniform [CompleteSpace E]
-    (hfn : ∀ n, RiemannIntegrable a b (fn n)) (hlim : TendstoUniformly fn f l) :
+    (hfn : ∀ n, RiemannIntegrable a b (fn n)) (hlim : TendstoUniformlyOn fn f l (Set.uIcc a b)) :
     l.Tendsto (fun n ↦ riemannIntegral a b (fn n)) (nhds (riemannIntegral a b f)) := by
   obtain ⟨_, hLn, hL⟩ := HasRiemannIntegral.of_uniform (fun n ↦ (hfn n).hasRiemannIntegral) hlim
   rw [hL.riemannIntegral_eq]; exact hLn
@@ -1012,44 +1015,58 @@ end UpperBound
 section Cut
 /-! ## Cutting by indicator functions -/
 
-variable {f : ℝ → E} {g : ℝ → F} {L : G} {B : E →L[ℝ] F →L[ℝ] G} {a b c : ℝ}
+variable {f : ℝ → E} {g : ℝ → F} {L : G} {B : E →L[ℝ] F →L[ℝ] G} {a b c : ℝ} {s : ℝ → F}
 
-theorem HasStieltjesIntegral.mul_indicator_left {hab : a ≤ b} (hc : c ∈ Set.Icc a b)
-    (h : HasStieltjesIntegral a c B f g L) (hg : ContinuousAt g c)
-    (hfbound : Bornology.IsBounded (f '' (Set.Icc a b))) :
-      HasStieltjesIntegral a b B ((Set.Ioc a c).indicator f) g L := by
+theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Icc a b)
+    (h : HasStieltjesIntegral a c B f g L) (hg : ContinuousOn g (.Icc a b))
+    (hfbound : Bornology.IsBounded (f '' (.Icc a b))) :
+      HasStieltjesIntegral a b B ((Set.Iic c).indicator f) g L := by
   -- take a fine partition of `Set.Icc a b` and cut it at `c`.  There is one interval that
   -- gets cut, but the continuity of g and the bound on f will show that the effect of this cut
   -- is small.
+  -- one can probably replace `hg` with `ContinuousWithinAt g (Set.Icc a b) c`.
   sorry
 
-theorem HasStieltjesIntegral.mul_indicator_right {hab : a ≤ b} (hc : c ∈ Set.Icc a b)
-    (h : HasStieltjesIntegral c b B f g L) (hg : ContinuousAt g c)
-    (hfbound : Bornology.IsBounded (f '' (Set.Icc a b))) :
-      HasStieltjesIntegral a b B ((Set.Ioc c b).indicator f) g L := by
+theorem HasStieltjesIntegral.mul_indicator_right (hab : a < b) (hc : c ∈ Set.Icc a b)
+    (h : HasStieltjesIntegral c b B f g L) (hg : ContinuousOn g (.Icc a b))
+    (hfbound : Bornology.IsBounded (f '' (.Icc a b))) :
+      HasStieltjesIntegral a b B ((Set.Iic c).indicator f) g L := by
   sorry
 
-theorem StieltjesIntegrable.mul_indicator_left {hab : a ≤ b} (hc : c ∈ Set.Icc a b)
-    (h : StieltjesIntegrable a c B f g) (hg : ContinuousAt g c)
-    (hfbound : Bornology.IsBounded (f '' (Set.Icc a b))) :
-      StieltjesIntegrable a b B ((Set.Ioc a c).indicator f) g := by
+theorem StieltjesIntegrable.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Icc a b)
+    (h : StieltjesIntegrable a c B f g) (hg : ContinuousOn g (.Icc a b))
+    (hfbound : Bornology.IsBounded (f '' (.Icc a b))) :
+      StieltjesIntegrable a b B ((Set.Iic c).indicator f) g :=
+  (h.hasStieltjesIntegral.mul_indicator_left hab hc hg hfbound).stieltjesIntegrable
+
+theorem StieltjesIntegrable.mul_indicator_right (hab : a < b) (hc : c ∈ Set.Icc a b)
+    (h : StieltjesIntegrable c b B f g) (hg : ContinuousOn g (.Icc a b))
+    (hfbound : Bornology.IsBounded (f '' (.Icc a b))) :
+      StieltjesIntegrable a b B ((Set.Iic c).indicator f) g :=
+  (h.hasStieltjesIntegral.mul_indicator_right hab hc hg hfbound).stieltjesIntegrable
+
+variable [CompleteSpace E]
+
+private theorem RiemannIntegrable.mul_indicator (hab : a < b) (hc : c ∈ Set.Icc a b)
+    (h : RiemannIntegrable a b f) (t : F) :
+      RiemannIntegrable a b ((Set.Iic c).indicator (fun x ↦ B (f x) t)) :=
   sorry
 
-theorem StieltjesIntegrable.mul_indicator_right {hab : a ≤ b} (hc : c ∈ Set.Icc a b)
-    (h : StieltjesIntegrable c b B f g) (hg : ContinuousAt g c)
-    (hfbound : Bornology.IsBounded (f '' (Set.Icc a b))) :
-      StieltjesIntegrable a b B ((Set.Ioc c b).indicator f) g := by
+private noncomputable def simple (s : ℝ → F) : Prop :=
+  ∃ (S : Finset ℝ) (t : ℝ → F), s = ∑ c ∈ S, (Set.Iic c).indicator (fun _ ↦ t c)
+
+private theorem RiemannIntegrable.mul_simple (hab : a < b)
+    (hf : RiemannIntegrable a b f) (hs : simple s)
+    :  RiemannIntegrable a b (fun x ↦ B (f x) (s x)) :=
   sorry
 
--- TODO: define the notion of a simple function
+/-- A continuous function is a uniform limit of simple functions. -/
+private theorem ContinuousOn.lim_of_simple (hab : a < b) (hg : ContinuousOn g (.uIcc a b)) :
+    ∃ s : ℕ → ℝ → F, (∀ n, simple (s n)) ∧
+      TendstoUniformlyOn (fun n ↦ s n) g atTop (Set.uIcc a b) := by
+  sorry
 
--- TODO: show that when g is continuous and f is bounded, Stieltjes integrability is preserved by
--- multiplication by simple functions
-
--- TODO: show that Riemann integrability is preserved by
--- multiplication by simple functions
-
--- TODO: show that continuous functions are uniform limits of simple functions
+variable [CompleteSpace G]
 
 /-- The product of a Riemann integrable function and a continuous function is also
 Riemann integrable. -/
@@ -1061,7 +1078,11 @@ theorem RiemannIntegrable.mul_continuous {f : ℝ → E} {g : ℝ → F}
     exact this hf hg (by order)
   obtain rfl | hab := hab.eq_or_lt
   · simp
-  sorry
+  obtain ⟨ s, hs, hlim ⟩ := hg.lim_of_simple hab
+  replace hlim : TendstoUniformlyOn (fun n x ↦ B (f x) (s n x))
+    (fun x ↦ B (f x) (g x)) atTop (Set.uIcc a b) := by
+    sorry
+  exact RiemannIntegrable.of_uniform (fun n ↦ hf.mul_simple hab (hs n)) hlim
 
 end Cut
 
@@ -1262,6 +1283,8 @@ theorem variation_of_contDiffOn (hab : a ≤ b) (hg : ContDiffOn ℝ 1 g (.Icc a
     _ = _ := by
       simp [sum_add_distrib, N_eq]; field_simp
 
+variable [CompleteSpace E] [CompleteSpace G]
+
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. Riemann integral version -/
 theorem HasStieltjesIntegral.of_contDiffOn_eq_riemann (hg : ContDiffOn ℝ 1 g (.uIcc a b))
@@ -1272,7 +1295,7 @@ theorem HasStieltjesIntegral.of_contDiffOn_eq_riemann (hg : ContDiffOn ℝ 1 g (
     exact this ((Set.uIcc_comm a b) ▸ hg) hf.symm (by order)
   obtain rfl | hab := hab.eq_or_lt
   · simp
-  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le hf.bounded
+  obtain ⟨ M, hM ⟩ := hf.bounded'
   let M' := max M 0
   replace hM : ∀ x ∈ Set.Icc a b, ‖f x‖ ≤ M' := by aesop
   simp only [Set.uIcc_of_lt hab] at hg ⊢

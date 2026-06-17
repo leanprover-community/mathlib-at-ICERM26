@@ -96,8 +96,8 @@ section Sums
 
 private lemma short {I J : Box (Fin 1)} {π : TaggedPrepartition I} (hπ : π.mesh_size ≤ 1)
     (hJ : J ∈ π) : ⌊J.upper₁⌋ = ⌊J.lower₁⌋ ∨ ⌊J.upper₁⌋ = ⌊J.lower₁⌋ + 1 := by
-  simp only [mesh_size_le_iff₁, mem_boxes, mem_toPrepartition, NNReal.coe_one, tsub_le_iff_right]
-    at hπ
+  simp only [mesh_size_le_iff₁, mem_boxes, mem_toPrepartition, NNReal.coe_one, Box.len,
+    tsub_le_iff_right] at hπ
   replace hπ := Int.floor_mono (hπ J hJ)
   have := Int.floor_mono (J.lower_lt_upper₁).le
   rw [add_comm, Int.floor_add_one] at hπ; grind

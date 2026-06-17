@@ -437,7 +437,8 @@ theorem HasRiemannIntegral.intervalIntegral_eq [hfin : Module.Finite ℝ E]
 
 /-- Theorem A.3 (b).  If g′ is continuous on [a, b] and if in addition f is
 Riemann integrable, then ∫ₐᵇ f(x) dg(x) = ∫ₐᵇ f(x) g′(x) dx. Interval integral version. -/
-theorem HasStieltjesIntegral.of_contDiffOn [Module.Finite ℝ G] (hg : ContDiffOn ℝ 1 g (.uIcc a b))
+theorem HasStieltjesIntegral.of_contDiffOn [Module.Finite ℝ G] [CompleteSpace E]
+    [CompleteSpace G] (hg : ContDiffOn ℝ 1 g (.uIcc a b))
     (hf : RiemannIntegrable a b f) :
     HasStieltjesIntegral a b B f g (∫ x in a..b, B (f x) (deriv g x)) := by
   wlog hab : a ≤ b
@@ -452,7 +453,7 @@ theorem HasStieltjesIntegral.of_contDiffOn [Module.Finite ℝ G] (hg : ContDiffO
     rw [derivWithin_of_mem_nhds]
     simpa [← mem_interior_iff_mem_nhds, Set.uIcc_of_lt, Set.uIoo_of_lt, hab] using hx
   rw [this]
-  convert of_contDiffOn_eq_riemann hg hf
+  convert of_contDiffOn_eq_riemann (G := G) hg hf
   simp only [Set.uIcc_of_lt hab] at hg
   have hriem : RiemannIntegrable a b (fun x ↦ B (f x) (g' x)) :=
     hf.mul_continuous (by simpa [g', Set.uIcc_of_lt hab] using

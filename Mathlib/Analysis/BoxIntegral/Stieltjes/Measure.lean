@@ -103,7 +103,7 @@ theorem HasStieltjesIntegral.of_continuous_of_Stieltjes (hf : ContinuousOn f (.u
     have htag : π.tag J 0 ∈ J.Icc₁ := by simpa [Box.mem_Icc₁] using hhen J hJπ
     simp only [mesh_size_le_iff₁, δ', NNReal.coe_mk] at hmesh
     have htag_x : |π.tag J 0 - x| < δ := by
-      simp only [Box.toSet₁_def, Set.mem_Ioc, abs_sub_lt_iff] at hxJ' ⊢
+      simp only [Box.toSet₁_def, Set.mem_Ioc, abs_sub_lt_iff, Box.len] at hxJ' hmesh ⊢
       refine ⟨?_, ?_⟩ <;> linarith [htag.1, htag.2, hxJ'.1.le, hxJ'.2, hmesh J hJπ]
     have htag_mem := Icc_subset_of_box_le_Ioc hab (π.le_of_mem hJπ) htag
     exact (hδf _ htag_mem _ (Ioc_subset_Icc_self hx) htag_x).le

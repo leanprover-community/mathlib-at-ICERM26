@@ -162,13 +162,13 @@ theorem HasStieltjesIntegral.of_comp_strictMono_continuous (hab : a ≤ b)
   specialize h1 hJπ
   specialize h2 hJπ
   have := J.lower_lt_upper₁
-  simp only [Ioc.comp, h2, Ioc.upper₁, Ioc.lower₁]
+  simp only [Ioc.comp, h2, Ioc.len]
   suffices dist (φ J.lower₁) (φ J.upper₁) < δ' by
     change φ J.upper₁ - φ J.lower₁ ≤ δ'
     simp [Real.dist_eq] at this ⊢; grind
   apply hδf _ h1.1 _ h1.2
   specialize hmesh J hJπ
-  simp [← NNReal.coe_le_coe] at hmesh ⊢; grind
+  simp [← NNReal.coe_le_coe, Box.len] at hmesh ⊢; grind
 
 theorem StieltjesIntegrable.of_comp_strictMono_continuous (hab : a ≤ b)
     (hmono : StrictMonoOn φ (.Icc a b))
@@ -190,6 +190,9 @@ private noncomputable def Box.reflect (J : Box (Fin 1)) : Box (Fin 1) :=
 private lemma Box.lower_lt_upper_reflect₁ (J : Box (Fin 1)) : (-J.upper₁) < (-J.lower₁) := by
   simp only [neg_lt_neg_iff, Box.lower_lt_upper₁]
 
+private noncomputable def Box.reflect_len (J : Box (Fin 1)) : J.reflect.len = J.len := by
+  simp [Box.len, Box.reflect, J.lower_lt_upper_reflect₁]; abel
+
 open Topology
 
 theorem HasStieltjesIntegral.of_reflect
@@ -202,7 +205,7 @@ theorem HasStieltjesIntegral.of_reflect
   · simp_all
   have hab' : -b < -a := by grind
   simp only [hab, hasStieltjesIntegral_iff_lim_sum, gt_iff_lt, mesh_size_le_iff₁, mem_boxes,
-    mem_toPrepartition, tsub_le_iff_right, isValue, hab', Function.comp_apply] at h ⊢
+    mem_toPrepartition, isValue, hab', Function.comp_apply] at h ⊢
   peel h with ε hε δ hδ h
   intro π hhen hpart hmesh
   classical
@@ -277,7 +280,7 @@ theorem HasStieltjesIntegral.of_reflect
     π'] at hJ'
   obtain ⟨ J, hJπ, rfl⟩ := hJ'
   specialize hmesh J hJπ
-  simpa [Box.reflect, J.lower_lt_upper_reflect₁, add_comm] using hmesh
+  simpa [Box.reflect_len] using hmesh
 
 theorem StieltjesIntegrable.of_reflect (h : StieltjesIntegrable a b B f g) :
     StieltjesIntegrable (-b) (-a) B (f ∘ Neg.neg) (g ∘ Neg.neg) :=

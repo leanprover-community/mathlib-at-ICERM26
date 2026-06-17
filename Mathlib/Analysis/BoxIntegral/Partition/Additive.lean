@@ -252,6 +252,8 @@ lemma ofDiff_smul {R : Type*} [Monoid R] [DistribMulAction R M] (c : R) (g : ℝ
 @[simp]
 lemma ofDiff_const (c : M) : ofDiff (fun _ : ℝ ↦ c) = 0 := by ext; simp
 
+lemma ofDiff_id : ofDiff id = Box.len := rfl
+
 @[simp]
 lemma ofDiff_Ioc (g : ℝ → M) {a b : ℝ} (h : a < b) : ofDiff g (Ioc a b) = g b - g a := by simp [h]
 
@@ -276,8 +278,7 @@ lemma _root_.BoxIntegral.Prepartition.IsPartition.sum_of_sub {I : Box (Fin 1)}
 
 lemma _root_.BoxIntegral.Prepartition.IsPartition.sum_of_len {I : Box (Fin 1)}
     {π : Prepartition I} (hπ : π.IsPartition) : ∑ J ∈ π.boxes, J.len = I.len := by
-    unfold Box.len
-    exact hπ.sum_of_sub id
+  simpa [←ofDiff_id] using hπ.sum_of_sub id
 
 end AddCommGroup
 
