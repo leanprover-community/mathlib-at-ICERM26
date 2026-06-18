@@ -139,8 +139,8 @@ theorem HasStieltjesIntegral.of_fun_floor_right (hab : a ≤ b) (hf : Continuous
             have := floor_le this
             grind
           simp [this]
-        apply sum_congr rfl; intro n hn
-        simp [hM n hn]
+        apply sum_congr rfl
+        simp +contextual [hM]
       _ < ε := by simp [hε]
   let ε' := ε / (2 * ‖B‖ * M)
   obtain ⟨δ, hδ, hδf⟩ := hf.metric_uniform ε' (by positivity)
@@ -220,7 +220,7 @@ theorem HasStieltjesIntegral.of_fun_Nat_floor_right (hab : a ≤ b) (hf : Contin
     (g : ℕ → F) :
     HasStieltjesIntegral a b B f (g ⌊·⌋₊) (∑ n ∈ .Ioc ⌊a⌋₊ ⌊b⌋₊, B (f n) (g n - g (n - 1))) := by
   convert of_fun_floor_right hab hf (g ⌊·⌋₊)
-  convert (sum_of_injOn (fun (n:ℕ) ↦ (n:ℤ)) ?_ ?_ ?_ ?_)
+  convert sum_of_injOn (fun (n:ℕ) ↦ (n:ℤ)) ?_ ?_ ?_ ?_
   · simp_all
   · intro n hn
     simp_all only [coe_Ioc, Set.mem_Ioc, Int.floor_lt, Int.cast_natCast,
@@ -275,8 +275,7 @@ theorem HasStieltjesIntegral.of_Nat_floor_right (hab : a ≤ b) (hf : Continuous
   · rw [sum_boole]; simp only [ne_eq, Nat.cast_inj]
     convert (Nat.card_Ioc 0 ⌊x⌋₊).symm
     grind
-  have : n ≠ 0 := by grind
-  simp [this]
+  simp [(by grind : n ≠ 0)]
 
 @[simp]
 theorem stieltjesIntegral.of_Nat_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
@@ -296,16 +295,16 @@ theorem stieltjesIntegral_of_floor_right (hab : a ≤ b) (hf : ContinuousOn f (.
 private theorem HasStieltjesIntegral.of_Heaviside (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f ((Set.Ici 0).indicator 1)
     ((Set.Ioc a b).indicator f 0) := by
-  have hint : ((Set.Ici (0:ℝ)).indicator (1:ℝ → ℝ)) = (((Set.Ici (0:ℤ)).indicator 1) ⌊·⌋) := by
+  have hint : ((Set.Ici (0:ℝ)).indicator (1 : ℝ → ℝ)) = (((Set.Ici (0:ℤ)).indicator 1) ⌊·⌋) := by
     ext; simp [Set.indicator, Int.floor_nonneg]
   rw [hint]
   convert of_fun_floor_right hab hf ((Set.Ici (0:ℤ)).indicator 1) using 1
   have h_term (n : ℤ) : (lsmul ℝ ℝ).flip (f ↑n)
-        ((Set.Ici 0).indicator (1:ℤ → ℝ) n - (Set.Ici 0).indicator 1 (n-1))
+        ((Set.Ici 0).indicator (1 : ℤ → ℝ) n - (Set.Ici 0).indicator 1 (n-1))
       = if n = 0 then f 0 else 0 := by
     obtain rfl | hn := eq_or_ne n 0
     · simp
-    have hdiff : ((Set.Ici 0).indicator (1:ℤ → ℝ) n - (Set.Ici 0).indicator 1 (n - 1)) = 0 := by
+    have hdiff : ((Set.Ici 0).indicator (1 : ℤ → ℝ) n - (Set.Ici 0).indicator 1 (n - 1)) = 0 := by
       simp [Set.indicator, Set.Ici]; grind
     simp [hdiff, hn]
   simp_rw [h_term, Finset.sum_ite_eq', ← Int.coe_mem_Ioc_iff, Set.indicator]
@@ -315,12 +314,12 @@ theorem HasStieltjesIntegral.of_shift_Heaviside (hab : a ≤ b) (hf : Continuous
     HasStieltjesIntegral a b (lsmul ℝ ℝ).flip f ((Set.Ici x).indicator 1)
     ((Set.Ioc a b).indicator f x) := by
   have hf' : ContinuousOn (f ∘ (· + x)) (.Icc (a - x) (b - x)) :=
-    hf.comp (Continuous.continuousOn (by fun_prop)) (by intro _ _; grind)
+    hf.comp (Continuous.continuousOn (by fun_prop)) (by intro; grind)
   have hmono : StrictMonoOn (· - x : ℝ → ℝ) (.Icc a b) := fun _ _ _ _ _ ↦ by linarith
   convert (of_Heaviside (by linarith) hf').of_comp_strictMono_continuous hab hmono (by fun_prop)
     using 1
   · grind
-  · ext y; simp [Set.indicator]
+  · ext; simp [Set.indicator]
   · simp [Set.indicator]
 
 theorem StieltjesIntegrable.of_shift_Heaviside (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
@@ -330,7 +329,7 @@ theorem StieltjesIntegrable.of_shift_Heaviside (hab : a ≤ b) (hf : ContinuousO
 @[simp]
 theorem stieltjesIntegral_of_shift_Heaviside (hab : a ≤ b) (hf : ContinuousOn f (.Icc a b)) :
     ∫⟨(lsmul ℝ ℝ).flip⟩ x in a..b, f x ∂((Set.Ici x).indicator 1) =
-      ((Set.Ioc a b).indicator f x) :=
+      (Set.Ioc a b).indicator f x :=
   (HasStieltjesIntegral.of_shift_Heaviside hab hf).stieltjesIntegral_eq
 
 /-- Equation (A.5) of Montgomery--Vaughan. -/
@@ -338,33 +337,32 @@ theorem sum_mul_eq_sub_stieltjes_integral {N : ℕ} {a : ℕ → ℂ} {f : ℝ �
     (hf : ContinuousOn f (.Icc 0 N)) :
     ∑ n ∈ .Ioc 0 N, a n * f n = (∑ n ∈ .Ioc 0 N, a n) * f N -
       ∫⟨(lsmul ℝ ℂ).flip⟩ x in 0..N, (∑ n ∈ .Ioc 0 ⌊x⌋₊, a n) ∂f := by
-  have h0 : HasStieltjesIntegral 0 N (lsmul ℝ ℂ) f (fun x ↦ ∑ n ∈ .Ioc 0 ⌊x⌋₊, a n)
+  have h0 : HasStieltjesIntegral 0 N (lsmul ℝ ℂ) f (∑ n ∈ .Ioc 0 ⌊·⌋₊, a n)
       (∑ n ∈ .Ioc 0 N, a n * f n) := by
     have h := HasStieltjesIntegral.of_fun_Nat_floor_right (B := lsmul ℝ ℂ)
       N.cast_nonneg hf (∑ n ∈ .Ioc 0 ·, a n)
     simp only [Nat.floor_zero, Nat.floor_natCast] at h
     convert h using 1
-    apply Finset.sum_congr rfl; intro n hn
+    apply sum_congr rfl; intro n hn
     simp only [Finset.mem_Ioc] at hn
     obtain ⟨m, rfl⟩ := Nat.exists_eq_add_one.mpr hn.1
-    simp [mul_comm, Finset.sum_Ioc_succ_top m.zero_le a]
-  simp [h0.by_parts.stieltjesIntegral_eq, ← Finset.mul_sum]; ring
+    simp [mul_comm, sum_Ioc_succ_top m.zero_le a]
+  simp [h0.by_parts.stieltjesIntegral_eq, ← mul_sum]; ring
 
 /-- Equation (A.6) of Montgomery--Vaughan. -/
 theorem sum_mul_eq_sub_integral_mul_deriv {N : ℕ} {a : ℕ → ℂ} {f : ℝ → ℂ}
     (hf : ContDiffOn ℝ 1 f (.Icc 0 N)) :
     ∑ n ∈ .Ioc 0 N, a n * f n = (∑ n ∈ .Ioc 0 N, a n) * f N -
-      ∫ x in 0..N, (∑ n ∈ .Ioc 0 ⌊x⌋₊, a n) * (deriv f x) := by
+      ∫ x in 0..N, (∑ n ∈ .Ioc 0 ⌊x⌋₊, a n) * deriv f x := by
   obtain rfl | h0 := eq_or_ne N 0
   · simp
   have hf' := hf; rw [←Set.uIcc_of_le (by positivity)] at hf'
-  have hN : (0 : ℝ) < N := by exact_mod_cast Nat.pos_of_ne_zero h0
+  have hN : (0 : ℝ) < N := mod_cast Nat.pos_of_ne_zero h0
   rw [sum_mul_eq_sub_stieltjes_integral hf.continuousOn, (HasStieltjesIntegral.of_contDiffOn
     hf' (.of_fun_Nat_floor hN.le (∑ n ∈ .Ioc 0 ·, a n))).stieltjesIntegral_eq]
   congr 1
   refine intervalIntegral.integral_congr fun x _ ↦ ?_
-  simp only [flip_apply, lsmul_apply, smul_eq_mul]
-  ring
+  simp only [flip_apply, lsmul_apply, smul_eq_mul, mul_comm]
 
 end Sums
 

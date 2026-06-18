@@ -225,11 +225,11 @@ def ofDiffAux (g : ℝ → M) : (Fin 1) →ᵇᵃ M :=
   ofMapSplitAdd (fun J : Box (Fin 1) ↦ g J.upper₁ - g J.lower₁) ⊤
     (fun I _ i x hx ↦ by
       fin_cases i
-      rw [Box.splitLower_def hx, Box.splitUpper_def hx]
+      rw [splitLower_def hx, splitUpper_def hx]
       simp [Option.elim', upper₁, lower₁])
 
 @[simp]
-lemma ofDiffAux_apply (g : ℝ → M) (J : Box (Fin 1)) :
+private lemma ofDiffAux_apply (g : ℝ → M) (J : Box (Fin 1)) :
     ofDiffAux g J = g J.upper₁ - g J.lower₁ := rfl
 
 /-- The box-additive "differential" sending a function `g : ℝ → M` to the box-additive map on
@@ -271,11 +271,14 @@ differential `ofDiff g` by `φ : M →+ N` is the same as taking the differentia
 lemma map_ofDiff {N : Type*} [AddCommGroup N] (g : ℝ → M) (φ : M →+ N) :
     (ofDiff g).map φ = ofDiff (φ ∘ g) := by ext J; simp [map_sub]
 
+/-- Telescoping series for one-dimensional box partitions. -/
 lemma _root_.BoxIntegral.Prepartition.IsPartition.sum_of_sub {I : Box (Fin 1)}
     {π : Prepartition I} (hπ : π.IsPartition) (f : ℝ → M)
     : ∑ J ∈ π.boxes, (f J.upper₁ - f J.lower₁) = f I.upper₁ - f I.lower₁ :=
   (ofDiff f).sum_partition_boxes (by simp) hπ
 
+/-- Additivity of length. -/
+@[simp]
 lemma _root_.BoxIntegral.Prepartition.IsPartition.sum_of_len {I : Box (Fin 1)}
     {π : Prepartition I} (hπ : π.IsPartition) : ∑ J ∈ π.boxes, J.len = I.len := by
   simpa [←ofDiff_id] using hπ.sum_of_sub id

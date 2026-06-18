@@ -142,7 +142,7 @@ variable {B : E →L[ℝ] F →L[ℝ] G} {a b : ℝ} {f : ℝ → E} {g : ℝ �
 theorem HasStieltjesIntegral.lim (hab : a < b) (h : HasStieltjesIntegral a b B f g L) :
     (IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤).Tendsto (fun π ↦ ∑ x ∈ π.boxes,
     ((B (f (π.tag x 0))) (g x.upper₁ - g x.lower₁))) (nhds L) := by
-  simp [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral'] at h
+  simp [of_lt, hab, HasStieltjesIntegral'] at h
   convert h.tendsto with π
   simp [integralSum]
 
@@ -151,9 +151,9 @@ one uses unordered partitions of the interval. -/
 theorem hasStieltjesIntegral_iff_lim_sum (hab : a < b) : HasStieltjesIntegral a b B f g L ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
     → π.mesh_size ≤ δ →
-     dist (∑ x ∈ π.boxes, ((B (f (π.tag x 0))) (g x.upper₁ - g x.lower₁))) L < ε := by
-  simp [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral',
-    HasIntegral_Riemann_iff, integralSum]
+    dist (∑ x ∈ π.boxes, ((B (f (π.tag x 0))) (g x.upper₁ - g x.lower₁))) L < ε := by
+  simp [HasStieltjesIntegral.of_lt, hab, HasStieltjesIntegral', HasIntegral_Riemann_iff,
+    integralSum]
 
 theorem HasRiemannIntegral.lim (hab : a < b) (h : HasRiemannIntegral a b f M) :
     (IntegrationParams.Riemann.toFilteriUnion (Ioc a b) ⊤).Tendsto (fun π ↦ ∑ x ∈ π.boxes,
@@ -162,8 +162,7 @@ theorem HasRiemannIntegral.lim (hab : a < b) (h : HasRiemannIntegral a b f M) :
 
 theorem hasRiemannIntegral_iff_lim_sum (hab : a < b) : HasRiemannIntegral a b f M ↔
     ∀ ε > 0, ∃ δ > 0, ∀ π : TaggedPrepartition (Ioc a b), π.IsHenstock → π.IsPartition
-    → π.mesh_size ≤ δ →
-     dist (∑ x ∈ π.boxes, (x.len • (f (π.tag x 0)))) M < ε :=
+    → π.mesh_size ≤ δ → dist (∑ x ∈ π.boxes, (x.len • (f (π.tag x 0)))) M < ε :=
   hasStieltjesIntegral_iff_lim_sum hab
 
 /-- A Riemann integrable function on a closed interval is bounded. -/
@@ -213,11 +212,11 @@ theorem RiemannIntegrable.bounded (h : RiemannIntegrable a b f) :
     split_ifs with h h'
     · simp [h.2, (e.grid_index_lt x).le, e.le_grid_succ_index x]
     · apply Box.upper_mem_Icc
-    exfalso; exact h' hJ
+    exact absurd hJ h'
   have hpart (p : Bool) : (π p).IsPartition := by
     intro x hx; simp only [Even.box, hab, mem_Ioc, isValue] at hx
     refine ⟨e.gridbox (e.index (x 0)), ?_, by convert hmem hx.1 hx.2⟩
-    rw [←Prepartition.mem_boxes]
+    rw [←mem_boxes]
     simp only [Even.toPrepartition, isValue, mem_image, π]
     exact ⟨e.index (x 0), by simp [←e.mem_box_iff]; grind, by rfl⟩
   have hmesh (p : Bool) : (π p).mesh_size ≤ δ := by
@@ -261,7 +260,7 @@ theorem RiemannIntegrable.bounded (h : RiemannIntegrable a b f) :
 
 theorem RiemannIntegrable.bounded' (h : RiemannIntegrable a b f) :
     ∃ M, ∀ x ∈ Set.uIcc a b, ‖f x‖ ≤ M := by
-  obtain ⟨ M, hM ⟩ := Bornology.IsBounded.exists_norm_le h.bounded
+  obtain ⟨ M, hM ⟩ := h.bounded.exists_norm_le
   exact ⟨ M, by grind ⟩
 
 section Naturality
@@ -529,7 +528,8 @@ theorem HasStieltjesIntegral.smul_right (h : HasStieltjesIntegral a b B f g L) (
   simp
 
 theorem StieltjesIntegrable.smul_right (h : StieltjesIntegrable a b B f g) (c : ℝ) :
-    StieltjesIntegrable a b B f (c • g) := (h.hasStieltjesIntegral.smul_right c).stieltjesIntegrable
+    StieltjesIntegrable a b B f (c • g) :=
+  (h.hasStieltjesIntegral.smul_right c).stieltjesIntegrable
 
 @[simp]
 theorem stieltjesIntegral_smul_right (h : StieltjesIntegrable a b B f g) (c : ℝ) :
@@ -1091,12 +1091,13 @@ private theorem RiemannIntegrable.mul_simple (hab : a < b)
   simp [Set.indicator]
   split_ifs <;> simp
 
+omit [NormedSpace ℝ F] in
 /-- A continuous function is a uniform limit of simple functions. -/
 private theorem ContinuousOn.lim_of_simple (hab : a < b) (hg : ContinuousOn g (.uIcc a b)) :
     ∃ s : ℕ → ℝ → F, (∀ n, simple (s n)) ∧
       TendstoUniformlyOn (fun n ↦ s n) g atTop (.uIcc a b) := by
   let e : ℕ → Prepartition.Even := fun N ↦ .mk _ _ (N + 1) hab (by lia)
-  -- the additional interval `J₀` is needed for technical reasons to cover the left endpoint `a`,
+  -- An additional interval `J₀` is needed for technical reasons to cover the left endpoint `a`,
   -- which is not covered by the `Box.Even` partition.
   let J₀ := Ioc (a - 1) a
   classical
@@ -1114,7 +1115,6 @@ private theorem ContinuousOn.lim_of_simple (hab : a < b) (hg : ContinuousOn g (.
   rcases this with rfl | hx
   · rw [sum_eq_single J₀]
     · have ha : a - 1 < a := by linarith
-      have : a ∈ J₀.toSet₁ := by sorry
       simp [Set.indicator, hε, J₀, ha]
     · simp only [mem_insert, mem_boxes, ne_eq, Box.toSet₁_def,
       Set.indicator_apply_eq_zero, Set.mem_Ioc, and_imp, forall_eq_or_imp, not_true_eq_false,

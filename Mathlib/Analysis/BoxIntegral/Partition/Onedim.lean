@@ -57,7 +57,7 @@ theorem b_sub_a_pos : 0 < e.b - e.a := by linarith [e.hab]
 /-- We use `δ` to denote the spacing of the grid. -/
 noncomputable def δ : ℝ := (e.b - e.a) / e.N
 
-theorem delta_pos : 0 < e.δ := div_pos e.b_sub_a_pos (by exact_mod_cast e.hN)
+theorem delta_pos : 0 < e.δ := div_pos e.b_sub_a_pos (mod_cast e.hN)
 
 /-- The grid points of the partition. -/
 noncomputable def grid : ℤ → ℝ := (e.a + · * e.δ)
@@ -79,20 +79,16 @@ theorem grid_strictMono : StrictMono e.grid :=
 theorem grid_mono : Monotone e.grid := e.grid_strictMono.monotone
 
 @[simp]
-theorem a_le_grid_iff : e.a ≤ e.grid n ↔ 0 ≤ n := by
-  simp [←grid_zero, e.grid_strictMono.le_iff_le]
+theorem a_le_grid_iff : e.a ≤ e.grid n ↔ 0 ≤ n := by simp [← grid_zero, e.grid_strictMono.le_iff_le]
 
 @[simp]
-theorem a_lt_grid_iff : e.a < e.grid n ↔ 0 < n := by
-  simp [←grid_zero, e.grid_strictMono.lt_iff_lt]
+theorem a_lt_grid_iff : e.a < e.grid n ↔ 0 < n := by simp [← grid_zero, e.grid_strictMono.lt_iff_lt]
 
 @[simp]
-theorem grid_le_b_iff : e.grid n ≤ e.b ↔ n ≤ e.N := by
-  simp [←grid_N, e.grid_strictMono.le_iff_le]
+theorem grid_le_b_iff : e.grid n ≤ e.b ↔ n ≤ e.N := by simp [← grid_N, e.grid_strictMono.le_iff_le]
 
 @[simp]
-theorem grid_lt_b_iff : e.grid n < e.b ↔ n < e.N := by
-  simp [←grid_N, e.grid_strictMono.lt_iff_lt]
+theorem grid_lt_b_iff : e.grid n < e.b ↔ n < e.N := by simp [← grid_N, e.grid_strictMono.lt_iff_lt]
 
 theorem grid_mem_Ioc_iff : e.grid n ∈ Set.Ioc e.a e.b ↔ n ∈ Set.Ioc 0 e.N := by simp
 
@@ -109,23 +105,19 @@ instance indices_nonempty : Nonempty e.indices := ⟨ 0, by simp [indices, hN] �
 
 theorem Ioc_subset_Ioc {n : ℤ} (hn : n ∈ e.indices) :
   Set.Ioc (e.grid n) (e.grid (n + 1)) ⊆ .Ioc e.a e.b := by
-  simp [indices] at hn
-  apply Set.Ioc_subset_Ioc (by simp; grind) (by simp; grind)
+  simp [indices] at hn; gcongr <;> { simp ; grind }
 
 theorem Ioo_subset_Ioo {n : ℤ} (hn : n ∈ e.indices) :
   Set.Ioo (e.grid n) (e.grid (n + 1)) ⊆ .Ioo e.a e.b := by
-  simp [indices] at hn
-  apply Set.Ioo_subset_Ioo (by simp; grind) (by simp; grind)
+  simp [indices] at hn; gcongr <;> { simp ; grind }
 
 theorem Ico_subset_Ico {n : ℤ} (hn : n ∈ e.indices) :
   Set.Ico (e.grid n) (e.grid (n + 1)) ⊆ .Ico e.a e.b := by
-  simp [indices] at hn
-  apply Set.Ico_subset_Ico (by simp; grind) (by simp; grind)
+  simp [indices] at hn; gcongr <;> { simp ; grind }
 
 theorem Icc_subset_Icc {n : ℤ} (hn : n ∈ e.indices) :
   Set.Icc (e.grid n) (e.grid (n + 1)) ⊆ .Icc e.a e.b := by
-  simp [indices] at hn
-  apply Set.Icc_subset_Icc (by simp; grind) (by simp; grind)
+  simp [indices] at hn; gcongr <;> { simp ; grind }
 
 /-- The box representing the entire interval. -/
 noncomputable def box := Ioc e.a e.b
@@ -196,7 +188,7 @@ noncomputable def toPrepartition : Prepartition e.box :=
       obtain ⟨i, hi, rfl⟩ := hI
       obtain ⟨j, hj, rfl⟩ := hJ
       simp [Box.disjoint_iff₁, e.grid_strictMono.le_iff_le]
-      grind
+      lia
   }
 
 @[simp]
@@ -206,11 +198,10 @@ theorem mem_toPrepartition_iff (J : Box (Fin 1)) :
 theorem toPrepartition_isPartition : (e.toPrepartition).IsPartition := by
   intro x hx
   simp [box, hab] at hx
-  refine ⟨ e.gridbox (e.index (x 0)), ?_, ?_ ⟩
-  · simp only [Fin.isValue, mem_toPrepartition_iff, indices]
-    use e.index (x 0)
-    simp [←grid_lt_iff, ←le_grid_iff, hx]
-  simp [grid_index_lt, le_grid_succ_index]
+  refine ⟨ e.gridbox (e.index (x 0)), ?_, by simp [grid_index_lt, le_grid_succ_index] ⟩
+  simp only [Fin.isValue, mem_toPrepartition_iff, indices]
+  use e.index (x 0)
+  simp [← grid_lt_iff, ← le_grid_iff, hx]
 
 theorem len_of_subbox {J : Box (Fin 1)} (hJ : J ∈ e.toPrepartition) : J.len = e.δ := by
   simp only [toPrepartition, mem_mk, mem_image] at hJ
@@ -218,10 +209,12 @@ theorem len_of_subbox {J : Box (Fin 1)} (hJ : J ∈ e.toPrepartition) : J.len = 
   simp
 
 
+/-- Can delete once #40745 lands in mathlib -/
 @[simp]
 theorem forall_in_set_const {p : Prop} {α : Type*} (S : Set α) [Nonempty S] : (∀ x ∈ S, p) ↔ p :=
   by aesop
 
+/-- Can delete once #40745 lands in mathlib -/
 @[simp]
 theorem forall_in_finset_const {p : Prop} {α : Type*} (S : Finset α) [Nonempty S] :
   (∀ x ∈ S, p) ↔ p := forall_in_set_const _

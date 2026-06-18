@@ -55,10 +55,10 @@ lemma Box.toSet₁_def : J.toSet₁ = Set.Ioc J.lower₁ J.upper₁ := rfl
 lemma Box.mem₁ (x : Fin 1 → ℝ) :
   x ∈ J ↔ x 0 ∈ J.toSet₁ := by simp [mem_def, lower₁, upper₁]
 
-lemma Box.upper_mem₁ : J.upper₁ ∈ J.toSet₁ := by grind [toSet₁_def, upper₁, lower_lt_upper₁]
+lemma Box.upper_mem₁ : J.upper₁ ∈ J.toSet₁ := by simp [toSet₁_def, lower_lt_upper₁]
 
 lemma Box.congr₁ : J = K ↔ J.lower₁ = K.lower₁ ∧ J.upper₁ = K.upper₁ :=
-  ⟨ by grind, fun ⟨ hlow, hup ⟩ ↦ by ext; simp [hlow, hup] ⟩
+  ⟨ by aesop, fun ⟨ hlow, hup ⟩ ↦ by ext; simp [hlow, hup] ⟩
 
 lemma Box.le_iff₁ : J ≤ K ↔ K.lower₁ ≤ J.lower₁ ∧ J.upper₁ ≤ K.upper₁ := by
   simp [Box.le_iff_bounds, Pi.le_def, lower₁, upper₁]
@@ -76,10 +76,10 @@ lemma Box.disjoint_iff_disjoint₁ {J J' : Box (Fin 1)} :
   simp [disjoint_iff₁]; grind [lower_lt_upper₁]
 
 /-- The closure of a one-dimensional box. -/
-def Box.Icc₁ : Set ℝ := Set.Icc J.lower₁ J.upper₁
+def Box.Icc₁ : Set ℝ := .Icc J.lower₁ J.upper₁
 
 @[simp]
-lemma Box.Icc₁_def : J.Icc₁ = Set.Icc J.lower₁ J.upper₁ := rfl
+lemma Box.Icc₁_def : J.Icc₁ = .Icc J.lower₁ J.upper₁ := rfl
 
 @[simp]
 lemma Box.Icc₁_eq : J.Icc = {x | x 0 ∈ J.Icc₁ } := by
@@ -106,11 +106,12 @@ lemma Box.dist_lt_len_of_mem₁ {x y : ℝ} (hx : x ∈ J.toSet₁) (hy : y ∈ 
 ## Ioc intervals
 
 The interval `(a, b]` as a `Box (Fin 1)`. Returns the junk interval `(-1, 1]` if `a = b`,
-and `(b, a]` if `a > b` (to give symmetry)).
+and `(b, a]` if `a > b` (to give symmetry)).  These values should be rarely in use.
 
 Instances of `Box` are required to be non-empty, so one cannot use the empty set as the junk case.
 
-This is analogous to `Set.Ioc` or `Finset.Ioc`, but is a distinct type from those two types. -/
+`Ioc` is analogous, but not identical to, `Set.Ioc` or `Finset.Ioc` (and also `Set.uIoc` and
+`Finset.uIoc`). -/
 noncomputable def Ioc (a b : ℝ) : Box (Fin 1) :=
   if h : a = b then ⟨ -1, 1, fun _ ↦ by norm_num ⟩
   else ⟨ fun _ ↦ min a b, fun _ ↦ max a b, fun _ ↦ by grind ⟩
@@ -128,13 +129,13 @@ lemma Ioc.of_eq : Ioc a a = ⟨ fun _ ↦ -1, fun _ ↦ 1, fun _ ↦ by norm_num
 lemma Ioc.upper (h : a < b) (i : Fin 1) : (Ioc a b).upper i = b := by simp [h, of_lt]
 
 @[simp]
-lemma Ioc.upper₁ (h : a < b) : (Ioc a b).upper₁ = b := Ioc.upper h 0
+lemma Ioc.upper₁ (h : a < b) : (Ioc a b).upper₁ = b := upper h 0
 
 @[simp]
 lemma Ioc.lower (h : a < b) (i : Fin 1) : (Ioc a b).lower i = a := by simp [h, of_lt]
 
 @[simp]
-lemma Ioc.lower₁ (h : a < b) : (Ioc a b).lower₁ = a := Ioc.lower h 0
+lemma Ioc.lower₁ (h : a < b) : (Ioc a b).lower₁ = a := lower h 0
 
 @[simp]
 lemma Ioc.len (h : a < b) : (Ioc a b).len = b - a := by simp [Box.len, h]
@@ -143,13 +144,13 @@ lemma Ioc.len (h : a < b) : (Ioc a b).len = b - a := by simp [Box.len, h]
 lemma Ioc.upper_gt (h : b < a) (i : Fin 1) : (Ioc a b).upper i = a := by simp [h, of_gt]
 
 @[simp]
-lemma Ioc.upper_gt₁ (h : b < a) : (Ioc a b).upper₁ = a := Ioc.upper_gt h 0
+lemma Ioc.upper_gt₁ (h : b < a) : (Ioc a b).upper₁ = a := upper_gt h 0
 
 @[simp]
 lemma Ioc.lower_gt (h : b < a) (i : Fin 1) : (Ioc a b).lower i = b := by simp [h, of_gt]
 
 @[simp]
-lemma Ioc.lower_gt₁ (h : b < a) : (Ioc a b).lower₁ = b := Ioc.lower_gt h 0
+lemma Ioc.lower_gt₁ (h : b < a) : (Ioc a b).lower₁ = b := lower_gt h 0
 
 @[simp]
 lemma Ioc.len_gt (h : b < a) : (Ioc a b).len = a - b := by simp [Box.len, h]
@@ -177,9 +178,7 @@ lemma Box.ge_Ioc_iff (hab : a < b) (J : Box (Fin 1)) :
   Ioc a b ≤ J ↔ J.lower₁ ≤ a ∧ b ≤ J.upper₁ := by simp [Box.le_iff₁, hab]
 
 lemma Box.mem_of_le (hab : a < b) {J : Box (Fin 1)} (hJ : J ≤ Ioc a b) :
-  J.lower₁ ∈ Set.Icc a b ∧ J.upper₁ ∈ Set.Icc a b := by
-  have := J.lower_lt_upper₁
-  grind [le_Ioc_iff]
+  J.lower₁ ∈ Set.Icc a b ∧ J.upper₁ ∈ Set.Icc a b := by grind [le_Ioc_iff, lower_lt_upper₁]
 
 lemma Icc_subset_of_box_le_Ioc {a b : ℝ} {J : Box (Fin 1)} (hab : a < b) (hJ : J ≤ Ioc a b) :
     J.Icc₁ ⊆ Set.Icc a b := by simp; grind [Box.le_Ioc_iff]
@@ -196,15 +195,15 @@ lemma Ioc.comp_apply (hab : a < b) : comp φ (Ioc a b) = Ioc (φ a) (φ b) := by
 /-- The map `Ioc.comp φ` is injective on any set of boxes contained in `Ioc a b`, provided `φ` is
 strictly monotone on `[a, b]`. -/
 lemma Ioc.comp_injOn_of_strictMonoOn {φ : ℝ → ℝ} {S : Set (Box (Fin 1))}
-    (hab : a < b) (hS : ∀ J ∈ S, J ≤ Ioc a b) (hmono : StrictMonoOn φ (Set.Icc a b)) :
-    Set.InjOn (Ioc.comp φ) S := by
+    (hab : a < b) (hS : ∀ J ∈ S, J ≤ Ioc a b) (hmono : StrictMonoOn φ (.Icc a b)) :
+    Set.InjOn (comp φ) S := by
   intro I hI J hJ hIJ
   have hI' := Box.mem_of_le hab (hS I hI)
   have hJ' := Box.mem_of_le hab (hS J hJ)
   have hIlt := hmono hI'.1 hI'.2 I.lower_lt_upper₁
   have hJlt := hmono hJ'.1 hJ'.2 J.lower_lt_upper₁
   rw [Box.congr₁]; refine ⟨hmono.injOn hI'.1 hJ'.1 ?_, hmono.injOn hI'.2 hJ'.2 ?_⟩
-  · simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.lower₁ hIJ
-  · simpa [Ioc.comp, hIlt, hJlt] using congrArg Box.upper₁ hIJ
+  · simpa [comp, hIlt, hJlt] using congrArg Box.lower₁ hIJ
+  · simpa [comp, hIlt, hJlt] using congrArg Box.upper₁ hIJ
 
 end BoxIntegral
