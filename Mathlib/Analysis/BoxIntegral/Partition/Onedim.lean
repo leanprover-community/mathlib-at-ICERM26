@@ -212,6 +212,12 @@ theorem toPrepartition_isPartition : (e.toPrepartition).IsPartition := by
     simp [←grid_lt_iff, ←le_grid_iff, hx]
   simp [grid_index_lt, le_grid_succ_index]
 
+theorem len_of_subbox {J : Box (Fin 1)} (hJ : J ∈ e.toPrepartition) : J.len = e.δ := by
+  simp only [toPrepartition, mem_mk, mem_image] at hJ
+  obtain ⟨n, hn, rfl⟩ := hJ
+  simp
+
+
 @[simp]
 theorem forall_in_set_const {p : Prop} {α : Type*} (S : Set α) [Nonempty S] : (∀ x ∈ S, p) ↔ p :=
   by aesop

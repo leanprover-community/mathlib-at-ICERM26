@@ -1069,7 +1069,7 @@ private theorem RiemannIntegrable.mul_indicator_box (hab : a < b) (J : Box (Fin 
       RiemannIntegrable a b (J.toSet₁.indicator (fun x ↦ B (f x) t)) := by
   have (g : ℝ → G) : J.toSet₁.indicator g = (Set.Iic J.upper₁).indicator g
     - (Set.Iic J.lower₁).indicator g := by
-    ext x; simp [Set.indicator, Set.Iic, Box.toSet₁]
+    ext; simp [Set.indicator, Set.Iic, Box.toSet₁]
     have := J.lower_le_upper₁
     split_ifs <;> grind
   rw [this]
@@ -1085,7 +1085,7 @@ private theorem RiemannIntegrable.mul_simple (hab : a < b)
   obtain ⟨ S, t, rfl ⟩ := hs
   convert_to RiemannIntegrable a b (∑ J ∈ S, (fun x ↦ (B (f x))
       (J.toSet₁.indicator (fun x ↦ t J) x)))
-  · ext x; simp
+  · ext; simp
   refine .finset_sum (fun s hs ↦ ?_)
   convert hf.mul_indicator_box hab s (t s) (B := B)
   simp [Set.indicator]
@@ -1094,8 +1094,60 @@ private theorem RiemannIntegrable.mul_simple (hab : a < b)
 /-- A continuous function is a uniform limit of simple functions. -/
 private theorem ContinuousOn.lim_of_simple (hab : a < b) (hg : ContinuousOn g (.uIcc a b)) :
     ∃ s : ℕ → ℝ → F, (∀ n, simple (s n)) ∧
-      TendstoUniformlyOn (fun n ↦ s n) g atTop (Set.uIcc a b) := by
-  sorry
+      TendstoUniformlyOn (fun n ↦ s n) g atTop (.uIcc a b) := by
+  let e : ℕ → Prepartition.Even := fun N ↦ .mk _ _ (N + 1) hab (by lia)
+  -- the additional interval `J₀` is needed for technical reasons to cover the left endpoint `a`,
+  -- which is not covered by the `Box.Even` partition.
+  let J₀ := Ioc (a - 1) a
+  classical
+  let s : ℕ → ℝ → F := fun N ↦
+    ∑ J ∈ ((e N).toPrepartition.boxes ∪ {J₀}), J.toSet₁.indicator (fun _ ↦ g J.upper₁)
+  refine ⟨ s, fun N ↦ ⟨ (e N).toPrepartition.boxes ∪ {J₀}, (g ·.upper₁), rfl ⟩, ?_ ⟩
+  simp only [tendstoUniformlyOn_iff, gt_iff_lt, eventually_atTop, ge_iff_le]
+  intro ε hε
+  rw [Set.uIcc_of_lt hab] at hg ⊢
+  obtain ⟨δ, hδpos, hδ⟩ := hg.metric_uniform ε hε
+  refine ⟨ ⌊(b - a) / δ⌋₊, fun N hN ↦ ?_ ⟩
+  peel hδ with x hx hcont
+  have : a = x ∨ x ∈ Set.Ioc a b := by grind
+  simp only [union_singleton, Finset.sum_apply, dist_eq_norm, gt_iff_lt, s]
+  rcases this with rfl | hx
+  · rw [sum_eq_single J₀]
+    · have ha : a - 1 < a := by linarith
+      have : a ∈ J₀.toSet₁ := by sorry
+      simp [Set.indicator, hε, J₀, ha]
+    · simp only [mem_insert, mem_boxes, ne_eq, Box.toSet₁_def,
+      Set.indicator_apply_eq_zero, Set.mem_Ioc, and_imp, forall_eq_or_imp, not_true_eq_false,
+      IsEmpty.forall_iff, true_and]
+      intro J hJ _ h _
+      have := (e N).toPrepartition.le_of_mem hJ
+      simp [Box.le_iff₁, e] at this
+      order
+    simp
+  obtain ⟨ I, hI, hxI ⟩ := (e N).toPrepartition_isPartition (fun _ ↦ x) (by
+    simp only [Box.mem₁, Box.toSet₁_def, Even.box_lower₁, Even.box_upper₁, Set.mem_Ioc]; exact hx)
+  rw [sum_eq_single I]
+  · have : x ∈ I.toSet₁ := by simpa using hxI
+    simp only [Set.indicator, this, ↓reduceIte, gt_iff_lt]
+    apply hcont
+    · have := (e N).toPrepartition.le_of_mem hI
+      simp [Box.le_iff₁, e] at this
+      grind [Box.lower_le_upper₁]
+    grw [I.dist_lt_len_of_mem₁ this I.upper_mem₁, (e N).len_of_subbox hI, Even.δ]
+    unfold e; simp; field_simp
+    grw [← hN]
+    calc
+      _ = (b - a) / δ * δ := by field_simp
+      _ < _ := by gcongr; apply Nat.lt_floor_add_one
+  · simp only [mem_insert, mem_boxes, ne_eq, J₀.toSet₁_def,
+    Set.indicator_apply_eq_zero, Set.mem_Ioc, and_imp, forall_eq_or_imp, sub_lt_self_iff,
+    zero_lt_one, Ioc.lower₁, Ioc.upper₁, isEmpty_Prop, not_le, hx.1, IsEmpty.forall_iff,
+    implies_true, true_and, J₀]
+    intro J hJmem hJI hxJ
+    replace hJI := ((e N).toPrepartition.disjoint_coe_of_mem hJmem hI hJI).notMem_of_mem_left
+      (a := fun _ ↦ x)
+    simp_all
+  simp [mem_insert, Prepartition.mem_boxes, hI]
 
 variable [CompleteSpace G]
 

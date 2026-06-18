@@ -55,6 +55,8 @@ lemma Box.toSet₁_def : J.toSet₁ = Set.Ioc J.lower₁ J.upper₁ := rfl
 lemma Box.mem₁ (x : Fin 1 → ℝ) :
   x ∈ J ↔ x 0 ∈ J.toSet₁ := by simp [mem_def, lower₁, upper₁]
 
+lemma Box.upper_mem₁ : J.upper₁ ∈ J.toSet₁ := by grind [toSet₁_def, upper₁, lower_lt_upper₁]
+
 lemma Box.congr₁ : J = K ↔ J.lower₁ = K.lower₁ ∧ J.upper₁ = K.upper₁ :=
   ⟨ by grind, fun ⟨ hlow, hup ⟩ ↦ by ext; simp [hlow, hup] ⟩
 
@@ -83,10 +85,22 @@ lemma Box.Icc₁_def : J.Icc₁ = Set.Icc J.lower₁ J.upper₁ := rfl
 lemma Box.Icc₁_eq : J.Icc = {x | x 0 ∈ J.Icc₁ } := by
   ext; simp [Box.Icc_def, Pi.le_def, upper₁, lower₁]
 
+lemma Box.upper_mem_Icc₁ : J.upper₁ ∈ J.Icc₁ := by grind [Icc₁_def, upper₁, lower_lt_upper₁]
+
+lemma Box.lower_mem_Icc₁ : J.lower₁ ∈ J.Icc₁ := by grind [Icc₁_def, lower₁, lower_lt_upper₁]
+
+lemma Box.toSet₁_subset_Icc₁ : J.toSet₁ ⊆ J.Icc₁ := by grind [toSet₁_def, Icc₁_def]
+
 lemma Box.mem_Icc₁ (x : Fin 1 → ℝ) : x ∈ J.Icc ↔ x 0 ∈ J.Icc₁ := by simp
 
 lemma Box.Icc₁_subset_Icc₁ {J J' : Box (Fin 1)} (h : J ≤ J') : J.Icc₁ ⊆ J'.Icc₁ := by
   grind [le_iff₁, Icc₁]
+
+lemma Box.dist_le_len_of_mem_Icc₁ {x y : ℝ} (hx : x ∈ J.Icc₁) (hy : y ∈ J.Icc₁)
+  : |x - y| ≤ J.len := by grind [len, Icc₁_def]
+
+lemma Box.dist_lt_len_of_mem₁ {x y : ℝ} (hx : x ∈ J.toSet₁) (hy : y ∈ J.toSet₁)
+  : |x - y| < J.len := by grind [len, toSet₁_def]
 
 /--
 ## Ioc intervals
