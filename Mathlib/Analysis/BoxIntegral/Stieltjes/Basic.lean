@@ -1032,8 +1032,9 @@ private lemma Box.splitLower_unbot_upper {J : Box (Fin 1)} {c : ℝ}
   simpa using congrArg (· 0) this
 
 private lemma bilin_norm_bd (B : E →L[ℝ] F →L[ℝ] G) {u : E} {v : F} {M ε' : ℝ}
-    (hu : ‖u‖ ≤ M) (hv : ‖v‖ ≤ ε') (hM : 0 ≤ M) :
+    (hu : ‖u‖ ≤ M) (hv : ‖v‖ ≤ ε') :
     ‖B u v‖ ≤ ‖B‖ * M * ε' := by
+  have : 0 ≤ M := (norm_nonneg _).trans hu
   calc ‖B u v‖
       ≤ ‖B u‖ * ‖v‖ := (B u).le_opNorm _
     _ ≤ ‖B‖ * ‖u‖ * ‖v‖ := by gcongr; exact B.le_opNorm _
@@ -1064,6 +1065,9 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
     refine ⟨Real.toNNReal (δ_c / 2), Real.toNNReal_pos.mpr (by positivity),
       fun π hH hPart hMesh => ?_⟩
     rw [dist_zero_right]
+    have cty_g_bd : ∀ {x : ℝ}, x ∈ Set.uIcc a b → |x - a| < δ_c → ‖g x - g a‖ < ε' := by
+      intro x hx hd; rw [← dist_eq_norm]
+      exact hδ_c_bd hx (by rwa [Real.dist_eq])
     have tag_forces : ∀ J ∈ π.boxes, π.tag J 0 = a → J.lower 0 = a := by
       intro J hJ hT
       have h1 : J.lower 0 ≤ π.tag J 0 := by
@@ -1103,17 +1107,13 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
         have hJ_lt := J.lower_lt_upper 0
         have hJ_up_mem : J.upper 0 ∈ Set.uIcc a b := by
           rw [Set.uIcc_of_lt hab]; exact ⟨by linarith, hJ_le.2⟩
-        have hJ_up_dist : dist (J.upper 0) a < δ_c := by
-          rw [Real.dist_eq, abs_of_nonneg (by linarith)]; linarith
-        have hg_dist : ‖g (J.upper 0) - g a‖ < ε' := by
-          rw [show ‖g (J.upper 0) - g a‖ = dist (g (J.upper 0)) (g a) from
-            (dist_eq_norm _ _).symm]
-          exact hδ_c_bd hJ_up_mem hJ_up_dist
+        have hg_dist : ‖g (J.upper 0) - g a‖ < ε' :=
+          cty_g_bd hJ_up_mem (by rw [abs_of_nonneg (by linarith)]; linarith)
         rw [show ((Set.Iic a).indicator f) (π.tag J 0) = f a by
           rw [htag, Set.indicator_of_mem Set.self_mem_Iic]]
         show ‖B (f a) (g J.upper₁ - g J.lower₁)‖ ≤ _
         rw [show J.lower₁ = a from hJ_lo]
-        exact bilin_norm_bd B (hM (f a) ⟨a, Set.left_mem_uIcc, rfl⟩) hg_dist.le hM_nn
+        exact bilin_norm_bd B (hM (f a) ⟨a, Set.left_mem_uIcc, rfl⟩) hg_dist.le
       · rw [if_neg htag]
         have hJ_le := (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)
         have hb : J.lower 0 ≤ π.tag J 0 := by
@@ -1334,6 +1334,9 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
           congrArg (· 0) (Box.splitLower_unbot_lower hJ_ne)
         rw [← h_tag_eq, ← h_K_J_lower]
     rw [dist_eq_norm, h_reindex, ← Finset.sum_sub_distrib]
+    have cty_g_bd : ∀ {x : ℝ}, x ∈ Set.uIcc a b → |x - c| < δ_c → ‖g x - g c‖ < ε' := by
+      intro x hx hd; rw [← dist_eq_norm]
+      exact hδ_c_bd hx (by rwa [Real.dist_eq])
     have h_per_box_bd : ∀ J ∈ π.boxes,
         ‖B (((Set.Iic c).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁) - t_πL_ext J‖ ≤
         if (J.lower 0 < c ∧ c < J.upper 0) ∨ (π.tag J 0 = c ∧ J.lower 0 = c) then
@@ -1342,7 +1345,7 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
       have hJ_le := (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ_in)
       have hJ_lo_a : a ≤ J.lower 0 := hJ_le.1
       have hJ_up_b : J.upper 0 ≤ b := hJ_le.2
-      have htag_in : π.tag J ∈ Box.Icc J := hH J hJ_in
+      have htag_in := hH J hJ_in
       rw [Box.Icc_def] at htag_in
       have htag_lo : J.lower 0 ≤ π.tag J 0 := htag_in.1 0
       have htag_hi : π.tag J 0 ≤ J.upper 0 := htag_in.2 0
@@ -1396,15 +1399,11 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
           rw [show (Set.Iic c).indicator f (π.tag J 0) = f c by
                 rw [h_tag_c, Set.indicator_of_mem Set.self_mem_Iic],
               if_pos (Or.inr ⟨h_tag_c, hJ_lo_c⟩)]
-          have hJ_up_dist : dist (J.upper 0) c < δ_c := by
-            rw [Real.dist_eq, abs_of_nonneg (by linarith)]; linarith
-          have hg_dist : ‖g (J.upper 0) - g c‖ < ε' := by
-            rw [show ‖g (J.upper 0) - g c‖ = dist (g (J.upper 0)) (g c) from
-              (dist_eq_norm _ _).symm]
-            exact hδ_c_bd hJ_up_uIcc hJ_up_dist
+          have hg_dist : ‖g (J.upper 0) - g c‖ < ε' :=
+            cty_g_bd hJ_up_uIcc (by rw [abs_of_nonneg (by linarith)]; linarith)
           show ‖(B (f c)) (g J.upper₁ - g J.lower₁)‖ ≤ _
           rw [hJ_up_eq, hJ_lo_eq, hJ_lo_c]
-          exact bilin_norm_bd B hMc hg_dist.le hM_nn
+          exact bilin_norm_bd B hMc hg_dist.le
         · have h_tag_gt : c < π.tag J 0 :=
             lt_of_le_of_ne (h_lower.trans htag_lo) (Ne.symm h_tag_c)
           rw [show (Set.Iic c).indicator f (π.tag J 0) = 0 by
@@ -1419,10 +1418,6 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
       have h_K_J_up : ((Box.splitLower J 0 c).unbot h_split_ne).upper 0 = c := by
         rw [Box.splitLower_unbot_upper, min_eq_left h_upper'.le]
       rw [if_pos (Or.inl ⟨h_lower', h_upper'⟩)]
-      have hJ_lo_dist : dist (J.lower 0) c < δ_c := by
-        rw [Real.dist_eq, abs_of_nonpos (by linarith)]; linarith
-      have hJ_up_dist : dist (J.upper 0) c < δ_c := by
-        rw [Real.dist_eq, abs_of_nonneg (by linarith)]; linarith
       rw [show t_πL_ext J = B (f (min (π.tag J 0) c)) (g c - g (J.lower 0)) by
             simp only [ht_πL_ext_def, dif_pos h_split_ne]
             rw [show ((Box.splitLower J 0 c).unbot h_split_ne).upper₁ = c from h_K_J_up]]
@@ -1436,21 +1431,18 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
               show g J.upper₁ - g J.lower₁ - (g c - g (J.lower 0)) = g (J.upper 0) - g c
               show g (J.upper 0) - g (J.lower 0) - (g c - g (J.lower 0)) = g (J.upper 0) - g c
               abel]
-        have hg_dist : ‖g (J.upper 0) - g c‖ < ε' := by
-          rw [show ‖g (J.upper 0) - g c‖ = dist (g (J.upper 0)) (g c) from
-            (dist_eq_norm _ _).symm]
-          exact hδ_c_bd hJ_up_uIcc hJ_up_dist
-        exact bilin_norm_bd B hM_tag hg_dist.le hM_nn
+        have hg_dist : ‖g (J.upper 0) - g c‖ < ε' :=
+          cty_g_bd hJ_up_uIcc (by rw [abs_of_nonneg (by linarith)]; linarith)
+        exact bilin_norm_bd B hM_tag hg_dist.le
       · have h_tag_gt : c < π.tag J 0 := not_le.mp h_tag_le
         rw [show (Set.Iic c).indicator f (π.tag J 0) = 0 by
               apply Set.indicator_of_notMem; simpa using h_tag_gt,
             ContinuousLinearMap.map_zero, ContinuousLinearMap.zero_apply,
             min_eq_right h_tag_gt.le, zero_sub, norm_neg]
         have hg_dist : ‖g c - g (J.lower 0)‖ < ε' := by
-          rw [show ‖g c - g (J.lower 0)‖ = dist (g c) (g (J.lower 0)) from
-            (dist_eq_norm _ _).symm, dist_comm]
-          exact hδ_c_bd hJ_lo_uIcc hJ_lo_dist
-        exact bilin_norm_bd B hMc hg_dist.le hM_nn
+          rw [← norm_neg, neg_sub]
+          exact cty_g_bd hJ_lo_uIcc (by rw [abs_of_nonpos (by linarith)]; linarith)
+        exact bilin_norm_bd B hMc hg_dist.le
     have h_near_c_at_most_one :
         (π.boxes.filter (fun J => (J.lower 0 < c ∧ c < J.upper 0) ∨
                                   (π.tag J 0 = c ∧ J.lower 0 = c))).card ≤ 1 := by
