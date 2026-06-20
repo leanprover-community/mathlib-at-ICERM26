@@ -1138,6 +1138,29 @@ private theorem HasStieltjesIntegral.indicator_left_endpoint_zero
           _ = ε / 2 := by field_simp
           _ < ε := by linarith
 
+/-- For a tagged prepartition of `Ioc a b`, at most one box either straddles `c` or sits at
+`c` with its left endpoint and tag both equal to `c` (these are the boxes whose contribution
+to the Riemann sum is affected by cutting at `c`). -/
+private lemma TaggedPrepartition.near_c_at_most_one
+    (π : TaggedPrepartition (Ioc a b)) (c : ℝ) :
+    (π.boxes.filter (fun J => (J.lower 0 < c ∧ c < J.upper 0) ∨
+                              (π.tag J 0 = c ∧ J.lower 0 = c))).card ≤ 1 := by
+  rw [Finset.card_le_one]
+  intros J1 hJ1 J2 hJ2
+  rw [Finset.mem_filter] at hJ1 hJ2
+  by_contra hne
+  have hd := (Box.disjoint_iff₁ (J := J1) (J' := J2)).mp
+    (π.disjoint_coe_of_mem hJ1.1 hJ2.1 hne)
+  have unpack : ∀ {J}, (J.lower 0 < c ∧ c < J.upper 0) ∨
+      (π.tag J 0 = c ∧ J.lower 0 = c) → J.lower 0 ≤ c ∧ c < J.upper 0 :=
+    fun {J} h => h.elim (fun ⟨l, u⟩ => ⟨l.le, u⟩)
+      (fun ⟨_, le⟩ => ⟨le.le, le ▸ J.lower_lt_upper 0⟩)
+  obtain ⟨hJ1_lo, hJ1_up⟩ := unpack hJ1.2
+  obtain ⟨hJ2_lo, hJ2_up⟩ := unpack hJ2.2
+  rcases hd with h | h
+  · linarith [show J1.upper 0 ≤ c from h.trans hJ2_lo]
+  · linarith [show J2.upper 0 ≤ c from h.trans hJ1_lo]
+
 theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Icc a b)
     (h : HasStieltjesIntegral a c B f g L) (hg : ContinuousOn g (.uIcc a b))
     (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
@@ -1286,6 +1309,18 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
         B (f (min (π.tag J 0) c))
           (g ((Box.splitLower J 0 c).unbot hJ).upper₁ - g (J.lower 0))
       else 0 with ht_πL_ext_def
+    have splitLower_inj : ∀ {J1 J2 : Box (Fin 1)}, J1 ∈ π.boxes → J2 ∈ π.boxes →
+        Box.splitLower J1 0 c ≠ ⊥ →
+        Box.splitLower J1 0 c = Box.splitLower J2 0 c → J1 = J2 := by
+      intros J1 J2 hJ1 hJ2 hne_bot h_eq
+      by_contra hne
+      have hdisj : Disjoint (Box.splitLower J1 0 c) (Box.splitLower J2 0 c) := by
+        rw [← Box.disjoint_withBotCoe, Box.coe_splitLower, Box.coe_splitLower]
+        exact (π.disjoint_coe_of_mem hJ1 hJ2 hne).mono
+          Set.inter_subset_left Set.inter_subset_left
+      rw [h_eq] at hne_bot
+      rw [h_eq, disjoint_self] at hdisj
+      exact hne_bot hdisj
     have h_reindex :
         ∑ K ∈ π_L.boxes, B (f (π_L.tag K 0)) (g K.upper₁ - g K.lower₁) =
           ∑ J ∈ π.boxes, t_πL_ext J := by
@@ -1306,16 +1341,9 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
         exact ⟨J, (Finset.mem_filter.mp hJ).1, rfl⟩
       · intros J1 hJ1 J2 hJ2 hi_eq
         rw [Finset.mem_filter] at hJ1 hJ2
-        by_contra hne
-        have h_split_eq : Box.splitLower J1 0 c = Box.splitLower J2 0 c := by
+        exact splitLower_inj hJ1.1 hJ2.1 hJ1.2 (by
           rw [← WithBot.coe_unbot (Box.splitLower J1 0 c) hJ1.2,
-              ← WithBot.coe_unbot (Box.splitLower J2 0 c) hJ2.2, hi_eq]
-        have hdisj : Disjoint (Box.splitLower J1 0 c) (Box.splitLower J2 0 c) := by
-          rw [← Box.disjoint_withBotCoe, Box.coe_splitLower, Box.coe_splitLower]
-          exact (π.disjoint_coe_of_mem hJ1.1 hJ2.1 hne).mono
-            Set.inter_subset_left Set.inter_subset_left
-        rw [h_split_eq, disjoint_self] at hdisj
-        exact hJ2.2 hdisj
+              ← WithBot.coe_unbot (Box.splitLower J2 0 c) hJ2.2, hi_eq])
       · intros K hK
         obtain ⟨J, hJ_in, hsp⟩ := K_from_prep K hK
         have hJ_ne : Box.splitLower J 0 c ≠ ⊥ := by rw [← hsp]; exact WithBot.coe_ne_bot
@@ -1331,16 +1359,9 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
           ⟨J, hJ_in, WithBot.coe_unbot _ hJ_ne⟩
         have h_unique : Classical.choose hK_J_split = J := by
           obtain ⟨h_in', h_eq'⟩ := Classical.choose_spec hK_J_split
-          set J' := Classical.choose hK_J_split
-          by_contra hne
-          have h_split_eq : Box.splitLower J' 0 c = Box.splitLower J 0 c := by
-            rw [← h_eq', WithBot.coe_unbot]
-          have hdisj : Disjoint (Box.splitLower J' 0 c) (Box.splitLower J 0 c) := by
-            rw [← Box.disjoint_withBotCoe, Box.coe_splitLower, Box.coe_splitLower]
-            exact (π.disjoint_coe_of_mem h_in' hJ_in hne).mono
-              Set.inter_subset_left Set.inter_subset_left
-          rw [h_split_eq, disjoint_self] at hdisj
-          exact hJ_ne hdisj
+          have h_ne' : Box.splitLower (Classical.choose hK_J_split) 0 c ≠ ⊥ := by
+            rw [← h_eq']; exact WithBot.coe_ne_bot
+          exact splitLower_inj h_in' hJ_in h_ne' (by rw [← h_eq', WithBot.coe_unbot])
         have h_tag_eq : π_L_tag K_J 0 = min (π.tag J 0) c := by
           simp only [hπ_L_tag_def, dif_pos hK_J_split, h_unique]
         have h_K_J_lower : K_J.lower₁ = J.lower 0 :=
@@ -1449,24 +1470,7 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
           rw [← norm_neg, neg_sub]
           exact cty_g_bd hJ_lo_uIcc (by rw [abs_of_nonpos (by linarith)]; linarith)
         exact bilin_norm_bd B hMc hg_dist.le
-    have h_near_c_at_most_one :
-        (π.boxes.filter (fun J => (J.lower 0 < c ∧ c < J.upper 0) ∨
-                                  (π.tag J 0 = c ∧ J.lower 0 = c))).card ≤ 1 := by
-      rw [Finset.card_le_one]
-      intros J1 hJ1 J2 hJ2
-      rw [Finset.mem_filter] at hJ1 hJ2
-      by_contra hne
-      have hd := (Box.disjoint_iff₁ (J := J1) (J' := J2)).mp
-        (π.disjoint_coe_of_mem hJ1.1 hJ2.1 hne)
-      have unpack : ∀ {J}, (J.lower 0 < c ∧ c < J.upper 0) ∨
-          (π.tag J 0 = c ∧ J.lower 0 = c) → J.lower 0 ≤ c ∧ c < J.upper 0 :=
-        fun {J} h => h.elim (fun ⟨l, u⟩ => ⟨l.le, u⟩)
-          (fun ⟨_, le⟩ => ⟨le.le, le ▸ J.lower_lt_upper 0⟩)
-      obtain ⟨hJ1_lo, hJ1_up⟩ := unpack hJ1.2
-      obtain ⟨hJ2_lo, hJ2_up⟩ := unpack hJ2.2
-      rcases hd with h | h
-      · linarith [show J1.upper 0 ≤ c from h.trans hJ2_lo]
-      · linarith [show J2.upper 0 ≤ c from h.trans hJ1_lo]
+    have h_near_c_at_most_one := π.near_c_at_most_one c
     have h_sum_bd :
         ‖∑ J ∈ π.boxes,
             (B (((Set.Iic c).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁)
