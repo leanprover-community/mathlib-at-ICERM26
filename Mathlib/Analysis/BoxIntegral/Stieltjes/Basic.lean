@@ -1040,6 +1040,96 @@ private lemma bilin_norm_bd (B : E →L[ℝ] F →L[ℝ] G) {u : E} {v : F} {M �
     _ ≤ ‖B‖ * ‖u‖ * ‖v‖ := by gcongr; exact B.le_opNorm _
     _ ≤ ‖B‖ * M * ε' := by gcongr
 
+/-- The Riemann sums of `(Iic a).indicator f` (against a function `g` continuous at `a`)
+vanish: the indicator is `0` on `(a, b]` and equals `f a` at `a`, where the contribution is
+small by continuity of `g` at `a`. -/
+private theorem HasStieltjesIntegral.indicator_left_endpoint_zero
+    (hab : a < b) (hfbound : Bornology.IsBounded (f '' Set.uIcc a b))
+    (hgc : ContinuousWithinAt g (Set.uIcc a b) a) :
+    HasStieltjesIntegral a b B ((Set.Iic a).indicator f) g 0 := by
+  obtain ⟨Mf, hMf⟩ := hfbound.exists_norm_le
+  have hMf_nn : 0 ≤ Mf := (norm_nonneg _).trans (hMf (f a) ⟨a, Set.left_mem_uIcc, rfl⟩)
+  rw [hasStieltjesIntegral_iff_lim_sum hab]
+  intro ε hε
+  set ε' : ℝ := ε / (2 * (‖B‖ * Mf + 1)) with hε'_def
+  have hε'_pos : 0 < ε' := by rw [hε'_def]; positivity
+  obtain ⟨δ_c, hδ_c_pos, hδ_c_bd⟩ :=
+    (Metric.continuousWithinAt_iff.mp hgc) ε' hε'_pos
+  refine ⟨Real.toNNReal (δ_c / 2), Real.toNNReal_pos.mpr (by positivity),
+    fun π hH hPart hMesh => ?_⟩
+  rw [dist_zero_right]
+  have cty_g_bd : ∀ {x : ℝ}, x ∈ Set.uIcc a b → |x - a| < δ_c → ‖g x - g a‖ < ε' := by
+    intro x hx hd; rw [← dist_eq_norm]
+    exact hδ_c_bd hx (by rwa [Real.dist_eq])
+  have tag_forces : ∀ J ∈ π.boxes, π.tag J 0 = a → J.lower 0 = a := fun J hJ hT => by
+    have h1 : J.lower 0 ≤ π.tag J 0 := by
+      have := hH J hJ; rw [Box.Icc_def] at this; exact this.1 0
+    have h2 : a ≤ J.lower 0 := ((Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)).1
+    rw [hT] at h1; linarith
+  have hAMO : (π.boxes.filter (fun J => π.tag J 0 = a)).card ≤ 1 := by
+    rw [Finset.card_le_one]
+    intros J1 hJ1 J2 hJ2
+    simp only [Finset.mem_filter] at hJ1 hJ2
+    by_contra hne
+    have h1 := tag_forces J1 hJ1.1 hJ1.2
+    have h2 := tag_forces J2 hJ2.1 hJ2.2
+    have hd : Disjoint J1.toSet J2.toSet := π.disjoint_coe_of_mem hJ1.1 hJ2.1 hne
+    rw [Box.disjoint_iff₁, show J1.lower₁ = a from h1, show J2.lower₁ = a from h2] at hd
+    have hu1 := J1.lower_lt_upper 0
+    have hu2 := J2.lower_lt_upper 0
+    rcases hd with h | h
+    · have h' : J1.upper 0 ≤ a := h; linarith
+    · have h' : J2.upper 0 ≤ a := h; linarith
+  have h_mesh : ∀ J ∈ π.boxes, J.upper 0 - J.lower 0 ≤ δ_c / 2 := fun J hJ => by
+    have hδ : (Real.toNNReal (δ_c / 2) : ℝ) = δ_c / 2 :=
+      Real.coe_toNNReal _ (by positivity)
+    have hlen := (mesh_size_le_iff₁ π.toPrepartition _).mp hMesh J hJ
+    have : J.len ≤ δ_c / 2 := by rw [← hδ]; exact_mod_cast hlen
+    simpa [Box.len, Box.upper₁, Box.lower₁] using this
+  have h_term_bd : ∀ J ∈ π.boxes,
+      ‖B (((Set.Iic a).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁)‖ ≤
+      if π.tag J 0 = a then ‖B‖ * Mf * ε' else 0 := by
+    intro J hJ
+    by_cases htag : π.tag J 0 = a
+    · rw [if_pos htag]
+      have hJ_lo : J.lower 0 = a := tag_forces J hJ htag
+      have hJ_le := (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)
+      have hmesh := h_mesh J hJ
+      have hJ_lt := J.lower_lt_upper 0
+      have hJ_up_mem : J.upper 0 ∈ Set.uIcc a b := by
+        rw [Set.uIcc_of_lt hab]; exact ⟨by linarith, hJ_le.2⟩
+      have hg_dist : ‖g (J.upper 0) - g a‖ < ε' :=
+        cty_g_bd hJ_up_mem (by rw [abs_of_nonneg (by linarith)]; linarith)
+      rw [show ((Set.Iic a).indicator f) (π.tag J 0) = f a by
+        rw [htag, Set.indicator_of_mem Set.self_mem_Iic]]
+      show ‖B (f a) (g J.upper₁ - g J.lower₁)‖ ≤ _
+      rw [show J.lower₁ = a from hJ_lo]
+      exact bilin_norm_bd B (hMf (f a) ⟨a, Set.left_mem_uIcc, rfl⟩) hg_dist.le
+    · rw [if_neg htag]
+      have hJ_le := (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)
+      have hb : J.lower 0 ≤ π.tag J 0 := by
+        have := hH J hJ; rw [Box.Icc_def] at this; exact this.1 0
+      have h_tag_gt : a < π.tag J 0 :=
+        lt_of_le_of_ne (hJ_le.1.trans hb) (fun h => htag h.symm)
+      rw [show ((Set.Iic a).indicator f) (π.tag J 0) = 0 by
+        apply Set.indicator_of_notMem; simpa using h_tag_gt]
+      simp
+  calc ‖∑ J ∈ π.boxes, B (((Set.Iic a).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁)‖
+      ≤ ∑ J ∈ π.boxes, _ := norm_sum_le _ _
+    _ ≤ ∑ J ∈ π.boxes, (if π.tag J 0 = a then ‖B‖ * Mf * ε' else 0) :=
+        Finset.sum_le_sum h_term_bd
+    _ = (π.boxes.filter (fun J => π.tag J 0 = a)).card • (‖B‖ * Mf * ε') := by
+        rw [Finset.sum_ite, Finset.sum_const_zero, add_zero, Finset.sum_const]
+    _ ≤ 1 • (‖B‖ * Mf * ε') := nsmul_le_nsmul_left (by positivity) hAMO
+    _ = ‖B‖ * Mf * ε' := by simp
+    _ < ε := by
+        rw [hε'_def]
+        calc ‖B‖ * Mf * (ε / (2 * (‖B‖ * Mf + 1)))
+            ≤ (‖B‖ * Mf + 1) * (ε / (2 * (‖B‖ * Mf + 1))) := by
+              apply mul_le_mul_of_nonneg_right _ (by positivity); linarith
+          _ = ε / 2 := by field_simp
+          _ < ε := by linarith
+
 theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Icc a b)
     (h : HasStieltjesIntegral a c B f g L) (hg : ContinuousOn g (.uIcc a b))
     (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
@@ -1055,86 +1145,8 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
   obtain rfl | hac' := hac.eq_or_lt
   · have hL : L = 0 := HasStieltjesIntegral.of_eq_iff_zero.mp h
     subst hL
-    rw [hasStieltjesIntegral_iff_lim_sum hab]
-    intro ε hε
-    set ε' : ℝ := ε / (2 * (‖B‖ * M + 1)) with hε'_def
-    have hε'_pos : 0 < ε' := by rw [hε'_def]; positivity
-    obtain ⟨δ_c, hδ_c_pos, hδ_c_bd⟩ :=
-      (Metric.continuousWithinAt_iff.mp (hg a Set.left_mem_uIcc)) ε' hε'_pos
-    refine ⟨Real.toNNReal (δ_c / 2), Real.toNNReal_pos.mpr (by positivity),
-      fun π hH hPart hMesh => ?_⟩
-    rw [dist_zero_right]
-    have cty_g_bd : ∀ {x : ℝ}, x ∈ Set.uIcc a b → |x - a| < δ_c → ‖g x - g a‖ < ε' := by
-      intro x hx hd; rw [← dist_eq_norm]
-      exact hδ_c_bd hx (by rwa [Real.dist_eq])
-    have tag_forces : ∀ J ∈ π.boxes, π.tag J 0 = a → J.lower 0 = a := fun J hJ hT => by
-      have h1 : J.lower 0 ≤ π.tag J 0 := by
-        have := hH J hJ; rw [Box.Icc_def] at this; exact this.1 0
-      have h2 : a ≤ J.lower 0 := ((Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)).1
-      rw [hT] at h1; linarith
-    have hAMO : (π.boxes.filter (fun J => π.tag J 0 = a)).card ≤ 1 := by
-      rw [Finset.card_le_one]
-      intros J1 hJ1 J2 hJ2
-      simp only [Finset.mem_filter] at hJ1 hJ2
-      by_contra hne
-      have h1 := tag_forces J1 hJ1.1 hJ1.2
-      have h2 := tag_forces J2 hJ2.1 hJ2.2
-      have hd : Disjoint J1.toSet J2.toSet := π.disjoint_coe_of_mem hJ1.1 hJ2.1 hne
-      rw [Box.disjoint_iff₁, show J1.lower₁ = a from h1, show J2.lower₁ = a from h2] at hd
-      have hu1 := J1.lower_lt_upper 0
-      have hu2 := J2.lower_lt_upper 0
-      rcases hd with h | h
-      · linarith [show J1.upper 0 ≤ a from h]
-      · linarith [show J2.upper 0 ≤ a from h]
-    have h_mesh : ∀ J ∈ π.boxes, J.upper 0 - J.lower 0 ≤ δ_c / 2 := fun J hJ => by
-      have hδ : (Real.toNNReal (δ_c / 2) : ℝ) = δ_c / 2 :=
-        Real.coe_toNNReal _ (by positivity)
-      have hlen := (mesh_size_le_iff₁ π.toPrepartition _).mp hMesh J hJ
-      have : J.len ≤ δ_c / 2 := by rw [← hδ]; exact_mod_cast hlen
-      simpa [Box.len, Box.upper₁, Box.lower₁] using this
-    have h_term_bd : ∀ J ∈ π.boxes,
-        ‖B (((Set.Iic a).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁)‖ ≤
-        if π.tag J 0 = a then ‖B‖ * M * ε' else 0 := by
-      intro J hJ
-      by_cases htag : π.tag J 0 = a
-      · rw [if_pos htag]
-        have hJ_lo : J.lower 0 = a := tag_forces J hJ htag
-        have hJ_le := (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)
-        have hmesh := h_mesh J hJ
-        have hJ_lt := J.lower_lt_upper 0
-        have hJ_up_mem : J.upper 0 ∈ Set.uIcc a b := by
-          rw [Set.uIcc_of_lt hab]; exact ⟨by linarith, hJ_le.2⟩
-        have hg_dist : ‖g (J.upper 0) - g a‖ < ε' :=
-          cty_g_bd hJ_up_mem (by rw [abs_of_nonneg (by linarith)]; linarith)
-        rw [show ((Set.Iic a).indicator f) (π.tag J 0) = f a by
-          rw [htag, Set.indicator_of_mem Set.self_mem_Iic]]
-        show ‖B (f a) (g J.upper₁ - g J.lower₁)‖ ≤ _
-        rw [show J.lower₁ = a from hJ_lo]
-        exact bilin_norm_bd B (hM (f a) ⟨a, Set.left_mem_uIcc, rfl⟩) hg_dist.le
-      · rw [if_neg htag]
-        have hJ_le := (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)
-        have hb : J.lower 0 ≤ π.tag J 0 := by
-          have := hH J hJ; rw [Box.Icc_def] at this; exact this.1 0
-        have h_tag_gt : a < π.tag J 0 :=
-          lt_of_le_of_ne (hJ_le.1.trans hb) (fun h => htag h.symm)
-        rw [show ((Set.Iic a).indicator f) (π.tag J 0) = 0 by
-          apply Set.indicator_of_notMem; simpa using h_tag_gt]
-        simp
-    calc ‖∑ J ∈ π.boxes, B (((Set.Iic a).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁)‖
-        ≤ ∑ J ∈ π.boxes, _ := norm_sum_le _ _
-      _ ≤ ∑ J ∈ π.boxes, (if π.tag J 0 = a then ‖B‖ * M * ε' else 0) :=
-          Finset.sum_le_sum h_term_bd
-      _ = (π.boxes.filter (fun J => π.tag J 0 = a)).card • (‖B‖ * M * ε') := by
-          rw [Finset.sum_ite, Finset.sum_const_zero, add_zero, Finset.sum_const]
-      _ ≤ 1 • (‖B‖ * M * ε') := nsmul_le_nsmul_left (by positivity) hAMO
-      _ = ‖B‖ * M * ε' := by simp
-      _ < ε := by
-          rw [hε'_def]
-          calc ‖B‖ * M * (ε / (2 * (‖B‖ * M + 1)))
-              ≤ (‖B‖ * M + 1) * (ε / (2 * (‖B‖ * M + 1))) := by
-                apply mul_le_mul_of_nonneg_right _ (by positivity); linarith
-            _ = ε / 2 := by field_simp
-            _ < ε := by linarith
+    exact HasStieltjesIntegral.indicator_left_endpoint_zero hab hfbound
+      (hg a Set.left_mem_uIcc)
   rw [hasStieltjesIntegral_iff_lim_sum hac'] at h
   rw [hasStieltjesIntegral_iff_lim_sum hab]
   intro ε hε
