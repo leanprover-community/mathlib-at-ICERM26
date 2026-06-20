@@ -1049,10 +1049,9 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
   · refine (hasStieltjesIntegral_congr (fun x hx => ?_) (Set.eqOn_refl _ _)).mp h
     rw [Set.uIcc_of_lt hab] at hx; simp [Set.indicator, hx.2]
   obtain ⟨M, hM⟩ := hfbound.exists_norm_le
-  have hM_nn : 0 ≤ M := (norm_nonneg _).trans (hM (f a) ⟨a, Set.left_mem_uIcc, rfl⟩)
-  have hB_nn : 0 ≤ ‖B‖ := norm_nonneg B
   have hc_uIcc : c ∈ Set.uIcc a b := by rw [Set.uIcc_of_lt hab]; exact ⟨hac, hcb⟩
   have hMc : ‖f c‖ ≤ M := hM (f c) ⟨c, hc_uIcc, rfl⟩
+  have hM_nn : 0 ≤ M := (norm_nonneg _).trans hMc
   obtain rfl | hac' := hac.eq_or_lt
   · have hL : L = 0 := HasStieltjesIntegral.of_eq_iff_zero.mp h
     subst hL
@@ -1068,8 +1067,7 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
     have cty_g_bd : ∀ {x : ℝ}, x ∈ Set.uIcc a b → |x - a| < δ_c → ‖g x - g a‖ < ε' := by
       intro x hx hd; rw [← dist_eq_norm]
       exact hδ_c_bd hx (by rwa [Real.dist_eq])
-    have tag_forces : ∀ J ∈ π.boxes, π.tag J 0 = a → J.lower 0 = a := by
-      intro J hJ hT
+    have tag_forces : ∀ J ∈ π.boxes, π.tag J 0 = a → J.lower 0 = a := fun J hJ hT => by
       have h1 : J.lower 0 ≤ π.tag J 0 := by
         have := hH J hJ; rw [Box.Icc_def] at this; exact this.1 0
       have h2 : a ≤ J.lower 0 := ((Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ)).1
@@ -1088,8 +1086,7 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
       rcases hd with h | h
       · linarith [show J1.upper 0 ≤ a from h]
       · linarith [show J2.upper 0 ≤ a from h]
-    have h_mesh : ∀ J ∈ π.boxes, J.upper 0 - J.lower 0 ≤ δ_c / 2 := by
-      intro J hJ
+    have h_mesh : ∀ J ∈ π.boxes, J.upper 0 - J.lower 0 ≤ δ_c / 2 := fun J hJ => by
       have hδ : (Real.toNNReal (δ_c / 2) : ℝ) = δ_c / 2 :=
         Real.coe_toNNReal _ (by positivity)
       have hlen := (mesh_size_le_iff₁ π.toPrepartition _).mp hMesh J hJ
@@ -1151,6 +1148,11 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
   set δ_use : NNReal := min δ_h (Real.toNNReal δ_use_real) with hδ_use_def
   have hδ_use_pos : 0 < δ_use :=
     lt_min hδ_h_pos (Real.toNNReal_pos.mpr hδ_use_real_pos)
+  have hδ_use_real_le : (δ_use : ℝ) ≤ δ_use_real := by
+    rw [hδ_use_def]; push_cast
+    exact (min_le_right _ _).trans (Real.coe_toNNReal _ hδ_use_real_pos.le).le
+  have hδ_use_le_c : (δ_use : ℝ) ≤ δ_c / 2 :=
+    hδ_use_real_le.trans ((min_le_left _ _).trans (min_le_left _ _))
   refine ⟨δ_use, hδ_use_pos, fun π hH hPart hMesh => ?_⟩
   classical
   set preBoxes : Finset (WithBot (Box (Fin 1))) :=
@@ -1218,14 +1220,11 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
     { toPrepartition := π_L_prep, tag := π_L_tag, tag_mem_Icc := h_tag_mem } with hπ_L_def
   have h_henstock : π_L.IsHenstock := by
     intro K hK_in
-    obtain ⟨J, hJ_in, hsp⟩ := K_from_prep K hK_in
-    have hK_split : ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c := ⟨J, hJ_in, hsp⟩
+    have hK_split : ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c := K_from_prep K hK_in
     show π_L_tag K ∈ Box.Icc K
     simp only [hπ_L_tag_def, dif_pos hK_split]
-    have hJ_in' : Classical.choose hK_split ∈ π.boxes := (Classical.choose_spec hK_split).1
-    have hsp' : ↑K = Box.splitLower (Classical.choose hK_split) 0 c :=
-      (Classical.choose_spec hK_split).2
     set J' := Classical.choose hK_split
+    obtain ⟨hJ_in', hsp'⟩ := Classical.choose_spec hK_split
     have htag := hH J' hJ_in'
     rw [Box.Icc_def] at htag
     have htag_lo : J'.lower 0 ≤ π.tag J' 0 := htag.1 0
@@ -1233,8 +1232,8 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
     have h_ne : Box.splitLower J' 0 c ≠ ⊥ := by rw [← hsp']; exact WithBot.coe_ne_bot
     have hJ'_lt : J'.lower 0 < c := by
       simpa [ne_eq, Box.splitLower_eq_bot, not_le] using h_ne
-    have hKeq : K = (Box.splitLower J' 0 c).unbot h_ne := by
-      apply WithBot.coe_injective; rw [hsp', WithBot.coe_unbot]
+    have hKeq : K = (Box.splitLower J' 0 c).unbot h_ne :=
+      WithBot.coe_injective (by rw [hsp', WithBot.coe_unbot])
     rw [Box.mem_Icc₁, Box.Icc₁_def, hKeq]
     show min (π.tag J' 0) c ∈ Set.Icc _ _
     rw [show ((Box.splitLower J' 0 c).unbot h_ne).lower₁ = J'.lower 0 from
@@ -1351,18 +1350,11 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
       have htag_hi : π.tag J 0 ≤ J.upper 0 := htag_in.2 0
       have hJ_lt : J.lower 0 < J.upper 0 := J.lower_lt_upper 0
       have hmesh : J.upper 0 - J.lower 0 ≤ δ_c / 2 := by
-        have h1 : J.len ≤ (δ_use : ℝ) := by
-          exact_mod_cast (mesh_size_le_iff₁ π.toPrepartition δ_use).mp hMesh J hJ_in
-        have h2 : (δ_use : ℝ) ≤ δ_use_real := by
-          rw [hδ_use_def]
-          calc ((min δ_h (Real.toNNReal δ_use_real)) : ℝ)
-              ≤ (Real.toNNReal δ_use_real : ℝ) := by exact_mod_cast min_le_right _ _
-            _ = δ_use_real := Real.coe_toNNReal _ hδ_use_real_pos.le
-        have h3 : δ_use_real ≤ δ_c / 2 :=
-          (min_le_left _ _).trans (min_le_left _ _)
         have hlen : J.upper 0 - J.lower 0 = J.len := by
           simp [Box.len, Box.upper₁, Box.lower₁]
-        linarith
+        have h1 : J.len ≤ (δ_use : ℝ) := by
+          exact_mod_cast (mesh_size_le_iff₁ π.toPrepartition δ_use).mp hMesh J hJ_in
+        linarith [hδ_use_le_c]
       have hJ_lo_uIcc : J.lower 0 ∈ Set.uIcc a b := by
         rw [Set.uIcc_of_lt hab]; exact ⟨hJ_lo_a, by linarith⟩
       have hJ_up_uIcc : J.upper 0 ∈ Set.uIcc a b := by
@@ -1463,8 +1455,8 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
       obtain ⟨hJ1_lo_le, hJ1_lt_up⟩ := lo_le J1 hJ1_near
       obtain ⟨hJ2_lo_le, hJ2_lt_up⟩ := lo_le J2 hJ2_near
       rcases hdisj with h | h
-      · exact absurd hJ1_lt_up (not_lt.mpr (show J1.upper 0 ≤ c from h.trans hJ2_lo_le))
-      · exact absurd hJ2_lt_up (not_lt.mpr (show J2.upper 0 ≤ c from h.trans hJ1_lo_le))
+      · linarith [show J1.upper 0 ≤ c from h.trans hJ2_lo_le]
+      · linarith [show J2.upper 0 ≤ c from h.trans hJ1_lo_le]
     have h_sum_bd :
         ‖∑ J ∈ π.boxes,
             (B (((Set.Iic c).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁)
