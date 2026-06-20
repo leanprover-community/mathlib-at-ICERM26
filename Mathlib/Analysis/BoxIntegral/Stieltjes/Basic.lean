@@ -1031,6 +1031,14 @@ private lemma Box.splitLower_unbot_upper {J : Box (Fin 1)} {c : ℝ}
   have := ((Box.mk'_eq_coe).mp h_coe.symm).2.symm
   simpa using congrArg (· 0) this
 
+private lemma Box.splitLower_unbot_len_le {J : Box (Fin 1)} {c : ℝ}
+    (h : Box.splitLower J 0 c ≠ ⊥) :
+    ((Box.splitLower J 0 c).unbot h).len ≤ J.len := by
+  change ((Box.splitLower J 0 c).unbot h).upper 0 - ((Box.splitLower J 0 c).unbot h).lower 0 ≤
+    J.upper 0 - J.lower 0
+  rw [Box.splitLower_unbot_upper, congrArg (· 0) (Box.splitLower_unbot_lower h)]
+  exact sub_le_sub_right (min_le_right _ _) _
+
 private lemma bilin_norm_bd (B : E →L[ℝ] F →L[ℝ] G) {u : E} {v : F} {M ε' : ℝ}
     (hu : ‖u‖ ≤ M) (hv : ‖v‖ ≤ ε') :
     ‖B u v‖ ≤ ‖B‖ * M * ε' := by
@@ -1261,13 +1269,7 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
     have h_ne : Box.splitLower J 0 c ≠ ⊥ := by rw [← hsp]; exact WithBot.coe_ne_bot
     have hKeq : K = (Box.splitLower J 0 c).unbot h_ne := by
       apply WithBot.coe_injective; rw [hsp, WithBot.coe_unbot]
-    have hKlen : K.len ≤ J.len := by
-      have hK_lo : K.lower 0 = J.lower 0 :=
-        hKeq ▸ congrArg (· 0) (Box.splitLower_unbot_lower h_ne)
-      have hK_up : K.upper 0 = min c (J.upper 0) := hKeq ▸ Box.splitLower_unbot_upper h_ne
-      show K.upper₁ - K.lower₁ ≤ J.upper₁ - J.lower₁
-      show K.upper 0 - K.lower 0 ≤ J.upper 0 - J.lower 0
-      rw [hK_lo, hK_up]; exact sub_le_sub_right (min_le_right _ _) _
+    have hKlen : K.len ≤ J.len := hKeq ▸ Box.splitLower_unbot_len_le h_ne
     have hJ_len : J.len ≤ (δ_use : ℝ) := by
       exact_mod_cast (mesh_size_le_iff₁ π.toPrepartition δ_use).mp hMesh J hJ_in
     have hδ_le : (δ_use : ℝ) ≤ (δ_h : ℝ) := by
@@ -1453,22 +1455,18 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
       rw [Finset.card_le_one]
       intros J1 hJ1 J2 hJ2
       rw [Finset.mem_filter] at hJ1 hJ2
-      obtain ⟨hJ1_in, hJ1_near⟩ := hJ1
-      obtain ⟨hJ2_in, hJ2_near⟩ := hJ2
       by_contra hne
-      have hdisj : Disjoint J1.toSet J2.toSet := π.disjoint_coe_of_mem hJ1_in hJ2_in hne
-      rw [Box.disjoint_iff₁] at hdisj
-      have lo_le : ∀ (J : Box (Fin 1)),
-          (J.lower 0 < c ∧ c < J.upper 0) ∨ (π.tag J 0 = c ∧ J.lower 0 = c) →
-          J.lower 0 ≤ c ∧ c < J.upper 0 := fun J h => by
-        rcases h with ⟨h_lo, h_hi⟩ | ⟨_, h_lo_eq⟩
-        · exact ⟨h_lo.le, h_hi⟩
-        · exact ⟨h_lo_eq.le, h_lo_eq ▸ J.lower_lt_upper 0⟩
-      obtain ⟨hJ1_lo_le, hJ1_lt_up⟩ := lo_le J1 hJ1_near
-      obtain ⟨hJ2_lo_le, hJ2_lt_up⟩ := lo_le J2 hJ2_near
-      rcases hdisj with h | h
-      · linarith [show J1.upper 0 ≤ c from h.trans hJ2_lo_le]
-      · linarith [show J2.upper 0 ≤ c from h.trans hJ1_lo_le]
+      have hd := (Box.disjoint_iff₁ (J := J1) (J' := J2)).mp
+        (π.disjoint_coe_of_mem hJ1.1 hJ2.1 hne)
+      have unpack : ∀ {J}, (J.lower 0 < c ∧ c < J.upper 0) ∨
+          (π.tag J 0 = c ∧ J.lower 0 = c) → J.lower 0 ≤ c ∧ c < J.upper 0 :=
+        fun {J} h => h.elim (fun ⟨l, u⟩ => ⟨l.le, u⟩)
+          (fun ⟨_, le⟩ => ⟨le.le, le ▸ J.lower_lt_upper 0⟩)
+      obtain ⟨hJ1_lo, hJ1_up⟩ := unpack hJ1.2
+      obtain ⟨hJ2_lo, hJ2_up⟩ := unpack hJ2.2
+      rcases hd with h | h
+      · linarith [show J1.upper 0 ≤ c from h.trans hJ2_lo]
+      · linarith [show J2.upper 0 ≤ c from h.trans hJ1_lo]
     have h_sum_bd :
         ‖∑ J ∈ π.boxes,
             (B (((Set.Iic c).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁)
