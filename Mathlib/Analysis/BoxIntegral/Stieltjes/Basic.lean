@@ -1138,6 +1138,20 @@ private theorem HasStieltjesIntegral.indicator_left_endpoint_zero
           _ = ε / 2 := by field_simp
           _ < ε := by linarith
 
+/-- `Box.splitLower (· 0 c)` is injective on boxes of a prepartition where it does not
+collapse to `⊥`: distinct boxes give either equal-and-bot or disjoint splits. -/
+private lemma Prepartition.splitLower_injOn {a b : ℝ} {π : Prepartition (Ioc a b)} {c : ℝ}
+    {J1 J2 : Box (Fin 1)} (hJ1 : J1 ∈ π.boxes) (hJ2 : J2 ∈ π.boxes)
+    (hne_bot : Box.splitLower J1 0 c ≠ ⊥)
+    (h_eq : Box.splitLower J1 0 c = Box.splitLower J2 0 c) : J1 = J2 := by
+  by_contra hne
+  have hdisj : Disjoint (Box.splitLower J1 0 c) (Box.splitLower J2 0 c) := by
+    rw [← Box.disjoint_withBotCoe, Box.coe_splitLower, Box.coe_splitLower]
+    exact (π.disjoint_coe_of_mem hJ1 hJ2 hne).mono
+      Set.inter_subset_left Set.inter_subset_left
+  rw [h_eq, disjoint_self] at hdisj
+  exact (h_eq ▸ hne_bot) hdisj
+
 /-- For a tagged prepartition of `Ioc a b`, at most one box either straddles `c` or sits at
 `c` with its left endpoint and tag both equal to `c` (these are the boxes whose contribution
 to the Riemann sum is affected by cutting at `c`). -/
@@ -1230,19 +1244,13 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
     obtain ⟨J, hJ_in, hxJ⟩ := hPart x (by rw [mem_Ioc hab, Set.mem_Ioc]; exact ⟨hx.1, hx.2.trans hcb⟩)
     have h_ne : Box.splitLower J 0 c ≠ ⊥ := by
       rw [ne_eq, Box.splitLower_eq_bot, not_le]
-      rw [Box.mem_def] at hxJ
-      exact lt_of_lt_of_le (hxJ 0).1 hx.2
+      rw [Box.mem_def] at hxJ; exact lt_of_lt_of_le (hxJ 0).1 hx.2
     refine ⟨(Box.splitLower J 0 c).unbot h_ne, ?_, ?_⟩
     · rw [hπ_L_prep_def, Prepartition.mem_ofWithBot, WithBot.coe_unbot,
           hpreBoxes_def, Finset.mem_image]
       exact ⟨J, hJ_in, rfl⟩
-    · have h_set_eq : (((Box.splitLower J 0 c).unbot h_ne) : Set (Fin 1 → ℝ)) =
-          ↑J ∩ {y | y 0 ≤ c} := by
-        rw [← Box.coe_coe, WithBot.coe_unbot, Box.coe_splitLower]
-      rw [Box.mem_def]; intro i
-      have hx_in : x ∈ (((Box.splitLower J 0 c).unbot h_ne) : Set (Fin 1 → ℝ)) := by
-        rw [h_set_eq]; exact ⟨hxJ, hx.2⟩
-      rw [Box.mem_coe, Box.mem_def] at hx_in; exact hx_in i
+    · rw [← Box.mem_coe, ← Box.coe_coe, WithBot.coe_unbot, Box.coe_splitLower]
+      exact ⟨hxJ, hx.2⟩
   set π_L_tag : Box (Fin 1) → (Fin 1 → ℝ) := fun K =>
     if hK : ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c then
       fun _ => min (π.tag (Classical.choose hK) 0) c
@@ -1309,18 +1317,6 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
         B (f (min (π.tag J 0) c))
           (g ((Box.splitLower J 0 c).unbot hJ).upper₁ - g (J.lower 0))
       else 0 with ht_πL_ext_def
-    have splitLower_inj : ∀ {J1 J2 : Box (Fin 1)}, J1 ∈ π.boxes → J2 ∈ π.boxes →
-        Box.splitLower J1 0 c ≠ ⊥ →
-        Box.splitLower J1 0 c = Box.splitLower J2 0 c → J1 = J2 := by
-      intros J1 J2 hJ1 hJ2 hne_bot h_eq
-      by_contra hne
-      have hdisj : Disjoint (Box.splitLower J1 0 c) (Box.splitLower J2 0 c) := by
-        rw [← Box.disjoint_withBotCoe, Box.coe_splitLower, Box.coe_splitLower]
-        exact (π.disjoint_coe_of_mem hJ1 hJ2 hne).mono
-          Set.inter_subset_left Set.inter_subset_left
-      rw [h_eq] at hne_bot
-      rw [h_eq, disjoint_self] at hdisj
-      exact hne_bot hdisj
     have h_reindex :
         ∑ K ∈ π_L.boxes, B (f (π_L.tag K 0)) (g K.upper₁ - g K.lower₁) =
           ∑ J ∈ π.boxes, t_πL_ext J := by
@@ -1341,7 +1337,7 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
         exact ⟨J, (Finset.mem_filter.mp hJ).1, rfl⟩
       · intros J1 hJ1 J2 hJ2 hi_eq
         rw [Finset.mem_filter] at hJ1 hJ2
-        exact splitLower_inj hJ1.1 hJ2.1 hJ1.2 (by
+        exact Prepartition.splitLower_injOn hJ1.1 hJ2.1 hJ1.2 (by
           rw [← WithBot.coe_unbot (Box.splitLower J1 0 c) hJ1.2,
               ← WithBot.coe_unbot (Box.splitLower J2 0 c) hJ2.2, hi_eq])
       · intros K hK
@@ -1361,7 +1357,8 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
           obtain ⟨h_in', h_eq'⟩ := Classical.choose_spec hK_J_split
           have h_ne' : Box.splitLower (Classical.choose hK_J_split) 0 c ≠ ⊥ := by
             rw [← h_eq']; exact WithBot.coe_ne_bot
-          exact splitLower_inj h_in' hJ_in h_ne' (by rw [← h_eq', WithBot.coe_unbot])
+          exact Prepartition.splitLower_injOn h_in' hJ_in h_ne'
+            (by rw [← h_eq', WithBot.coe_unbot])
         have h_tag_eq : π_L_tag K_J 0 = min (π.tag J 0) c := by
           simp only [hπ_L_tag_def, dif_pos hK_J_split, h_unique]
         have h_K_J_lower : K_J.lower₁ = J.lower 0 :=
