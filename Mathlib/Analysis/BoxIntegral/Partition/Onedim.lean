@@ -8,6 +8,7 @@ module
 
 public import Mathlib.Analysis.BoxIntegral.Box.Ioc
 public import Mathlib.Analysis.BoxIntegral.Partition.Additive
+public import Mathlib.Analysis.BoxIntegral.Partition.Tagged
 
 /-! # One-dimensional partitions
 
@@ -32,6 +33,39 @@ theorem mesh_size₁ {I : Box (Fin 1)} (π : Prepartition I) : π.mesh_size
 theorem mesh_size_le_iff₁ {I : Box (Fin 1)} (π : Prepartition I) (ε : NNReal) :
     π.mesh_size ≤ ε ↔ ∀ B ∈ π.boxes, B.len ≤ ε := by
   simp [mesh_size_le_iff, Box.len, Box.lower₁, Box.upper₁]
+
+/-- In one dimension, the length of `splitLower J 0 c` (when nonempty) is bounded by the length
+of `J`. -/
+theorem Box.splitLower_unbot_len_le {J : Box (Fin 1)} {c : ℝ}
+    (h : J.splitLower 0 c ≠ ⊥) :
+    ((J.splitLower 0 c).unbot h).len ≤ J.len := by
+  change ((J.splitLower 0 c).unbot h).upper 0 - ((J.splitLower 0 c).unbot h).lower 0 ≤
+    J.upper 0 - J.lower 0
+  rw [Box.splitLower_unbot_upper_apply_self, congrArg (· 0) (Box.splitLower_unbot_lower h)]
+  exact sub_le_sub_right (min_le_right _ _) _
+
+/-- For a tagged prepartition of `Ioc a b`, at most one box either straddles `c` or sits at
+`c` with its left endpoint and tag both equal to `c` (these are the boxes whose contribution
+to a one-dimensional Riemann sum is affected by cutting at `c`). -/
+theorem TaggedPrepartition.near_c_at_most_one {a b : ℝ}
+    (π : TaggedPrepartition (BoxIntegral.Ioc a b)) (c : ℝ) :
+    (π.boxes.filter (fun J => (J.lower 0 < c ∧ c < J.upper 0) ∨
+                              (π.tag J 0 = c ∧ J.lower 0 = c))).card ≤ 1 := by
+  rw [Finset.card_le_one]
+  intros J1 hJ1 J2 hJ2
+  rw [Finset.mem_filter] at hJ1 hJ2
+  by_contra hne
+  have hd := (Box.disjoint_iff₁ (J := J1) (J' := J2)).mp
+    (π.disjoint_coe_of_mem hJ1.1 hJ2.1 hne)
+  have unpack : ∀ {J}, (J.lower 0 < c ∧ c < J.upper 0) ∨
+      (π.tag J 0 = c ∧ J.lower 0 = c) → J.lower 0 ≤ c ∧ c < J.upper 0 :=
+    fun {J} h => h.elim (fun ⟨l, u⟩ => ⟨l.le, u⟩)
+      (fun ⟨_, le⟩ => ⟨le.le, le ▸ J.lower_lt_upper 0⟩)
+  obtain ⟨hJ1_lo, hJ1_up⟩ := unpack hJ1.2
+  obtain ⟨hJ2_lo, hJ2_up⟩ := unpack hJ2.2
+  rcases hd with h | h
+  · linarith [show J1.upper 0 ≤ c from h.trans hJ2_lo]
+  · linarith [show J2.upper 0 ≤ c from h.trans hJ1_lo]
 
 namespace Prepartition
 
