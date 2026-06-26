@@ -44,6 +44,165 @@ theorem Box.splitLower_unbot_len_le {J : Box (Fin 1)} {c : ℝ}
   rw [Box.splitLower_unbot_upper_apply_self, congrArg (· 0) (Box.splitLower_unbot_lower h)]
   exact sub_le_sub_right (min_le_right _ _) _
 
+/-! ### Cutting a one-dimensional prepartition at an interior point
+
+Given a prepartition of `Ioc a b` and `c ∈ (a, b]`, `Prepartition.splitLowerAt` takes the
+lower (≤ c) half of each box, yielding a prepartition of `Ioc a c`. The companion theorems
+state that this preserves the partition property and does not increase the mesh size. -/
+
+open scoped Classical in
+/-- Cut a prepartition of `Ioc a b` at `c ∈ (a, b]`: take the lower (≤ c) half of each box. -/
+noncomputable def Prepartition.splitLowerAt {a b : ℝ}
+    (π : Prepartition (BoxIntegral.Ioc a b)) (c : ℝ) (hac : a < c) (hcb : c ≤ b) :
+    Prepartition (BoxIntegral.Ioc a c) :=
+  have hab : a < b := hac.trans_le hcb
+  Prepartition.ofWithBot (π.boxes.image (fun J => J.splitLower 0 c))
+    (by
+      intro K hK
+      simp only [Finset.mem_image] at hK
+      obtain ⟨J, hJ_in, rfl⟩ := hK
+      rw [← Box.withBotCoe_subset_iff, Box.coe_splitLower, Box.coe_coe]
+      rintro x ⟨hxJ, hxc⟩
+      have hJ_le := (Box.le_Ioc_iff hab J).mp (π.le_of_mem' J hJ_in)
+      rw [Box.mem_coe, Box.mem₁, Box.toSet₁_def, Set.mem_Ioc] at hxJ
+      rw [Box.mem_coe, mem_Ioc hac, Set.mem_Ioc]
+      exact ⟨lt_of_le_of_lt hJ_le.1 hxJ.1, hxc⟩)
+    (by
+      intro K1 hK1 K2 hK2 hne
+      simp only [Finset.coe_image, Set.mem_image] at hK1 hK2
+      obtain ⟨J1, hJ1_in, rfl⟩ := hK1
+      obtain ⟨J2, hJ2_in, rfl⟩ := hK2
+      rw [← Box.disjoint_withBotCoe, Box.coe_splitLower, Box.coe_splitLower]
+      exact (π.disjoint_coe_of_mem hJ1_in hJ2_in (fun h => hne (by rw [h]))).mono
+        Set.inter_subset_left Set.inter_subset_left)
+
+theorem Prepartition.mem_splitLowerAt_iff {a b : ℝ}
+    {π : Prepartition (BoxIntegral.Ioc a b)} {c : ℝ} {hac : a < c} {hcb : c ≤ b}
+    {K : Box (Fin 1)} :
+    K ∈ π.splitLowerAt c hac hcb ↔ ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c := by
+  classical
+  unfold splitLowerAt
+  rw [Prepartition.mem_ofWithBot, Finset.mem_image]
+  exact ⟨fun ⟨J, hJ, hKJ⟩ => ⟨J, hJ, hKJ.symm⟩, fun ⟨J, hJ, hKJ⟩ => ⟨J, hJ, hKJ.symm⟩⟩
+
+theorem Prepartition.splitLowerAt_isPartition {a b : ℝ}
+    (π : Prepartition (BoxIntegral.Ioc a b)) {c : ℝ} (hac : a < c) (hcb : c ≤ b)
+    (hπ : π.IsPartition) : (π.splitLowerAt c hac hcb).IsPartition := by
+  have hab : a < b := hac.trans_le hcb
+  intro x hx
+  rw [mem_Ioc hac, Set.mem_Ioc] at hx
+  obtain ⟨J, hJ_in, hxJ⟩ := hπ x (by
+    rw [mem_Ioc hab, Set.mem_Ioc]; exact ⟨hx.1, hx.2.trans hcb⟩)
+  have h_ne : Box.splitLower J 0 c ≠ ⊥ := by
+    rw [ne_eq, Box.splitLower_eq_bot, not_le]
+    rw [Box.mem_def] at hxJ
+    exact lt_of_lt_of_le (hxJ 0).1 hx.2
+  refine ⟨(Box.splitLower J 0 c).unbot h_ne, ?_, ?_⟩
+  · rw [mem_splitLowerAt_iff]
+    exact ⟨J, hJ_in, (WithBot.coe_unbot _ h_ne)⟩
+  · rw [← Box.mem_coe, ← Box.coe_coe, WithBot.coe_unbot, Box.coe_splitLower]
+    exact ⟨hxJ, hx.2⟩
+
+theorem Prepartition.splitLowerAt_mesh_le {a b : ℝ}
+    (π : Prepartition (BoxIntegral.Ioc a b)) {c : ℝ} (hac : a < c) (hcb : c ≤ b) :
+    (π.splitLowerAt c hac hcb).mesh_size ≤ π.mesh_size := by
+  rw [mesh_size_le_iff₁]
+  intro K hK
+  obtain ⟨J, hJ_in, hsp⟩ := Prepartition.mem_splitLowerAt_iff.mp hK
+  have h_ne : Box.splitLower J 0 c ≠ ⊥ := by rw [← hsp]; exact WithBot.coe_ne_bot
+  have hKeq : K = (Box.splitLower J 0 c).unbot h_ne := by
+    apply WithBot.coe_injective; rw [hsp, WithBot.coe_unbot]
+  have hKlen : K.len ≤ J.len := hKeq ▸ Box.splitLower_unbot_len_le h_ne
+  have hJ_len : J.len ≤ (π.mesh_size : ℝ) :=
+    (mesh_size_le_iff₁ π _).mp le_rfl J hJ_in
+  linarith
+
+open scoped Classical in
+/-- Cut a tagged prepartition of `Ioc a b` at `c ∈ (a, b]`: take the lower half of each box,
+inheriting the tag (clipped to `c`). -/
+noncomputable def TaggedPrepartition.splitLowerAt {a b : ℝ}
+    (π : TaggedPrepartition (BoxIntegral.Ioc a b)) (c : ℝ) (hac : a < c) (hcb : c ≤ b) :
+    TaggedPrepartition (BoxIntegral.Ioc a c) where
+  toPrepartition := π.toPrepartition.splitLowerAt c hac hcb
+  tag K :=
+    if hK : ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c then
+      fun _ => min (π.tag (Classical.choose hK) 0) c
+    else fun _ => c
+  tag_mem_Icc := by
+    have hab : a < b := hac.trans_le hcb
+    intro K
+    rw [Box.mem_Icc₁, Box.Icc₁_def, Ioc.lower₁ hac, Ioc.upper₁ hac]
+    show _ ∈ Set.Icc a c
+    by_cases hK : ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c
+    · simp only [dif_pos hK]
+      have htag_ge : a ≤ π.tag (Classical.choose hK) 0 := by
+        have := π.tag_mem_Icc (Classical.choose hK)
+        rw [Box.mem_Icc₁, Box.Icc₁_def, Ioc.lower₁ hab, Ioc.upper₁ hab] at this
+        exact this.1
+      exact ⟨le_min htag_ge hac.le, min_le_right _ _⟩
+    · simp only [dif_neg hK]; exact ⟨hac.le, le_refl _⟩
+
+theorem TaggedPrepartition.splitLowerAt_tag_apply {a b : ℝ}
+    (π : TaggedPrepartition (BoxIntegral.Ioc a b)) {c : ℝ} (hac : a < c) (hcb : c ≤ b)
+    {J : Box (Fin 1)} (hJ : J ∈ π.boxes) (h_ne : Box.splitLower J 0 c ≠ ⊥) :
+    (π.splitLowerAt c hac hcb).tag ((Box.splitLower J 0 c).unbot h_ne) 0 =
+      min (π.tag J 0) c := by
+  classical
+  set K := (Box.splitLower J 0 c).unbot h_ne with hK_def
+  have h_witness : ∃ J' ∈ π.boxes, ↑K = Box.splitLower J' 0 c :=
+    ⟨J, hJ, WithBot.coe_unbot _ _⟩
+  have h_spec := Classical.choose_spec h_witness
+  have h_ne' : Box.splitLower (Classical.choose h_witness) 0 c ≠ ⊥ := by
+    rw [← h_spec.2]; exact WithBot.coe_ne_bot
+  have hJ'_eq : Classical.choose h_witness = J :=
+    Prepartition.splitLower_injOn h_spec.1 hJ h_ne'
+      (by rw [← h_spec.2, ← WithBot.coe_unbot (Box.splitLower J 0 c) h_ne])
+  change (if hK : ∃ J' ∈ π.boxes, ↑K = Box.splitLower J' 0 c then
+          (fun _ : Fin 1 => min (π.tag (Classical.choose hK) 0) c)
+        else fun _ : Fin 1 => c) 0 = min (π.tag J 0) c
+  rw [dif_pos h_witness, hJ'_eq]
+
+theorem TaggedPrepartition.mem_splitLowerAt_iff {a b : ℝ}
+    {π : TaggedPrepartition (BoxIntegral.Ioc a b)} {c : ℝ} {hac : a < c} {hcb : c ≤ b}
+    {K : Box (Fin 1)} :
+    K ∈ π.splitLowerAt c hac hcb ↔ ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c :=
+  @Prepartition.mem_splitLowerAt_iff _ _ π.toPrepartition c hac hcb K
+
+theorem TaggedPrepartition.splitLowerAt_mesh_le {a b : ℝ}
+    (π : TaggedPrepartition (BoxIntegral.Ioc a b)) {c : ℝ} (hac : a < c) (hcb : c ≤ b) :
+    (π.splitLowerAt c hac hcb).mesh_size ≤ π.mesh_size :=
+  Prepartition.splitLowerAt_mesh_le π.toPrepartition hac hcb
+
+theorem TaggedPrepartition.splitLowerAt_isPartition {a b : ℝ}
+    (π : TaggedPrepartition (BoxIntegral.Ioc a b)) {c : ℝ} (hac : a < c) (hcb : c ≤ b)
+    (hπ : π.IsPartition) : (π.splitLowerAt c hac hcb).IsPartition :=
+  Prepartition.splitLowerAt_isPartition π.toPrepartition hac hcb hπ
+
+theorem TaggedPrepartition.splitLowerAt_isHenstock {a b : ℝ}
+    (π : TaggedPrepartition (BoxIntegral.Ioc a b)) {c : ℝ} (hac : a < c) (hcb : c ≤ b)
+    (hH : π.IsHenstock) : (π.splitLowerAt c hac hcb).IsHenstock := by
+  intro K hK_in
+  have hK_prep : K ∈ π.toPrepartition.splitLowerAt c hac hcb := hK_in
+  obtain ⟨J, hJ_in, hsp⟩ := Prepartition.mem_splitLowerAt_iff.mp hK_prep
+  have h_ne : Box.splitLower J 0 c ≠ ⊥ := by rw [← hsp]; exact WithBot.coe_ne_bot
+  have hKeq : K = (Box.splitLower J 0 c).unbot h_ne :=
+    WithBot.coe_injective (by rw [hsp, WithBot.coe_unbot])
+  have htag := hH J hJ_in
+  rw [Box.Icc_def] at htag
+  have htag_lo : J.lower 0 ≤ π.tag J 0 := htag.1 0
+  have htag_hi : π.tag J 0 ≤ J.upper 0 := htag.2 0
+  have hJ_lt : J.lower 0 < c := by
+    simpa [ne_eq, Box.splitLower_eq_bot, not_le] using h_ne
+  rw [Box.mem_Icc₁, Box.Icc₁_def, hKeq]
+  show _ ∈ Set.Icc _ _
+  rw [TaggedPrepartition.splitLowerAt_tag_apply π hac hcb hJ_in h_ne]
+  rw [show ((Box.splitLower J 0 c).unbot h_ne).lower₁ = J.lower 0 from
+        congrArg (· 0) (Box.splitLower_unbot_lower h_ne),
+      show ((Box.splitLower J 0 c).unbot h_ne).upper₁ = min c (J.upper 0) from
+        Box.splitLower_unbot_upper_apply_self h_ne]
+  exact ⟨le_min htag_lo hJ_lt.le,
+    le_min (min_le_right _ _) ((min_le_left _ _).trans htag_hi)⟩
+
 /-- For a tagged prepartition of `Ioc a b`, at most one box either straddles `c` or sits at
 `c` with its left endpoint and tag both equal to `c` (these are the boxes whose contribution
 to a one-dimensional Riemann sum is affected by cutting at `c`). -/

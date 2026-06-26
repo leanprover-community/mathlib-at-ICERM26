@@ -1025,9 +1025,6 @@ private lemma bilin_norm_bd (B : E →L[ℝ] F →L[ℝ] G) {u : E} {v : F} {M �
     _ ≤ ‖B‖ * ‖u‖ * ‖v‖ := by gcongr; exact B.le_opNorm _
     _ ≤ ‖B‖ * M * ε' := by gcongr
 
-/-- The Riemann sums of `(Iic a).indicator f` (against a function `g` continuous at `a`)
-vanish: the indicator is `0` on `(a, b]` and equals `f a` at `a`, where the contribution is
-small by continuity of `g` at `a`. -/
 private theorem HasStieltjesIntegral.indicator_left_endpoint_zero
     (hab : a < b) (hfbound : Bornology.IsBounded (f '' Set.uIcc a b))
     (hgc : ContinuousWithinAt g (Set.uIcc a b) a) :
@@ -1152,100 +1149,14 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
     hδ_use_real_le.trans ((min_le_left _ _).trans (min_le_left _ _))
   refine ⟨δ_use, hδ_use_pos, fun π hH hPart hMesh => ?_⟩
   classical
-  set preBoxes : Finset (WithBot (Box (Fin 1))) :=
-    π.boxes.image (fun J => Box.splitLower J 0 c) with hpreBoxes_def
-  have h_le : ∀ J ∈ preBoxes, (J : WithBot (Box (Fin 1))) ≤ ↑(Ioc a c) := by
-    intro J hJ
-    simp only [hpreBoxes_def, Finset.mem_image] at hJ
-    obtain ⟨J', hJ'_in, rfl⟩ := hJ
-    rw [← Box.withBotCoe_subset_iff, Box.coe_splitLower, Box.coe_coe]
-    rintro x ⟨hxJ', hxc⟩
-    have hJ'_le := (Box.le_Ioc_iff hab J').mp (π.le_of_mem' J' hJ'_in)
-    rw [Box.mem_coe, Box.mem₁, Box.toSet₁_def, Set.mem_Ioc] at hxJ'
-    rw [Box.mem_coe, mem_Ioc hac', Set.mem_Ioc]
-    exact ⟨lt_of_le_of_lt hJ'_le.1 hxJ'.1, hxc⟩
-  have h_disj : Set.Pairwise (↑preBoxes : Set (WithBot (Box (Fin 1)))) Disjoint := by
-    intro J1 hJ1 J2 hJ2 hne
-    simp only [hpreBoxes_def, Finset.coe_image, Set.mem_image] at hJ1 hJ2
-    obtain ⟨J1', hJ1'_in, rfl⟩ := hJ1
-    obtain ⟨J2', hJ2'_in, rfl⟩ := hJ2
-    rw [← Box.disjoint_withBotCoe, Box.coe_splitLower, Box.coe_splitLower]
-    exact (π.disjoint_coe_of_mem hJ1'_in hJ2'_in (fun h => hne (by rw [h]))).mono
-      Set.inter_subset_left Set.inter_subset_left
-  set π_L_prep : Prepartition (Ioc a c) := Prepartition.ofWithBot preBoxes h_le h_disj
-    with hπ_L_prep_def
-  have K_from_prep : ∀ K ∈ π_L_prep, ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c := by
-    intro K hK
-    rw [hπ_L_prep_def, Prepartition.mem_ofWithBot, hpreBoxes_def, Finset.mem_image] at hK
-    obtain ⟨J, hJ_in, hsp⟩ := hK; exact ⟨J, hJ_in, hsp.symm⟩
-  have h_partition : π_L_prep.IsPartition := by
-    intro x hx
-    rw [mem_Ioc hac', Set.mem_Ioc] at hx
-    obtain ⟨J, hJ_in, hxJ⟩ := hPart x (by rw [mem_Ioc hab, Set.mem_Ioc]; exact ⟨hx.1, hx.2.trans hcb⟩)
-    have h_ne : Box.splitLower J 0 c ≠ ⊥ := by
-      rw [ne_eq, Box.splitLower_eq_bot, not_le]
-      rw [Box.mem_def] at hxJ; exact lt_of_lt_of_le (hxJ 0).1 hx.2
-    refine ⟨(Box.splitLower J 0 c).unbot h_ne, ?_, ?_⟩
-    · rw [hπ_L_prep_def, Prepartition.mem_ofWithBot, WithBot.coe_unbot,
-          hpreBoxes_def, Finset.mem_image]
-      exact ⟨J, hJ_in, rfl⟩
-    · rw [← Box.mem_coe, ← Box.coe_coe, WithBot.coe_unbot, Box.coe_splitLower]
-      exact ⟨hxJ, hx.2⟩
-  set π_L_tag : Box (Fin 1) → (Fin 1 → ℝ) := fun K =>
-    if hK : ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c then
-      fun _ => min (π.tag (Classical.choose hK) 0) c
-    else fun _ => c with hπ_L_tag_def
-  have h_tag_mem : ∀ K, π_L_tag K ∈ Box.Icc (Ioc a c) := by
-    intro K
-    rw [Box.mem_Icc₁, Box.Icc₁_def, Ioc.lower₁ hac', Ioc.upper₁ hac']
-    show (π_L_tag K) 0 ∈ Set.Icc a c
-    by_cases hK : ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c
-    · simp only [hπ_L_tag_def, dif_pos hK]
-      have hJ_in : Classical.choose hK ∈ π.boxes := (Classical.choose_spec hK).1
-      have hJ_le := (Box.le_Ioc_iff hab _).mp (π.le_of_mem' _ hJ_in)
-      have htag_lo : (Classical.choose hK).lower 0 ≤ π.tag (Classical.choose hK) 0 := by
-        have := hH _ hJ_in; rw [Box.Icc_def] at this; exact this.1 0
-      exact ⟨le_min (hJ_le.1.trans htag_lo) hac'.le, min_le_right _ _⟩
-    · simp only [hπ_L_tag_def, dif_neg hK]; exact ⟨hac'.le, le_refl _⟩
-  set π_L : TaggedPrepartition (Ioc a c) :=
-    { toPrepartition := π_L_prep, tag := π_L_tag, tag_mem_Icc := h_tag_mem } with hπ_L_def
-  have h_henstock : π_L.IsHenstock := by
-    intro K hK_in
-    have hK_split : ∃ J ∈ π.boxes, ↑K = Box.splitLower J 0 c := K_from_prep K hK_in
-    show π_L_tag K ∈ Box.Icc K
-    simp only [hπ_L_tag_def, dif_pos hK_split]
-    set J' := Classical.choose hK_split
-    obtain ⟨hJ_in', hsp'⟩ := Classical.choose_spec hK_split
-    have htag := hH J' hJ_in'
-    rw [Box.Icc_def] at htag
-    have htag_lo : J'.lower 0 ≤ π.tag J' 0 := htag.1 0
-    have htag_hi : π.tag J' 0 ≤ J'.upper 0 := htag.2 0
-    have h_ne : Box.splitLower J' 0 c ≠ ⊥ := by rw [← hsp']; exact WithBot.coe_ne_bot
-    have hJ'_lt : J'.lower 0 < c := by
-      simpa [ne_eq, Box.splitLower_eq_bot, not_le] using h_ne
-    have hKeq : K = (Box.splitLower J' 0 c).unbot h_ne :=
-      WithBot.coe_injective (by rw [hsp', WithBot.coe_unbot])
-    rw [Box.mem_Icc₁, Box.Icc₁_def, hKeq]
-    show min (π.tag J' 0) c ∈ Set.Icc _ _
-    rw [show ((Box.splitLower J' 0 c).unbot h_ne).lower₁ = J'.lower 0 from
-          congrArg (· 0) (Box.splitLower_unbot_lower h_ne),
-        show ((Box.splitLower J' 0 c).unbot h_ne).upper₁ = min c (J'.upper 0) from
-          Box.splitLower_unbot_upper_apply_self h_ne]
-    refine ⟨le_min htag_lo hJ'_lt.le,
-      le_min (min_le_right _ _) ((min_le_left _ _).trans htag_hi)⟩
-  have h_mesh_L : π_L.mesh_size ≤ δ_h := by
-    rw [mesh_size_le_iff₁]
-    intro K hK_in
-    obtain ⟨J, hJ_in, hsp⟩ := K_from_prep K hK_in
-    have h_ne : Box.splitLower J 0 c ≠ ⊥ := by rw [← hsp]; exact WithBot.coe_ne_bot
-    have hKeq : K = (Box.splitLower J 0 c).unbot h_ne := by
-      apply WithBot.coe_injective; rw [hsp, WithBot.coe_unbot]
-    have hKlen : K.len ≤ J.len := hKeq ▸ Box.splitLower_unbot_len_le h_ne
-    have hJ_len : J.len ≤ (δ_use : ℝ) := by
-      exact_mod_cast (mesh_size_le_iff₁ π.toPrepartition δ_use).mp hMesh J hJ_in
-    have hδ_le : (δ_use : ℝ) ≤ (δ_h : ℝ) := by
-      rw [hδ_use_def]; exact_mod_cast min_le_left _ _
-    linarith
+  set π_L : TaggedPrepartition (Ioc a c) := π.splitLowerAt c hac' hcb with hπ_L_def
+  have h_partition : π_L.IsPartition :=
+    TaggedPrepartition.splitLowerAt_isPartition π hac' hcb hPart
+  have h_henstock : π_L.IsHenstock :=
+    TaggedPrepartition.splitLowerAt_isHenstock π hac' hcb hH
+  have h_mesh_L : π_L.mesh_size ≤ δ_h :=
+    ((TaggedPrepartition.splitLowerAt_mesh_le π hac' hcb).trans hMesh).trans
+      (hδ_use_def ▸ min_le_left _ _)
   have h_int_L :
       dist (∑ K ∈ π_L.boxes, B (f (π_L.tag K 0)) (g K.upper₁ - g K.lower₁)) L < ε / 2 :=
     h_int π_L h_henstock h_partition h_mesh_L
@@ -1271,17 +1182,15 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
       apply Finset.sum_bij
         (fun J hJ => (Box.splitLower J 0 c).unbot (Finset.mem_filter.mp hJ).2)
       · intros J hJ
-        change (Box.splitLower J 0 c).unbot _ ∈ π_L_prep
-        rw [hπ_L_prep_def, Prepartition.mem_ofWithBot, WithBot.coe_unbot,
-            hpreBoxes_def, Finset.mem_image]
-        exact ⟨J, (Finset.mem_filter.mp hJ).1, rfl⟩
+        exact TaggedPrepartition.mem_splitLowerAt_iff.mpr
+          ⟨J, (Finset.mem_filter.mp hJ).1, WithBot.coe_unbot _ _⟩
       · intros J1 hJ1 J2 hJ2 hi_eq
         rw [Finset.mem_filter] at hJ1 hJ2
         exact Prepartition.splitLower_injOn hJ1.1 hJ2.1 hJ1.2 (by
           rw [← WithBot.coe_unbot (Box.splitLower J1 0 c) hJ1.2,
               ← WithBot.coe_unbot (Box.splitLower J2 0 c) hJ2.2, hi_eq])
       · intros K hK
-        obtain ⟨J, hJ_in, hsp⟩ := K_from_prep K hK
+        obtain ⟨J, hJ_in, hsp⟩ := TaggedPrepartition.mem_splitLowerAt_iff.mp hK
         have hJ_ne : Box.splitLower J 0 c ≠ ⊥ := by rw [← hsp]; exact WithBot.coe_ne_bot
         exact ⟨J, Finset.mem_filter.mpr ⟨hJ_in, hJ_ne⟩,
           WithBot.coe_injective (by rw [WithBot.coe_unbot, hsp])⟩
@@ -1291,16 +1200,8 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
         set K_J := (Box.splitLower J 0 c).unbot hJ_ne
         show t_πL_ext J = B (f (π_L.tag K_J 0)) (g K_J.upper₁ - g K_J.lower₁)
         simp only [ht_πL_ext_def, dif_pos hJ_ne]
-        have hK_J_split : ∃ J' ∈ π.boxes, ↑K_J = Box.splitLower J' 0 c :=
-          ⟨J, hJ_in, WithBot.coe_unbot _ hJ_ne⟩
-        have h_unique : Classical.choose hK_J_split = J := by
-          obtain ⟨h_in', h_eq'⟩ := Classical.choose_spec hK_J_split
-          have h_ne' : Box.splitLower (Classical.choose hK_J_split) 0 c ≠ ⊥ := by
-            rw [← h_eq']; exact WithBot.coe_ne_bot
-          exact Prepartition.splitLower_injOn h_in' hJ_in h_ne'
-            (by rw [← h_eq', WithBot.coe_unbot])
-        have h_tag_eq : π_L_tag K_J 0 = min (π.tag J 0) c := by
-          simp only [hπ_L_tag_def, dif_pos hK_J_split, h_unique]
+        have h_tag_eq : π_L.tag K_J 0 = min (π.tag J 0) c :=
+          TaggedPrepartition.splitLowerAt_tag_apply π hac' hcb hJ_in hJ_ne
         have h_K_J_lower : K_J.lower₁ = J.lower 0 :=
           congrArg (· 0) (Box.splitLower_unbot_lower hJ_ne)
         rw [← h_tag_eq, ← h_K_J_lower]
