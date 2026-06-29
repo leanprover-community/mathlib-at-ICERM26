@@ -1025,6 +1025,28 @@ private lemma bilin_norm_bd (B : E →L[ℝ] F →L[ℝ] G) {u : E} {v : F} {M �
     _ ≤ ‖B‖ * ‖u‖ * ‖v‖ := by gcongr; exact B.le_opNorm _
     _ ≤ ‖B‖ * M * ε' := by gcongr
 
+/-- The norm of a finite sum is at most `C` when every summand has norm `≤ C` on the (at most one)
+index satisfying `p`, and norm `≤ 0` elsewhere. -/
+private theorem norm_sum_le_of_atMostOne {ι H : Type*} [SeminormedAddCommGroup H]
+    (S : Finset ι) (φ : ι → H) (p : ι → Prop) [DecidablePred p] {C : ℝ} (hC : 0 ≤ C)
+    (hbd : ∀ i ∈ S, ‖φ i‖ ≤ if p i then C else 0) (hone : (S.filter p).card ≤ 1) :
+    ‖∑ i ∈ S, φ i‖ ≤ C :=
+  calc ‖∑ i ∈ S, φ i‖
+      ≤ ∑ i ∈ S, ‖φ i‖ := norm_sum_le _ _
+    _ ≤ ∑ i ∈ S, (if p i then C else 0) := Finset.sum_le_sum hbd
+    _ = (S.filter p).card • C := by
+        rw [Finset.sum_ite, Finset.sum_const_zero, add_zero, Finset.sum_const]
+    _ ≤ 1 • C := nsmul_le_nsmul_left hC hone
+    _ = C := by simp
+
+/-- From continuity within `s` at `c`, extract a radius `δ` on which `g` stays within `ε` of
+`g c`, phrased with `|x - c|` and `‖g x - g c‖` for direct use in Riemann-sum estimates. -/
+private theorem ContinuousWithinAt.exists_norm_sub_lt {H : Type*} [NormedAddCommGroup H]
+    {γ : ℝ → H} {s : Set ℝ} {c : ℝ} (hγc : ContinuousWithinAt γ s c) {ε : ℝ} (hε : 0 < ε) :
+    ∃ δ > 0, ∀ ⦃x : ℝ⦄, x ∈ s → |x - c| < δ → ‖γ x - γ c‖ < ε := by
+  obtain ⟨δ, hδ, hbd⟩ := (Metric.continuousWithinAt_iff.mp hγc) ε hε
+  exact ⟨δ, hδ, fun x hx hd => by rw [← dist_eq_norm]; exact hbd hx (by rwa [Real.dist_eq])⟩
+
 private theorem HasStieltjesIntegral.indicator_left_endpoint_zero
     (hab : a < b) (hfbound : Bornology.IsBounded (f '' Set.uIcc a b))
     (hgc : ContinuousWithinAt g (Set.uIcc a b) a) :
@@ -1035,14 +1057,10 @@ private theorem HasStieltjesIntegral.indicator_left_endpoint_zero
   intro ε hε
   set ε' : ℝ := ε / (2 * (‖B‖ * Mf + 1)) with hε'_def
   have hε'_pos : 0 < ε' := by rw [hε'_def]; positivity
-  obtain ⟨δ_c, hδ_c_pos, hδ_c_bd⟩ :=
-    (Metric.continuousWithinAt_iff.mp hgc) ε' hε'_pos
+  obtain ⟨δ_c, hδ_c_pos, cty_g_bd⟩ := hgc.exists_norm_sub_lt hε'_pos
   refine ⟨Real.toNNReal (δ_c / 2), Real.toNNReal_pos.mpr (by positivity),
     fun π hH hPart hMesh => ?_⟩
   rw [dist_zero_right]
-  have cty_g_bd : ∀ {x : ℝ}, x ∈ Set.uIcc a b → |x - a| < δ_c → ‖g x - g a‖ < ε' := by
-    intro x hx hd; rw [← dist_eq_norm]
-    exact hδ_c_bd hx (by rwa [Real.dist_eq])
   have tag_forces : ∀ J ∈ π.boxes, π.tag J 0 = a → J.lower 0 = a := fun J hJ hT => by
     have h1 : J.lower 0 ≤ π.tag J 0 := by
       have := hH J hJ; rw [Box.Icc_def] at this; exact this.1 0
@@ -1084,7 +1102,7 @@ private theorem HasStieltjesIntegral.indicator_left_endpoint_zero
         cty_g_bd hJ_up_mem (by rw [abs_of_nonneg (by linarith)]; linarith)
       rw [show ((Set.Iic a).indicator f) (π.tag J 0) = f a by
         rw [htag, Set.indicator_of_mem Set.self_mem_Iic]]
-      show ‖B (f a) (g J.upper₁ - g J.lower₁)‖ ≤ _
+      change ‖B (f a) (g J.upper₁ - g J.lower₁)‖ ≤ _
       rw [show J.lower₁ = a from hJ_lo]
       exact bilin_norm_bd B (hMf (f a) ⟨a, Set.left_mem_uIcc, rfl⟩) hg_dist.le
     · rw [if_neg htag]
@@ -1097,13 +1115,8 @@ private theorem HasStieltjesIntegral.indicator_left_endpoint_zero
         apply Set.indicator_of_notMem; simpa using h_tag_gt]
       simp
   calc ‖∑ J ∈ π.boxes, B (((Set.Iic a).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁)‖
-      ≤ ∑ J ∈ π.boxes, _ := norm_sum_le _ _
-    _ ≤ ∑ J ∈ π.boxes, (if π.tag J 0 = a then ‖B‖ * Mf * ε' else 0) :=
-        Finset.sum_le_sum h_term_bd
-    _ = (π.boxes.filter (fun J => π.tag J 0 = a)).card • (‖B‖ * Mf * ε') := by
-        rw [Finset.sum_ite, Finset.sum_const_zero, add_zero, Finset.sum_const]
-    _ ≤ 1 • (‖B‖ * Mf * ε') := nsmul_le_nsmul_left (by positivity) hAMO
-    _ = ‖B‖ * Mf * ε' := by simp
+      ≤ ‖B‖ * Mf * ε' :=
+        norm_sum_le_of_atMostOne π.boxes _ (fun J => π.tag J 0 = a) (by positivity) h_term_bd hAMO
     _ < ε := by
         rw [hε'_def]
         calc ‖B‖ * Mf * (ε / (2 * (‖B‖ * Mf + 1)))
@@ -1135,8 +1148,7 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
   set ε' : ℝ := ε / (4 * (‖B‖ * M + 1)) with hε'_def
   have hε'_pos : 0 < ε' := by rw [hε'_def]; positivity
   obtain ⟨δ_h, hδ_h_pos, h_int⟩ := h (ε / 2) (by linarith)
-  obtain ⟨δ_c, hδ_c_pos, hδ_c_bd⟩ :=
-    (Metric.continuousWithinAt_iff.mp (hg c hc_uIcc)) ε' hε'_pos
+  obtain ⟨δ_c, hδ_c_pos, cty_g_bd⟩ := (hg c hc_uIcc).exists_norm_sub_lt hε'_pos
   set δ_use_real : ℝ := min (min (δ_c / 2) ((c - a) / 2)) ((b - c) / 2) with hδ_use_real_def
   have hδ_use_real_pos : 0 < δ_use_real := by rw [hδ_use_real_def]; positivity
   set δ_use : NNReal := min δ_h (Real.toNNReal δ_use_real) with hδ_use_def
@@ -1171,44 +1183,18 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
     have h_reindex :
         ∑ K ∈ π_L.boxes, B (f (π_L.tag K 0)) (g K.upper₁ - g K.lower₁) =
           ∑ J ∈ π.boxes, t_πL_ext J := by
-      have h_filter_eq :
-          ∑ J ∈ π.boxes, t_πL_ext J =
-          ∑ J ∈ π.boxes.filter (fun J => Box.splitLower J 0 c ≠ ⊥), t_πL_ext J := by
-        refine (Finset.sum_subset (Finset.filter_subset _ _) ?_).symm
-        intros J hJ_in hJ_not
-        rw [Finset.mem_filter, not_and] at hJ_not
-        rw [show t_πL_ext J = 0 from dif_neg (fun h => h (not_not.mp (hJ_not hJ_in)))]
-      rw [h_filter_eq]; symm
-      apply Finset.sum_bij
-        (fun J hJ => (Box.splitLower J 0 c).unbot (Finset.mem_filter.mp hJ).2)
-      · intros J hJ
-        exact TaggedPrepartition.mem_splitLowerAt_iff.mpr
-          ⟨J, (Finset.mem_filter.mp hJ).1, WithBot.coe_unbot _ _⟩
-      · intros J1 hJ1 J2 hJ2 hi_eq
-        rw [Finset.mem_filter] at hJ1 hJ2
-        exact Prepartition.splitLower_injOn hJ1.1 hJ2.1 hJ1.2 (by
-          rw [← WithBot.coe_unbot (Box.splitLower J1 0 c) hJ1.2,
-              ← WithBot.coe_unbot (Box.splitLower J2 0 c) hJ2.2, hi_eq])
-      · intros K hK
-        obtain ⟨J, hJ_in, hsp⟩ := TaggedPrepartition.mem_splitLowerAt_iff.mp hK
-        have hJ_ne : Box.splitLower J 0 c ≠ ⊥ := by rw [← hsp]; exact WithBot.coe_ne_bot
-        exact ⟨J, Finset.mem_filter.mpr ⟨hJ_in, hJ_ne⟩,
-          WithBot.coe_injective (by rw [WithBot.coe_unbot, hsp])⟩
-      · intros J hJ
-        rw [Finset.mem_filter] at hJ
-        obtain ⟨hJ_in, hJ_ne⟩ := hJ
-        set K_J := (Box.splitLower J 0 c).unbot hJ_ne
-        show t_πL_ext J = B (f (π_L.tag K_J 0)) (g K_J.upper₁ - g K_J.lower₁)
-        simp only [ht_πL_ext_def, dif_pos hJ_ne]
-        have h_tag_eq : π_L.tag K_J 0 = min (π.tag J 0) c :=
-          TaggedPrepartition.splitLowerAt_tag_apply π hac' hcb hJ_in hJ_ne
-        have h_K_J_lower : K_J.lower₁ = J.lower 0 :=
-          congrArg (· 0) (Box.splitLower_unbot_lower hJ_ne)
-        rw [← h_tag_eq, ← h_K_J_lower]
+      rw [hπ_L_def]
+      refine (TaggedPrepartition.sum_splitLowerAt_boxes π hac' hcb
+        (fun K => B (f ((π.splitLowerAt c hac' hcb).tag K 0)) (g K.upper₁ - g K.lower₁))).trans ?_
+      refine Finset.sum_congr rfl fun J hJ => ?_
+      simp only [ht_πL_ext_def]
+      by_cases hJ_ne : Box.splitLower J 0 c ≠ ⊥
+      · rw [dif_pos hJ_ne, dif_pos hJ_ne,
+          TaggedPrepartition.splitLowerAt_tag_apply π hac' hcb hJ hJ_ne,
+          show ((Box.splitLower J 0 c).unbot hJ_ne).lower₁ = J.lower 0 from
+            congrArg (· 0) (Box.splitLower_unbot_lower hJ_ne)]
+      · rw [dif_neg hJ_ne, dif_neg hJ_ne]
     rw [dist_eq_norm, h_reindex, ← Finset.sum_sub_distrib]
-    have cty_g_bd : ∀ {x : ℝ}, x ∈ Set.uIcc a b → |x - c| < δ_c → ‖g x - g c‖ < ε' := by
-      intro x hx hd; rw [← dist_eq_norm]
-      exact hδ_c_bd hx (by rwa [Real.dist_eq])
     have h_per_box_bd : ∀ J ∈ π.boxes,
         ‖B (((Set.Iic c).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁) - t_πL_ext J‖ ≤
         if (J.lower 0 < c ∧ c < J.upper 0) ∨ (π.tag J 0 = c ∧ J.lower 0 = c) then
@@ -1266,7 +1252,7 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
               if_pos (Or.inr ⟨h_tag_c, hJ_lo_c⟩)]
           have hg_dist : ‖g (J.upper 0) - g c‖ < ε' :=
             cty_g_bd hJ_up_uIcc (by rw [abs_of_nonneg (by linarith)]; linarith)
-          show ‖(B (f c)) (g J.upper₁ - g J.lower₁)‖ ≤ _
+          change ‖(B (f c)) (g J.upper₁ - g J.lower₁)‖ ≤ _
           rw [hJ_up_eq, hJ_lo_eq, hJ_lo_c]
           exact bilin_norm_bd B hMc hg_dist.le
         · have h_tag_gt : c < π.tag J 0 :=
@@ -1293,8 +1279,7 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
               B (f (π.tag J 0)) (g c - g (J.lower 0)) =
               B (f (π.tag J 0)) (g (J.upper 0) - g c) by
               rw [← ContinuousLinearMap.map_sub]; congr 1
-              show g J.upper₁ - g J.lower₁ - (g c - g (J.lower 0)) = g (J.upper 0) - g c
-              show g (J.upper 0) - g (J.lower 0) - (g c - g (J.lower 0)) = g (J.upper 0) - g c
+              change g (J.upper 0) - g (J.lower 0) - (g c - g (J.lower 0)) = g (J.upper 0) - g c
               abel]
         have hg_dist : ‖g (J.upper 0) - g c‖ < ε' :=
           cty_g_bd hJ_up_uIcc (by rw [abs_of_nonneg (by linarith)]; linarith)
@@ -1308,22 +1293,13 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
           rw [← norm_neg, neg_sub]
           exact cty_g_bd hJ_lo_uIcc (by rw [abs_of_nonpos (by linarith)]; linarith)
         exact bilin_norm_bd B hMc hg_dist.le
-    have h_near_c_at_most_one := π.near_c_at_most_one c
     have h_sum_bd :
         ‖∑ J ∈ π.boxes,
             (B (((Set.Iic c).indicator f) (π.tag J 0)) (g J.upper₁ - g J.lower₁)
-              - t_πL_ext J)‖ ≤ ‖B‖ * M * ε' := by
-      calc ‖∑ J ∈ π.boxes, _‖
-          ≤ ∑ J ∈ π.boxes, ‖B (((Set.Iic c).indicator f) (π.tag J 0))
-              (g J.upper₁ - g J.lower₁) - t_πL_ext J‖ := norm_sum_le _ _
-        _ ≤ ∑ J ∈ π.boxes,
-              (if (J.lower 0 < c ∧ c < J.upper 0) ∨ (π.tag J 0 = c ∧ J.lower 0 = c) then
-                ‖B‖ * M * ε' else 0) := Finset.sum_le_sum h_per_box_bd
-        _ = (π.boxes.filter (fun J => (J.lower 0 < c ∧ c < J.upper 0) ∨
-                                      (π.tag J 0 = c ∧ J.lower 0 = c))).card • (‖B‖ * M * ε') := by
-            rw [Finset.sum_ite, Finset.sum_const_zero, add_zero, Finset.sum_const]
-        _ ≤ 1 • (‖B‖ * M * ε') := nsmul_le_nsmul_left (by positivity) h_near_c_at_most_one
-        _ = ‖B‖ * M * ε' := by simp
+              - t_πL_ext J)‖ ≤ ‖B‖ * M * ε' :=
+      norm_sum_le_of_atMostOne π.boxes _
+        (fun J => (J.lower 0 < c ∧ c < J.upper 0) ∨ (π.tag J 0 = c ∧ J.lower 0 = c))
+        (by positivity) h_per_box_bd (π.near_c_at_most_one c)
     calc ‖∑ J ∈ π.boxes, _‖
         ≤ ‖B‖ * M * ε' := h_sum_bd
       _ ≤ ε / 4 := by

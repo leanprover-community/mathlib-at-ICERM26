@@ -85,6 +85,49 @@ theorem Prepartition.mem_splitLowerAt_iff {a b : ℝ}
   rw [Prepartition.mem_ofWithBot, Finset.mem_image]
   exact ⟨fun ⟨J, hJ, hKJ⟩ => ⟨J, hJ, hKJ.symm⟩, fun ⟨J, hJ, hKJ⟩ => ⟨J, hJ, hKJ.symm⟩⟩
 
+open scoped Classical in
+/-- A sum over the boxes of `π.splitLowerAt c` reindexes to a sum over the original boxes of `π`,
+where each box `J` contributes via its lower half `splitLower J 0 c` (or `0` when that half is
+empty). This is the bookkeeping behind comparing a Riemann sum on the cut prepartition to one on
+the original. -/
+theorem Prepartition.sum_splitLowerAt_boxes {a b : ℝ}
+    (π : Prepartition (BoxIntegral.Ioc a b)) {c : ℝ} (hac : a < c) (hcb : c ≤ b)
+    {M : Type*} [AddCommMonoid M] (ψ : Box (Fin 1) → M) :
+    ∑ K ∈ (π.splitLowerAt c hac hcb).boxes, ψ K =
+      ∑ J ∈ π.boxes,
+        if h : Box.splitLower J 0 c ≠ ⊥ then ψ ((Box.splitLower J 0 c).unbot h) else 0 := by
+  symm
+  rw [← Finset.sum_filter_of_ne (p := fun J => Box.splitLower J 0 c ≠ ⊥)
+    (fun J _ hψ heq => hψ (dif_neg (not_not_intro heq)))]
+  refine Finset.sum_bij
+    (fun J hJ => (Box.splitLower J 0 c).unbot (Finset.mem_filter.mp hJ).2) ?_ ?_ ?_ ?_
+  · intro J hJ
+    exact Prepartition.mem_splitLowerAt_iff.mpr
+      ⟨J, (Finset.mem_filter.mp hJ).1, WithBot.coe_unbot _ _⟩
+  · intro J1 hJ1 J2 hJ2 hi_eq
+    rw [Finset.mem_filter] at hJ1 hJ2
+    refine Prepartition.splitLower_injOn hJ1.1 hJ2.1 hJ1.2 ?_
+    rw [← WithBot.coe_unbot (Box.splitLower J1 0 c) hJ1.2,
+        ← WithBot.coe_unbot (Box.splitLower J2 0 c) hJ2.2]
+    exact congrArg (fun x : Box (Fin 1) => (x : WithBot (Box (Fin 1)))) hi_eq
+  · intro K hK
+    obtain ⟨J, hJ_in, hsp⟩ := Prepartition.mem_splitLowerAt_iff.mp hK
+    have hJ_ne : Box.splitLower J 0 c ≠ ⊥ := by rw [← hsp]; exact WithBot.coe_ne_bot
+    exact ⟨J, Finset.mem_filter.mpr ⟨hJ_in, hJ_ne⟩,
+      WithBot.coe_injective (by rw [WithBot.coe_unbot, hsp])⟩
+  · intro J hJ
+    rw [dif_pos (Finset.mem_filter.mp hJ).2]
+
+open scoped Classical in
+/-- The tagged-prepartition version of `Prepartition.sum_splitLowerAt_boxes`. -/
+theorem TaggedPrepartition.sum_splitLowerAt_boxes {a b : ℝ}
+    (π : TaggedPrepartition (BoxIntegral.Ioc a b)) {c : ℝ} (hac : a < c) (hcb : c ≤ b)
+    {M : Type*} [AddCommMonoid M] (ψ : Box (Fin 1) → M) :
+    ∑ K ∈ (π.splitLowerAt c hac hcb).boxes, ψ K =
+      ∑ J ∈ π.boxes,
+        if h : Box.splitLower J 0 c ≠ ⊥ then ψ ((Box.splitLower J 0 c).unbot h) else 0 :=
+  π.toPrepartition.sum_splitLowerAt_boxes hac hcb ψ
+
 theorem Prepartition.splitLowerAt_isPartition {a b : ℝ}
     (π : Prepartition (BoxIntegral.Ioc a b)) {c : ℝ} (hac : a < c) (hcb : c ≤ b)
     (hπ : π.IsPartition) : (π.splitLowerAt c hac hcb).IsPartition := by
