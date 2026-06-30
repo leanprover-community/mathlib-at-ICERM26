@@ -465,3 +465,26 @@ end Even
 end Prepartition
 
 end BoxIntegral
+
+/---
+Main lemma
+
+Let B' \subset B be two boxes, and let P_n, Q_n be sequences of partitions such that
+
+(1) (Subj B) Every pelement of every partition P_n, Q_n is either contained in B' or outside
+-> Restr  {B',B} {P: Partition B} (Subj B' P) : Partition B'
+(2) p is in P_n and not in B iff it is in Q_n and not in B
+
+BoxSum P - BoxSum Q = BoxSum (Restr (Subj B' P)) - BoxSum (Restr (Subj B' Q))
+
+
+Proof via aux lemma
+
+BoxSum P = BoxSum (Restr (Subj B' P)) + \sum(other boxes)
+
+
+Extension lemma:
+
+For every B' \le B and epsilon there is a set of boxes that extend every epsilon-
+partition of B' into an epsilon-partition of B.
+---/
