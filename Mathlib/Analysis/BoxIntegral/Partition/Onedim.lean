@@ -466,7 +466,7 @@ end Prepartition
 
 end BoxIntegral
 
-/---
+/-
 Main lemma
 
 Let B' \subset B be two boxes, and let P_n, Q_n be sequences of partitions such that
@@ -487,4 +487,4 @@ Extension lemma:
 
 For every B' \le B and epsilon there is a set of boxes that extend every epsilon-
 partition of B' into an epsilon-partition of B.
----/
+-/

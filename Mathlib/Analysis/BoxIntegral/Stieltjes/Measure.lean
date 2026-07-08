@@ -90,7 +90,7 @@ theorem HasStieltjesIntegral.of_continuous_of_Stieltjes (hf : ContinuousOn f (.u
       toReal_ofReal (sub_nonneg.mpr (g.mono J.lower_le_upper₁))]
   simp only [Fin.isValue, lsmul_flip_apply, toSpanSingleton_apply, ← hstep_integral]
   have hbound_ae : ∀ᵐ x ∂μ, x ∈ Set.Ioc a b → ‖step x - f x‖ ≤ η := by
-    refine Filter.Eventually.of_forall fun x hx ↦ ?_
+    filter_upwards with x hx
     simp only [step, Finset.sum_apply]
     obtain ⟨J, hJπ, hxJ⟩ := hpart (fun _ ↦ x) (by simpa [hab] using hx)
     have hxJ' : x ∈ J.toSet₁ := by simpa [Box.mem₁] using hxJ
