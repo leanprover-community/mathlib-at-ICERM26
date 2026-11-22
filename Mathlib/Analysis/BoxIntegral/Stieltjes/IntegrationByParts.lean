@@ -18,6 +18,11 @@ public import Mathlib.Analysis.BoxIntegral.Stieltjes.RiemannStieltjesSum
 In this file we establish how integration by parts API for the Riemann–Stieltjes integral
 `∫⟨B⟩ x in a..b, f x ∂g` defined in `Analysis.BoxIntegral.Stieltjes.Defs`.
 
+## AI usage
+
+The proof of `HasStieltjesIntegral.by_parts` (Theorem A.2 of Montgomery–Vaughan) was rewritten by
+Claude (Anthropic) in November 2026, replacing an earlier LLM-generated proof. It compiles, but
+has not been reviewed by a human.
 -/
 
 @[expose] public section
@@ -72,56 +77,24 @@ variable {a b : ℝ} {B : E →L[ℝ] F →L[ℝ] G} {f : ℝ → E} {g : ℝ �
 ∫ₐᵇ g df = g(b) * f(b) - g(a) * f(a) - ∫ₐᵇ f dg. -/
 theorem HasStieltjesIntegral.by_parts (hL : HasStieltjesIntegral a b B f g L) :
     HasStieltjesIntegral a b B.flip g f (B (f b) (g b) - B (f a) (g a) - L) := by
-/-The proof below is LLM Slop and has to be redone-/
   wlog hle : a ≤ b generalizing a b L with hsymm
   · rw [HasStieltjesIntegral.symm_iff]
     convert hsymm hL.symm (by order) using 1
     abel
   obtain rfl | hab := hle.eq_or_lt
   · simp_all
-  rw [hasStieltjesIntegral_iff_lim_sum hab]
-  rw [hasStieltjesIntegral_iff_lim_sum hab] at hL
+  rw [hasStieltjesIntegral_iff_lim_sum hab] at hL ⊢
   intro ε hε
-  obtain ⟨δ, hδ_pos, hδ⟩ := hL ε hε
-  refine ⟨δ / 2, by positivity, ?_⟩
-  intro π hπ_hen hπ_part hπ_mesh
-  let σ := π.dual hab hπ_hen hπ_part
-  have hσ_hen : σ.IsHenstock := by
-    dsimp [σ]
-    exact π.dual_isHenstock hab hπ_hen hπ_part
-  have hσ_part : σ.IsPartition := by
-    dsimp [σ]
-    exact π.dual_isPartition hab hπ_hen hπ_part
-  have hσ_mesh : σ.mesh_size ≤ 2 * π.mesh_size := by
-    dsimp [σ]
-    exact π.dual_mesh_size_le_two_mul hab hπ_hen hπ_part
-  have hσ_sum :
-      (∑ J ∈ π.boxes, B.flip (g (π.tag J 0)) (f J.upper₁ - f J.lower₁)) =
-        B (f b) (g b) - B (f a) (g a) -
-          ∑ J ∈ σ.boxes, B (f (σ.tag J 0)) (g J.upper₁ - g J.lower₁) := by
-    dsimp [σ]
-    exact π.dual_sum_by_parts hab hπ_hen hπ_part
-  have hσ_mesh' : σ.mesh_size ≤ δ := by
-    calc
-      σ.mesh_size ≤ 2 * π.mesh_size := hσ_mesh
-      _ ≤ 2 * (δ / 2) := by gcongr
-      _ = δ := by field_simp
-  have hσ := hδ σ hσ_hen hσ_part hσ_mesh'
-  let S : G := ∑ J ∈ σ.boxes, B (f (σ.tag J 0)) (g J.upper₁ - g J.lower₁)
-  let T : G := ∑ J ∈ π.boxes, B.flip (g (π.tag J 0)) (f J.upper₁ - f J.lower₁)
-  let C : G := B (f b) (g b) - B (f a) (g a)
-  have hσ_sum' : T = C - S := by
-    simpa [S, T, C] using hσ_sum
-  have hσ' : dist S L < ε := by
-    simpa [S] using hσ
-  change dist T (C - L) < ε
-  calc
-    dist T (C - L) = dist (C - S) (C - L) := by rw [hσ_sum']
-    _ = dist S L := by
-      have hdiff : (C - S) - (C - L) = -(S - L) := by abel
-      rw [dist_eq_norm, dist_eq_norm, hdiff, norm_neg]
-    _ < ε := hσ'
-/- End LLM slop -/
+  obtain ⟨δ, hδ, hL⟩ := hL ε hε
+  refine ⟨δ / 2, by positivity, fun π hπ_hen hπ_part hπ_mesh ↦ ?_⟩
+  -- As in Montgomery–Vaughan: the sum for `∫ g df` over `π` is the boundary term minus the sum
+  -- for `∫ f dg` over the dual partition, whose mesh is at most twice that of `π`.
+  rw [π.dual_sum_by_parts hab hπ_hen hπ_part, dist_sub_left]
+  refine hL _ (π.dual_isHenstock hab hπ_hen hπ_part) (π.dual_isPartition hab hπ_hen hπ_part) ?_
+  calc (π.dual hab hπ_hen hπ_part).mesh_size ≤ 2 * π.mesh_size :=
+        π.dual_mesh_size_le_two_mul hab hπ_hen hπ_part
+    _ ≤ 2 * (δ / 2) := by gcongr
+    _ = δ := by field_simp
 
 
 theorem StieltjesIntegrable.by_parts (h : StieltjesIntegrable a b B f g) :

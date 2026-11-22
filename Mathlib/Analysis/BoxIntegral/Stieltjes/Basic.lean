@@ -1317,23 +1317,11 @@ theorem HasStieltjesIntegral.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Ic
     _ < ε / 2 + ε / 2 := by linarith
     _ = ε := by ring
 
-theorem HasStieltjesIntegral.mul_indicator_right (hab : a < b) (hc : c ∈ Set.Icc a b)
-    (h : HasStieltjesIntegral c b B f g L) (hg : ContinuousOn g (.uIcc a b))
-    (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
-      HasStieltjesIntegral a b B ((Set.Iic c).indicator f) g L := by
-  sorry
-
 theorem StieltjesIntegrable.mul_indicator_left (hab : a < b) (hc : c ∈ Set.Icc a b)
     (h : StieltjesIntegrable a c B f g) (hg : ContinuousOn g (.uIcc a b))
     (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
       StieltjesIntegrable a b B ((Set.Iic c).indicator f) g :=
   (h.hasStieltjesIntegral.mul_indicator_left hab hc hg hfbound).stieltjesIntegrable
-
-theorem StieltjesIntegrable.mul_indicator_right (hab : a < b) (hc : c ∈ Set.Icc a b)
-    (h : StieltjesIntegrable c b B f g) (hg : ContinuousOn g (.uIcc a b))
-    (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
-      StieltjesIntegrable a b B ((Set.Iic c).indicator f) g :=
-  (h.hasStieltjesIntegral.mul_indicator_right hab hc hg hfbound).stieltjesIntegrable
 
 variable [CompleteSpace E]
 

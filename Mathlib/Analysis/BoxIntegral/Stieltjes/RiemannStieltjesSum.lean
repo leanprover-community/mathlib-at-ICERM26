@@ -10,7 +10,17 @@ public import Mathlib.Analysis.BoxIntegral.Partition.Dual
 public import Mathlib.Analysis.Normed.Operator.Bilinear
 public import Mathlib.Algebra.BigOperators.Fin
 
-/-! # Finite Riemann-Stieltjes sums attached to tagged divisions -/
+/-! # Finite Riemann-Stieltjes sums attached to tagged divisions
+
+## AI usage
+
+The proofs of `TaggedDivision.RiemannStieltjesSum.by_parts`,
+`TaggedDivision.toTaggedPrepartition_RiemannStieltjesSum`,
+`TaggedPrepartition.toTaggedDivision_RiemannStieltjesSum` and
+`TaggedPrepartition.dual_sum_by_parts` were written by Claude (Anthropic) in November 2026,
+replacing `sorry`s and an earlier LLM-generated proof of `dual_sum_by_parts`. They compile, but
+have not been reviewed by a human.
+-/
 
 @[expose] public section
 
@@ -104,14 +114,24 @@ theorem removeDuplicates
       rw [snoc σ z t B f g, hrec, hdrop]
       simp [hσ_last, y, z, t]
 
+/-- Finite summation by parts (the identity behind the proof of Theorem A.2 of
+Montgomery–Vaughan): the Riemann–Stieltjes sum of `g` against `f` over a tagged division equals
+the boundary term minus the Riemann–Stieltjes sum of `f` against `g` over the dual division. -/
 theorem by_parts (π : TaggedDivision) (B : E →L[ℝ] F →L[ℝ] G)
     (f : ℝ → E) (g : ℝ → F) :
     π.RiemannStieltjesSum B.flip g f =
       B (f (π.x (Fin.last π.N))) (g (π.x (Fin.last π.N))) - B (f (π.x 0)) (g (π.x 0)) -
         π.dual.RiemannStieltjesSum B f g := by
-  induction π using TaggedDivision.recOnDropLast with
-  | zero π h0 => sorry
-  | step π hN ih => sorry
+  have hdual : π.dual.RiemannStieltjesSum B f g =
+      ∑ j : Fin (π.N + 1), B (f (π.x j)) (g (dual.x π j.succ) - g (dual.x π j.castSucc)) := rfl
+  rw [hdual]
+  simp only [RiemannStieltjesSum, ContinuousLinearMap.flip_apply, map_sub,
+    Finset.sum_sub_distrib]
+  rw [Fin.sum_univ_castSucc (fun j ↦ B (f (π.x j)) (g (dual.x π j.succ))),
+    Fin.sum_univ_succ (fun j ↦ B (f (π.x j)) (g (dual.x π j.castSucc)))]
+  simp only [dual.x_castSucc_succ, dual.x_succ_castSucc, Fin.succ_last, dual.x_last,
+    Fin.castSucc_zero, dual.x_first]
+  abel
 
 end RiemannStieltjesSum
 
@@ -124,7 +144,18 @@ theorem toTaggedPrepartition_RiemannStieltjesSum {a b : ℝ}
     (∑ J ∈ (π.toTaggedPrepartition hπ ha hb).boxes,
       B (f ((π.toTaggedPrepartition hπ ha hb).tag J 0)) (g J.upper₁ - g J.lower₁)) =
       π.RiemannStieltjesSum B f g := by
-  sorry
+  classical
+  rw [toTaggedPrepartition_boxes, Finset.sum_image (box_injOn (π.validTags_monotone hπ)),
+    RiemannStieltjesSum, ← Finset.sum_subset (Finset.subset_univ π.posIdx)]
+  · refine Finset.sum_congr rfl fun i hi ↦ ?_
+    have hi' := mem_posIdx.1 hi
+    rw [toTaggedPrepartition_tag π hπ ha hb hi]
+    simp [OrderedDivision.box, Box.upper₁, Box.lower₁, hi']
+  · -- Degenerate intervals contribute nothing.
+    intro i _ hi
+    have : π.x i.succ = π.x i.castSucc :=
+      le_antisymm (not_lt.1 fun h ↦ hi (mem_posIdx.2 h)) ((hπ i).1.trans (hπ i).2)
+    simp [this]
 
 end TaggedDivision
 
@@ -140,7 +171,14 @@ theorem toTaggedDivision_RiemannStieltjesSum
     (π : TaggedPrepartition (Ioc a b)) (hπ_part : π.IsPartition) :
     π.toTaggedDivision.RiemannStieltjesSum B f g =
       ∑ J ∈ π.boxes, B (f (π.tag J 0)) (g J.upper₁ - g J.lower₁) := by
-  sorry
+  rw [← OrderedDivision.fromPartition_map (π := π.toPrepartition) hπ_part,
+    OrderedDivision.boxMap, Finset.sum_map, TaggedDivision.RiemannStieltjesSum]
+  refine Finset.sum_congr rfl
+    fun (i : Fin (OrderedDivision.fromPartition π.toPrepartition).N) _ ↦ ?_
+  have hmono : _root_.StrictMono (OrderedDivision.fromPartition π.toPrepartition).x :=
+    OrderedDivision.fromPartition_strictMono π.toPrepartition
+  have hlt := hmono (Fin.castSucc_lt_succ (i := i))
+  simp [toTaggedDivision, OrderedDivision.box, Box.upper₁, Box.lower₁, hlt]
 
 /-- Finite summation by parts for the dual tagged prepartition. -/
 theorem dual_sum_by_parts (π : TaggedPrepartition (Ioc a b)) (hab : a < b)
@@ -150,29 +188,10 @@ theorem dual_sum_by_parts (π : TaggedPrepartition (Ioc a b)) (hab : a < b)
         ∑ J ∈ (π.dual hab hπ_hen hπ_part).boxes,
           B (f ((π.dual hab hπ_hen hπ_part).tag J 0))
             (g J.upper₁ - g J.lower₁) := by
-  -- This proof is AI nonsense and should be cleaned up
-  let ρ := π.toTaggedDivision
-  have hρ : ρ.ValidTags := π.toTaggedDivision_validTags hπ_hen hπ_part
-  have hρ_first : ρ.x 0 = a := π.toTaggedDivision_first hab hπ_part
-  have hρ_last : ρ.x (Fin.last ρ.N) = b := π.toTaggedDivision_last hab hπ_part
-  have hleft :
-      ρ.RiemannStieltjesSum B.flip g f =
-        ∑ J ∈ π.boxes, B.flip (g (π.tag J 0)) (f J.upper₁ - f J.lower₁) := by
-    simpa [ρ] using
-      (π.toTaggedDivision_RiemannStieltjesSum (B := B.flip) (f := g) (g := f) hπ_part)
-  have hright :
-      (∑ J ∈ (π.dual hab hπ_hen hπ_part).boxes,
-        B (f ((π.dual hab hπ_hen hπ_part).tag J 0)) (g J.upper₁ - g J.lower₁)) =
-        ρ.dual.RiemannStieltjesSum B f g := by
-    simpa [TaggedPrepartition.dual, ρ] using
-      (TaggedDivision.toTaggedPrepartition_RiemannStieltjesSum
-        (hπ := ρ.dual_validTags hρ)
-        (ha := by simpa using ρ.dual_first.trans hρ_first)
-        (hb := by simpa using ρ.dual_last.trans hρ_last)
-        (B := B) (f := f) (g := g))
-  rw [← hleft, hright]
-  simpa [hρ_first, hρ_last] using
-    (TaggedDivision.RiemannStieltjesSum.by_parts ρ B f g)
+  rw [← π.toTaggedDivision_RiemannStieltjesSum hπ_part,
+    TaggedDivision.RiemannStieltjesSum.by_parts, π.toTaggedDivision_first hab hπ_part,
+    π.toTaggedDivision_last hab hπ_part, dual,
+    TaggedDivision.toTaggedPrepartition_RiemannStieltjesSum]
 
 end TaggedPrepartition
 
