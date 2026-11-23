@@ -52,6 +52,17 @@ maps.
   reflection's sign change via the `neg_right` API). With `RiemannIntegrable.of_reflect`
   and `riemannIntegral_of_reflect`.
 
+### Cutting off the left part of the integrand
+
+* `BoxIntegral.HasStieltjesIntegral.mul_indicator_right`: the mirror image of
+  `HasStieltjesIntegral.mul_indicator_left`, obtained from it by reflection.
+
+## AI usage
+
+`HasStieltjesIntegral.mul_indicator_right` and `StieltjesIntegrable.mul_indicator_right` were
+moved here from `Analysis.BoxIntegral.Stieltjes.Basic` by Claude (Anthropic) in November 2026.
+Their previous statement, with `Set.Iic c`, was false; it now uses `Set.Ici c`. The proof by
+reflection was written by Claude; it compiles, but has not been reviewed by a human.
 -/
 
 @[expose] public section
@@ -329,6 +340,38 @@ theorem RiemannIntegrable.of_reflect (h : RiemannIntegrable a b f) :
 theorem riemannIntegral_of_reflect (h : RiemannIntegrable a b f) :
     riemannIntegral (-b) (-a) (f ∘ Neg.neg) = riemannIntegral a b f :=
   h.hasRiemannIntegral.of_reflect.riemannIntegral_eq
+
+/-! ### Cutting off the left part of the integrand -/
+
+/-- If `f` has Stieltjes integral `L` against `g` on `[c, b]`, then `𝟙_{[c, ∞)} f` has Stieltjes
+integral `L` against `g` on `[a, b]`, provided that `g` is continuous and `f` is bounded on
+`[a, b]`. This is the mirror image of `HasStieltjesIntegral.mul_indicator_left`, from which it
+follows by reflection. -/
+theorem HasStieltjesIntegral.mul_indicator_right {c : ℝ} (hab : a < b) (hc : c ∈ Set.Icc a b)
+    (h : HasStieltjesIntegral c b B f g L) (hg : ContinuousOn g (.uIcc a b))
+    (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
+    HasStieltjesIntegral a b B ((Set.Ici c).indicator f) g L := by
+  have hneg : Set.MapsTo Neg.neg (Set.uIcc (-b) (-a)) (Set.uIcc a b) := by
+    intro x hx
+    rw [Set.uIcc_of_le (neg_le_neg hab.le)] at hx
+    rw [Set.uIcc_of_le hab.le]
+    exact ⟨by linarith [hx.2], by linarith [hx.1]⟩
+  have h' := (h.of_reflect.mul_indicator_left (neg_lt_neg hab)
+    ⟨neg_le_neg hc.2, neg_le_neg hc.1⟩ (hg.comp continuous_neg.continuousOn hneg)
+    (hfbound.subset (by rintro _ ⟨x, hx, rfl⟩; exact ⟨-x, hneg hx, rfl⟩))).of_reflect
+  have e1 : ((Set.Iic (-c)).indicator (f ∘ Neg.neg)) ∘ Neg.neg = (Set.Ici c).indicator f := by
+    ext x
+    simp [Set.indicator_apply]
+  have e2 : (g ∘ Neg.neg) ∘ Neg.neg = g := by
+    ext x
+    simp
+  rwa [neg_neg, neg_neg, neg_neg, e1, e2] at h'
+
+theorem StieltjesIntegrable.mul_indicator_right {c : ℝ} (hab : a < b) (hc : c ∈ Set.Icc a b)
+    (h : StieltjesIntegrable c b B f g) (hg : ContinuousOn g (.uIcc a b))
+    (hfbound : Bornology.IsBounded (f '' (.uIcc a b))) :
+    StieltjesIntegrable a b B ((Set.Ici c).indicator f) g :=
+  (h.hasStieltjesIntegral.mul_indicator_right hab hc hg hfbound).stieltjesIntegrable
 
 end Change
 
